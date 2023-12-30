@@ -59,7 +59,8 @@ export default {
 }
 </script>
 <style>
-  * {
-      touch-action: manipulation;
-  }
+* {
+    -ms-touch-action: manipulation;
+    touch-action: manipulation;
+}
 </style>
