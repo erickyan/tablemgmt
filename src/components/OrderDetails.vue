@@ -58,7 +58,7 @@ import { ref } from 'vue'
                     </v-container>
 
                     <v-chip-group size="x-small" style="height: 130px; overflow-y: scroll;">
-                        <v-btn @click="reorderDrink()" icon="mdi-cancel" color="red-accent-4" size="x-small"></v-btn>
+                        <!-- <v-btn @click="reorderDrink()" icon="mdi-cancel" color="red-accent-4" size="x-small"></v-btn> -->
                         <v-chip @click="addDrinks('WTER')"><v-icon start icon="mdi-cube"></v-icon>Water</v-chip>
                         <v-chip @click="addDrinks('COKE')"><v-icon start icon="mdi-cube"></v-icon>Coke</v-chip>
                         <v-chip @click="addDrinks('LMND')"><v-icon start icon="mdi-cube"></v-icon>Lemonate</v-chip>
@@ -83,12 +83,15 @@ import { ref } from 'vue'
                 <!-- </v-form> -->
             </v-card-text>
             <v-card-actions>
-                <v-btn class="ml-auto"
-                    @click="$store.state.tables[$store.state.tableNum].goodPpl = !$store.state.tables[$store.state.tableNum].goodPpl"
-                    outlined color="pink-darken-1">
-                    <v-icon icon="mdi-heart-broken"
-                        v-if="$store.state.tables[$store.state.tableNum].goodPpl == true"></v-icon>
-                    <v-icon icon="mdi-heart" v-if="$store.state.tables[$store.state.tableNum].goodPpl == false"></v-icon>
+                <v-btn class="ml-auto" @click="$store.commit('clearDrink')" outlined>
+                    <v-icon size="x-large" icon="mdi-cancel"></v-icon>
+                </v-btn>
+                <v-btn class="ml-auto" @click="$store.commit('getTimestamp')" outlined >
+                    <v-icon size="x-large" icon="mdi-clock-check"></v-icon>
+                </v-btn>
+                <v-btn class="ml-auto" @click="$store.state.tables[$store.state.tableNum].goodPpl = !$store.state.tables[$store.state.tableNum].goodPpl" outlined color="pink-darken-1">
+                    <v-icon size="x-large" icon="mdi-heart-broken" v-if="$store.state.tables[$store.state.tableNum].goodPpl == true"></v-icon>
+                    <v-icon size="x-large" icon="mdi-heart" v-if="$store.state.tables[$store.state.tableNum].goodPpl == false"></v-icon>
                 </v-btn>
             </v-card-actions>
         </v-card>

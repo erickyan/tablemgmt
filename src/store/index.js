@@ -171,11 +171,7 @@ export default createStore({
         // },
         // calculate total price
         calculateTotal(state){
-            // set timestamp, needs to move out in the future
-            const today = new Date();
-            const now = today.getHours() + ":" + today.getMinutes()
-            state.tables[state.tableNum].sitDownTime = now
-            // console.log(state.sitDownTime)
+
             
             let num = state.tables[state.tableNum].drinks
             let numWater = 0
@@ -204,14 +200,13 @@ export default createStore({
             state.tables[state.tableNum].totalPrice = (state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDPRICE).toFixed(2)
         },
         getTimestamp(state){
-            // getNow: function() {
-            //     const today = new Date();
-            //     const date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
-            //     const time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
-            //     const dateTime = date +' '+ time;
-            //     this.timestamp = time;
-            // }
-            
+            const today = new Date();
+            const now = today.getHours() + ":" + today.getMinutes()
+            state.tables[state.tableNum].sitDownTime = now
+            // console.log(state.sitDownTime)
+        },
+        clearDrink(state){
+            state.tables[state.tableNum].drinks = []
         }
     },
     getters: {
