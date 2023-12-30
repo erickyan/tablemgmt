@@ -3,6 +3,7 @@ import { createStore } from 'vuex'
 export default createStore({
     state: {
         sales:{
+            totalCount: 0,
             adultCount: 0,
             bigKidCount: 0,
             smlKidCount: 0,
@@ -178,7 +179,6 @@ export default createStore({
         // calculate total price
         calculateTotal(state){
 
-            
             let num = state.tables[state.tableNum].drinks
             let numWater = 0
             let numDrink = 0
@@ -224,6 +224,10 @@ export default createStore({
         // count = 
         paid(state){
             state.sales.revenue = (state.sales.revenue*1 + state.tables[state.tableNum].totalPrice*1).toFixed(2)
+            state.sales.adultCount = (state.sales.adultCount*1 + state.tables[state.tableNum].adult*1)
+            state.sales.bigKidCount = (state.sales.bigKidCount*1 + state.tables[state.tableNum].bigKid*1)
+            state.sales.smlKidCount = (state.sales.smlKidCount*1 + state.tables[state.tableNum].smlKid*1)
+            state.sales.totalCount = state.sales.adultCount + state.sales.bigKidCount + state.sales.smlKidCount
             // resetting table
             state.tables[state.tableNum].sitDownTime=""
             state.tables[state.tableNum].adult=0

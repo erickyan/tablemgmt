@@ -29,8 +29,23 @@ import { RouterLink, RouterView } from 'vue-router'
           <v-divider></v-divider>
           <v-list-item
             prepend-icon='mdi-currency-usd'
-            title="Revenue"
           >{{ $store.state.sales.revenue }}</v-list-item>
+          <v-divider></v-divider>
+          <v-list-item
+            prepend-icon='mdi-account-multiple'
+          >{{ $store.state.sales.totalCount }}</v-list-item>
+          <v-divider></v-divider>
+          <v-list-item
+            prepend-icon='mdi-account'
+          >{{ $store.state.sales.adultCount }}</v-list-item>
+          <v-divider></v-divider>
+          <v-list-item
+            prepend-icon='mdi-nintendo-game-boy'
+          >{{ $store.state.sales.bigKidCount }}</v-list-item>
+          <v-divider></v-divider>
+          <v-list-item
+            prepend-icon='mdi-teddy-bear'
+          >{{ $store.state.sales.smlKidCount }}</v-list-item>
           <v-divider></v-divider>
         </v-navigation-drawer>
         <v-app-bar 
