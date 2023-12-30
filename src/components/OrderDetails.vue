@@ -61,12 +61,15 @@ import { ref } from 'vue'
                         <!-- <v-btn @click="reorderDrink()" icon="mdi-cancel" color="red-accent-4" size="x-small"></v-btn> -->
                         <v-chip @click="addDrinks('WTER')"><v-icon start icon="mdi-cube"></v-icon>Water</v-chip>
                         <v-chip @click="addDrinks('COKE')"><v-icon start icon="mdi-cube"></v-icon>Coke</v-chip>
-                        <v-chip @click="addDrinks('LMND')"><v-icon start icon="mdi-cube"></v-icon>Lemonate</v-chip>
-                        <v-chip @click="addDrinks('DRPP')"><v-icon start icon="mdi-cube"></v-icon>DrPepper</v-chip>
-                        <v-chip @click="addDrinks('DCOK')"><v-icon start icon="mdi-cube"></v-icon>DietCoke</v-chip>
                         <v-chip @click="addDrinks('STEA')"><v-icon start icon="mdi-cube"></v-icon>SweetTea</v-chip>
+                        <v-chip @click="addDrinks('SPRT')"><v-icon start icon="mdi-cube"></v-icon>Sprite</v-chip>
+                        <v-chip @click="addDrinks('DRPP')"><v-icon start icon="mdi-cube"></v-icon>DrPepper</v-chip>
+                        <v-chip @click="addDrinks('DIET')"><v-icon start icon="mdi-cube"></v-icon>DietCoke</v-chip>
                         <v-chip @click="addDrinks('USTE')"><v-icon start icon="mdi-cube"></v-icon>UnsweetTea</v-chip>
+                        <v-chip @click="addDrinks('LMND')"><v-icon start icon="mdi-cube"></v-icon>Lemonade</v-chip>
                         <v-chip @click="addDrinks('HALF')"><v-icon start icon="mdi-cube"></v-icon>Half-Half</v-chip>
+                        <v-chip @click="addDrinks('COFE')"><v-icon start icon="mdi-cube"></v-icon>Coffee</v-chip>
+                        <v-chip @click="addDrinks('HOTT')"><v-icon start icon="mdi-cube"></v-icon>Hot Tea</v-chip>
                         
                         <!-- <v-chip @click="addDrinks('')">Water</v-chip>
                             <v-chip @click="addDrinks('')">HotTea</v-chip>
