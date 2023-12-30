@@ -11,6 +11,7 @@ export default createStore({
         tables: [
             {
                 number: 1,
+                sitDownTime:"",
                 adult: 0,
                 bigKid: 0,
                 smlKid: 0,
@@ -170,30 +171,47 @@ export default createStore({
         // },
         // calculate total price
         calculateTotal(state){
+            // set timestamp, needs to move out in the future
+            const today = new Date();
+            const now = today.getHours() + ":" + today.getMinutes()
+            state.tables[state.tableNum].sitDownTime = now
+            // console.log(state.sitDownTime)
+            
             let num = state.tables[state.tableNum].drinks
             let numWater = 0
             let numDrink = 0
             if (num.length!=0){
                 let result = {}
+                
                 num.forEach((x) => {
                     result[x] = result[x] || 0
                     result[x]++
                 })
-                if (result.water==null){
-                    numWater = 0
+                // console.log(result.WTER)
+                if (result.WTER!=null){
+                    numWater = result.WTER
                 }else{
-                    numWater = result.Water
+                    numWater = 0
                 }
                 // numWater = result.Water
                 numDrink = num.length - numWater
             }
 
-            
             // Object.keys(myObj).length
             // console.log('water: ' + result.Water)
             // console.log('others: '+ (num.length - result.Water))
             state.tables[state.tableNum].drinkPrice = state.WATERPRICE*numWater + state.DRINKPRICE*numDrink
             state.tables[state.tableNum].totalPrice = (state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDPRICE).toFixed(2)
+        },
+        getTimestamp(state){
+            // getNow: function() {
+            //     const today = new Date();
+            //     const date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+            //     const time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+            //     const dateTime = date +' '+ time;
+            //     this.timestamp = time;
+            // }
+            
         }
     },
     getters: {

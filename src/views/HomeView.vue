@@ -6,16 +6,18 @@
           <v-col v-for="n in 10" :key="n" cols="4">
             <v-card class="mx-auto" height="200" @click="addDetails(n)">
               <v-card-item>
-                <v-card-title>
+                <v-card-title class="headline black d-flex">
                   Table {{ n }}
-                  <v-icon icon="mdi-cards-heart" size="x-small" v-if="$store.state.tables[n - 1].goodPpl"></v-icon>
+                  <v-spacer></v-spacer>
+                  {{ $store.state.tables[n-1].sitDownTime }}
+                  <v-icon icon="mdi-cards-heart" color="pink-darken-1" size="x-small" v-if="$store.state.tables[n - 1].goodPpl"></v-icon>
                 </v-card-title>
-                <v-list disabled>
+                <v-divider></v-divider>
                   <v-list-item>
                     <!-- <v-icon icon="mdi-account"></v-icon> -->
                     <div class="d-flex justify-space-between ">
                       <!-- <v-icon icon="mdi-account"></v-icon> -->
-                      <v-list-item-title class="pe-5"> Adult </v-list-item-title>
+                      <v-list-item-title> Adult </v-list-item-title>
                       <v-list-item-title> {{ $store.state.tables[n - 1].adult }}</v-list-item-title>
                       <!-- <v-list-item-title > Price </v-list-item-title> -->
                     </div>
@@ -32,16 +34,11 @@
                       <!-- <v-list-item-title> Price </v-list-item-title> -->
                     </div>
                     <v-row no-gutters>
-                      <v-col cols="12" sm="3" v-for="drink in $store.state.tables[n - 1].drinks"> {{ drink
-                      }}
+                      <v-col cols="12" sm="3" v-for="drink in $store.state.tables[n - 1].drinks"> 
+                       {{ drink }}
                       </v-col>
                     </v-row>
-
-
-
                   </v-list-item>
-                </v-list>
-
               </v-card-item>
             </v-card>
             <div class="d-flex justify-end mb-6">

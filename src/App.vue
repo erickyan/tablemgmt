@@ -11,7 +11,7 @@ import { RouterLink, RouterView } from 'vue-router'
         >
         <v-list-item
             prepend-avatar="https://randomuser.me/api/portraits/men/78.jpg"
-            title="Manager"
+            title="China Buffet"
           ></v-list-item>
   
           <v-divider></v-divider>
