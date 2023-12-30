@@ -7,6 +7,9 @@
             <v-card class="mx-auto" height="200" @click="addDetails(n)">
               <v-card-item>
                 <v-card-title class="headline black d-flex">
+                  <!-- <v-chip size="x-small" variant="flat" v-bind:style="[$store.state.tables[n - 1].occupied ? {'color': 'green'} : {'color': 'red'}]"> -->
+                    <v-icon icon="mdi-check-circle-outline" v-bind:style="[$store.state.tables[n - 1].occupied ? {'color': 'red'} : {'color': 'green'}]"></v-icon>
+                  <!-- </v-chip> -->
                   Table {{ n }}
                   <v-spacer></v-spacer>
                   {{ $store.state.tables[n-1].sitDownTime }}

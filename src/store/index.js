@@ -178,7 +178,8 @@ export default createStore({
         // },
         // calculate total price
         calculateTotal(state){
-
+            // change table to occupied
+            state.tables[state.tableNum].occupied = true
             let num = state.tables[state.tableNum].drinks
             let numWater = 0
             let numDrink = 0
@@ -237,6 +238,7 @@ export default createStore({
             state.tables[state.tableNum].drinkPrice=0
             state.tables[state.tableNum].totalPrice=0
             state.tables[state.tableNum].goodPpl=false
+            state.tables[state.tableNum].occupied = false
         },
 
         getRevenue(state){
