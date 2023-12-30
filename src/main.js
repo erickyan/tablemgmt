@@ -5,6 +5,7 @@ import router from './router'
 import store from './store'
 import orderdetails from './components/OrderDetails.vue'
 
+
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify'

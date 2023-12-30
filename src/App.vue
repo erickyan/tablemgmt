@@ -23,9 +23,14 @@ import { RouterLink, RouterView } from 'vue-router'
           <v-divider></v-divider>
           <v-list-item
             prepend-icon='mdi-forum'
-            title="About"
+            title="TODO"
             to="about"
           ></v-list-item>
+          <v-divider></v-divider>
+          <v-list-item
+            prepend-icon='mdi-currency-usd'
+            title="Revenue"
+          >{{ $store.state.sales.revenue }}</v-list-item>
           <v-divider></v-divider>
         </v-navigation-drawer>
         <v-app-bar 

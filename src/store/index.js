@@ -2,6 +2,12 @@ import { createStore } from 'vuex'
 
 export default createStore({
     state: {
+        sales:{
+            adultCount: 0,
+            bigKidCount: 0,
+            smlKidCount: 0,
+            revenue:0
+        },
         ADULTPRICE: 10.55,
         BIGKIDPRICE: 6.99,
         SMALLKIDPRICE: 4.99,
@@ -207,7 +213,32 @@ export default createStore({
         },
         clearDrink(state){
             state.tables[state.tableNum].drinks = []
+        },
+        // saveFile(state) {
+        //     const data = JSON.stringify(state.tables)
+        //     const fs = require('fs')
+        //     try { fs.writeFileSync('myfile.txt', data, 'utf-8'); }
+        //     catch(e) { alert('Failed to save the file !'); }
+        // }
+        // rev = price+price 
+        // count = 
+        paid(state){
+            state.sales.revenue = (state.sales.revenue*1 + state.tables[state.tableNum].totalPrice*1).toFixed(2)
+            // resetting table
+            state.tables[state.tableNum].sitDownTime=""
+            state.tables[state.tableNum].adult=0
+            state.tables[state.tableNum].bigKid=0
+            state.tables[state.tableNum].smlKid=0
+            state.tables[state.tableNum].drinks=[]
+            state.tables[state.tableNum].drinkPrice=0
+            state.tables[state.tableNum].totalPrice=0
+            state.tables[state.tableNum].goodPpl=false
+        },
+
+        getRevenue(state){
+            state.sales.revenue
         }
+        
     },
     getters: {
 

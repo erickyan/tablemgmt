@@ -83,6 +83,9 @@ import { ref } from 'vue'
                 <!-- </v-form> -->
             </v-card-text>
             <v-card-actions>
+                <v-btn class="ml-auto" @click="$store.commit('paid')" outlined>
+                    <v-icon size="x-large" icon="mdi-check"></v-icon>
+                </v-btn>
                 <v-btn class="ml-auto" @click="$store.commit('clearDrink')" outlined>
                     <v-icon size="x-large" icon="mdi-cancel"></v-icon>
                 </v-btn>
