@@ -153,9 +153,9 @@ export default {
 }
 </script>
   
-<style>
+<!-- <style>
     #id{
         /* text-field-details-padding-inline: 0px; */
         text-field-input-padding-start: 0px
     }
-</style>
+</style> -->
