@@ -65,11 +65,11 @@ import { ref } from 'vue'
                         <v-chip @click="addDrinks('SPRT')"><v-icon start icon="mdi-cube"></v-icon>Sprite</v-chip>
                         <v-chip @click="addDrinks('DRPP')"><v-icon start icon="mdi-cube"></v-icon>DrPepper</v-chip>
                         <v-chip @click="addDrinks('DIET')"><v-icon start icon="mdi-cube"></v-icon>DietCoke</v-chip>
-                        <v-chip @click="addDrinks('USTE')"><v-icon start icon="mdi-cube"></v-icon>UnsweetTea</v-chip>
+                        <v-chip @click="addDrinks('UTEA')"><v-icon start icon="mdi-cube"></v-icon>UnsweetTea</v-chip>
                         <v-chip @click="addDrinks('LMND')"><v-icon start icon="mdi-cube"></v-icon>Lemonade</v-chip>
                         <v-chip @click="addDrinks('HALF')"><v-icon start icon="mdi-cube"></v-icon>Half-Half</v-chip>
                         <v-chip @click="addDrinks('COFE')"><v-icon start icon="mdi-cube"></v-icon>Coffee</v-chip>
-                        <v-chip @click="addDrinks('HOTT')"><v-icon start icon="mdi-cube"></v-icon>Hot Tea</v-chip>
+                        <v-chip @click="addDrinks('HTEA')"><v-icon start icon="mdi-cube"></v-icon>Hot Tea</v-chip>
                         
                         <!-- <v-chip @click="addDrinks('')">Water</v-chip>
                             <v-chip @click="addDrinks('')">HotTea</v-chip>
@@ -86,14 +86,22 @@ import { ref } from 'vue'
                 <!-- </v-form> -->
             </v-card-text>
             <v-card-actions>
+
+                <!-- <v-btn class="ml-auto" @click="$store.commit('addingTogo')" outlined>
+                    TOGO
+                </v-btn> -->
+                <!-- <v-text-field id="togobox" density="compact" variant="plain">  -->
+                    <!-- TOGO:  -->
+                    <!-- {{ $store.state.tables[$store.state.tableNum].togo }} -->
+                <!-- </v-text-field> -->
                 <v-btn class="ml-auto" @click="$store.commit('paid')" outlined>
-                    <v-icon size="x-large" icon="mdi-check"></v-icon>
+                    <v-icon size="x-large" icon="mdi-cash-check"></v-icon>
                 </v-btn>
-                <v-btn class="ml-auto" @click="$store.commit('clearDrink')" outlined>
+                <v-btn class="ml-auto" @click="$store.commit('clearEverything')" outlined>
                     <v-icon size="x-large" icon="mdi-cancel"></v-icon>
                 </v-btn>
                 <v-btn class="ml-auto" @click="$store.commit('getTimestamp')" outlined >
-                    <v-icon size="x-large" icon="mdi-clock-check"></v-icon>
+                    <v-icon size="x-large" icon="mdi-clock-check-outline"></v-icon>
                 </v-btn>
                 <v-btn class="ml-auto" @click="$store.state.tables[$store.state.tableNum].goodPpl = !$store.state.tables[$store.state.tableNum].goodPpl" outlined color="pink-darken-1">
                     <v-icon size="x-large" icon="mdi-heart-broken" v-if="$store.state.tables[$store.state.tableNum].goodPpl == true"></v-icon>
@@ -103,15 +111,13 @@ import { ref } from 'vue'
         </v-card>
     </v-dialog>
 </template>
-  
+
+
 <script>
 
 import { ref } from 'vue'
 
 export default {
-    // props: {
-    //     detailCompose: Boolean
-    // },
     data: () => ({
         valid: true,
 
@@ -121,7 +127,7 @@ export default {
             // const buttonValue = e.target.value;
             this.$store.state.tables[this.$store.state.tableNum].drinks.push(btnV)
             this.$store.state.tables[this.$store.state.tableNum].drinks.sort()
-            // console.log(this.$store.state.tables[0].goodPpl)
+            // console.log(this.$store.state.dinnerTime)
 
             // let num = this.$store.state.tables[0].drinks
             // let result = {}
@@ -147,4 +153,9 @@ export default {
 }
 </script>
   
-<style></style>
+<style>
+    #id{
+        /* text-field-details-padding-inline: 0px; */
+        text-field-input-padding-start: 0px
+    }
+</style>

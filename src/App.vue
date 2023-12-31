@@ -11,8 +11,8 @@ import { RouterLink, RouterView } from 'vue-router'
         >
         <v-list-item
             prepend-avatar="https://randomuser.me/api/portraits/men/78.jpg"
-            title="China Buffet"
-          ></v-list-item>
+            title="China Buffet">
+        </v-list-item>
   
           <v-divider></v-divider>
           <v-list-item
@@ -47,6 +47,17 @@ import { RouterLink, RouterView } from 'vue-router'
             prepend-icon='mdi-teddy-bear'
           >{{ $store.state.sales.smlKidCount }}</v-list-item>
           <v-divider></v-divider>
+          <v-list-item>
+            <v-switch
+              v-model="dinnertime"
+              color="primary"
+              @click="toggleDinner"
+              inset
+              label="Blue is Lunch price"
+              density:compact
+            ></v-switch>
+          </v-list-item>
+          <v-divider></v-divider>
         </v-navigation-drawer>
         <v-app-bar 
           :elevation="2"
@@ -70,12 +81,20 @@ export default {
     },
   data: () => ({ 
     drawer: null,
+    dinnertime: true,
     // detailCompose: false,
     sideBarList: [
       {title: 'Home', icon: 'mdi-view-dashboard', to:'/'},
       {title: 'About', icon: 'mdi-forum', to:'/about'}
     ]
   }),
+  methods: {
+    toggleDinner(){
+      this.$store.state.isDinner = this.dinnertime
+      // console.log("local: " + this.dinnertime)
+      // console.log("global: " + this.$store.state.isDinner)
+    }
+  }
 }
 </script>
 <style>

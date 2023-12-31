@@ -2,6 +2,7 @@ import { createStore } from 'vuex'
 
 export default createStore({
     state: {
+        isDinner: false,
         sales:{
             totalCount: 0,
             adultCount: 0,
@@ -9,9 +10,12 @@ export default createStore({
             smlKidCount: 0,
             revenue:0
         },
-        ADULTPRICE: 10.55,
-        BIGKIDPRICE: 6.99,
-        SMALLKIDPRICE: 4.99,
+        ADULTPRICE: 10,
+        BIGKIDPRICE: 6,
+        SMALLKIDPRICE: 4,
+        ADULTDINNERPRICE: 15,
+        BIGKIDDINNERPRICE: 10,
+        SMALLKIDDINNERPRICE: 8,
         WATERPRICE: 0.27,
         DRINKPRICE:1.61,
         tableNum:0,
@@ -27,7 +31,8 @@ export default createStore({
                 occupied: false,
                 drinkPrice: 0,
                 totalPrice: 0,
-                goodPpl: false
+                goodPpl: false,
+                togo: 0
             },
             {
                 number: 2,
@@ -39,7 +44,8 @@ export default createStore({
                 occupied: false,
                 drinkPrice: 0,
                 totalPrice: 0,
-                goodPpl: false
+                goodPpl: false,
+                togo: 0
             },
             {
                 number: 3,
@@ -51,7 +57,8 @@ export default createStore({
                 occupied: false,
                 drinkPrice: 0,
                 totalPrice: 0,
-                goodPpl: false
+                goodPpl: false,
+                togo: 0
             },
             {
                 number: 4,
@@ -63,7 +70,8 @@ export default createStore({
                 occupied: false,
                 drinkPrice: 0,
                 totalPrice: 0,
-                goodPpl: false
+                goodPpl: false,
+                togo: 0
             },
             {
                 number: 5,
@@ -75,7 +83,8 @@ export default createStore({
                 occupied: false,
                 drinkPrice: 0,
                 totalPrice: 0,
-                goodPpl: false
+                goodPpl: false,
+                togo: 0
             },
             {
                 number: 6,
@@ -87,7 +96,8 @@ export default createStore({
                 occupied: false,
                 drinkPrice: 0,
                 totalPrice: 0,
-                goodPpl: false
+                goodPpl: false,
+                togo: 0
             },
             {
                 number: 7,
@@ -99,7 +109,8 @@ export default createStore({
                 occupied: false,
                 drinkPrice: 0,
                 totalPrice: 0,
-                goodPpl: false
+                goodPpl: false,
+                togo: 0
             },
             {
                 number: 8,
@@ -111,7 +122,8 @@ export default createStore({
                 occupied: false,
                 drinkPrice: 0,
                 totalPrice: 0,
-                goodPpl: false
+                goodPpl: false,
+                togo: 0
             },
             {
                 number: 9,
@@ -123,7 +135,8 @@ export default createStore({
                 occupied: false,
                 drinkPrice: 0,
                 totalPrice: 0,
-                goodPpl: false
+                goodPpl: false,
+                togo: 0
             },
             {
                 number: 10,
@@ -135,7 +148,8 @@ export default createStore({
                 occupied: false,
                 drinkPrice: 0,
                 totalPrice: 0,
-                goodPpl: false
+                goodPpl: false,
+                togo: 0
             }
         ]
     },
@@ -204,7 +218,14 @@ export default createStore({
             // console.log('water: ' + result.Water)
             // console.log('others: '+ (num.length - result.Water))
             state.tables[state.tableNum].drinkPrice = state.WATERPRICE*numWater + state.DRINKPRICE*numDrink
-            state.tables[state.tableNum].totalPrice = (state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDPRICE).toFixed(2)
+            if(state.isDinner){
+                // console.log('diner')
+                state.tables[state.tableNum].totalPrice = (state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTDINNERPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDDINNERPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDDINNERPRICE).toFixed(2)
+            }else{
+                // console.log('lunch')
+                state.tables[state.tableNum].totalPrice = (state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDPRICE).toFixed(2)
+            }
+            
         },
         getTimestamp(state){
             const today = new Date();
@@ -212,8 +233,16 @@ export default createStore({
             state.tables[state.tableNum].sitDownTime = now
             // console.log(state.sitDownTime)
         },
-        clearDrink(state){
-            state.tables[state.tableNum].drinks = []
+        clearEverything(state){
+            state.tables[state.tableNum].sitDownTime=""
+            state.tables[state.tableNum].adult=0
+            state.tables[state.tableNum].bigKid=0
+            state.tables[state.tableNum].smlKid=0
+            state.tables[state.tableNum].drinks=[]
+            state.tables[state.tableNum].drinkPrice=0
+            state.tables[state.tableNum].totalPrice=0
+            state.tables[state.tableNum].goodPpl=false
+            state.tables[state.tableNum].occupied = false
         },
         // saveFile(state) {
         //     const data = JSON.stringify(state.tables)
@@ -241,8 +270,8 @@ export default createStore({
             state.tables[state.tableNum].occupied = false
         },
 
-        getRevenue(state){
-            state.sales.revenue
+        addingTogo(state){
+            console.log('togo')
         }
         
     },
