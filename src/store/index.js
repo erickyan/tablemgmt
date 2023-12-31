@@ -10,14 +10,14 @@ export default createStore({
             smlKidCount: 0,
             revenue:0
         },
-        ADULTPRICE: 10,
-        BIGKIDPRICE: 6,
-        SMALLKIDPRICE: 4,
-        ADULTDINNERPRICE: 15,
-        BIGKIDDINNERPRICE: 10,
-        SMALLKIDDINNERPRICE: 8,
+        ADULTPRICE: 11.12,
+        BIGKIDPRICE: 6.47,
+        SMALLKIDPRICE: 5.39,
+        ADULTDINNERPRICE: 13.26,
+        BIGKIDDINNERPRICE: 7.55,
+        SMALLKIDDINNERPRICE: 6.47,
         WATERPRICE: 0.27,
-        DRINKPRICE:1.61,
+        DRINKPRICE:1.72,
         tableNum:0,
         tables: [
             {

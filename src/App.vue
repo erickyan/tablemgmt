@@ -23,7 +23,7 @@ import { RouterLink, RouterView } from 'vue-router'
           <v-divider></v-divider>
           <v-list-item
             prepend-icon='mdi-forum'
-            title="TODO"
+            title="Order"
             to="about"
           ></v-list-item>
           <v-divider></v-divider>
