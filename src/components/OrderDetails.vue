@@ -1,9 +1,3 @@
-<script setup>
-
-import { ref } from 'vue'
-
-</script>
-
 <template>
     <v-dialog width="400">
         <v-card>
@@ -114,9 +108,6 @@ import { ref } from 'vue'
 
 
 <script>
-
-import { ref } from 'vue'
-
 export default {
     data: () => ({
         valid: true,
