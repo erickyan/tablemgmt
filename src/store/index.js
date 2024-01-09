@@ -19,6 +19,7 @@ export default createStore({
         WATERPRICE: 0.27,
         DRINKPRICE:1.72,
         tableNum:0,
+        catID: 0,
         tables: [
             {
                 number: 1,
@@ -151,6 +152,59 @@ export default createStore({
                 goodPpl: false,
                 togo: 0
             }
+        ],
+        menu : [
+            
+        {
+            category: 'Appetizers',
+            items: [
+            {
+                name: 'Pork Egg Roll',
+                Quantity: 0,
+                listPrice: 0
+            },
+            {
+                name: 'Shrimp Egg Roll',
+                Quantity: 0,
+                listPrice: 0
+            },
+            {
+                name: 'Vegetable Egg Roll',
+                Quantity: 0,
+                listPrice: 0
+            }
+            ]
+        },
+        {
+            category: 'Soup',
+            items: [
+            {
+                name: 'Egg Drop Soup',
+                Quantity: 0,
+                listPrice: 0
+            },
+            {
+                name: 'Wanton Soup',
+                Quantity: 0,
+                listPrice: 0
+            }
+            ]
+        },
+        {
+            category: 'Lo Mien',
+            items: [
+            {
+                name: 'House Specail Lo Mien',
+                Quantity: 0,
+                listPrice: 0
+            },
+            {
+                name: 'Beef Lo Mien',
+                Quantity: 0,
+                listPrice: 0
+            }
+            ]
+        },
         ]
     },
     mutations: {

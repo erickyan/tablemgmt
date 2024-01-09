@@ -4,42 +4,14 @@
 export default {
   
   data: () => ({
-    menu : [
-      {
-        category: 'Appetizers',
-        items: [
-          {
-            name: 'Pork Egg Roll',
-            Quantity: 0,
-            listPrice: 0
-          },
-          {
-            name: 'Shrimp Egg Roll',
-            Quantity: 0,
-            listPrice: 0
-          }
-        ]
-      },
-      {
-        category: 'Soup',
-        items: [
-        {
-            name: 'Egg Drop Soup',
-            Quantity: 0,
-            listPrice: 0
-          },
-          {
-            name: 'Wanton Soup',
-            Quantity: 0,
-            listPrice: 0
-          }
-        ]
-      },
-    ]
+    togoCompose: false,
   }),
   methods: {
-    clickingItem(e, item){
-      console.log(e, "items: "+item.items[0].name)
+    clickingItem(i){
+      // console.log("items: "+this.$store.state.menu[i].category)
+      this.$store.state.catID = i - 1
+      // console.log("items after: "+this.$store.state.menu[i].category)
+      this.togoCompose=true
     }
   }
   
@@ -49,14 +21,15 @@ export default {
 </script>
 
 <template>
-    <v-app>
+  <v-app>
     <v-main>
       <v-container>
         <v-row>
-          <v-col v-for="item in menu" cols="4">
-            <v-card class="mx-auto" :title=item.category @click="clickingItem($event, item)">
-              <!-- displaying relevant food menus -->
-              
+          <v-col v-for="i in 3" :key="i" cols="4">
+            <v-card class="mx-auto" height="150" :title=$store.state.menu[i-1].category @click="clickingItem(i)">
+              <!-- displaying relevant food menus :title="$store.state.menu(i).title"-->
+              <!-- <p>{{ $store.state.menu($store.state.catID).category }}</p> -->
+              <togo-details v-model="togoCompose"></togo-details>
             </v-card>
 
           </v-col>
