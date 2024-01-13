@@ -65,10 +65,25 @@ import { RouterView } from 'vue-router'
         <v-app-bar-nav-icon @click="drawer = !drawer">
         </v-app-bar-nav-icon>
         <v-app-bar-title>China Buffet</v-app-bar-title>
+
+
+
+        <v-layout style="height: 56px;">
+            <v-bottom-navigation v-model="toggleTogo">
+              <v-btn value>
+                <v-icon size="x-large" v-bind:style="[($store.state.seletedTogo.length !== 0) ? {'color': 'red'} : {'color': 'black'}]" >mdi-food-takeout-box-outline</v-icon>
+                <span>Togo</span>
+                
+              </v-btn>
+              <div v-if="$store.state.sales.totalTogoPriceState !== 0"><v-chip class="ma-2" label> ${{ $store.state.sales.totalTogoPriceState}} </v-chip></div>
+            </v-bottom-navigation>
+         
+          </v-layout>
+
       </v-app-bar>
       <v-main>
-        
         <RouterView />
+        <currenttogo-details v-model="toggleTogo"></currenttogo-details>
       </v-main>
   </v-app>
   
@@ -82,6 +97,7 @@ export default {
   data: () => ({ 
     drawer: null,
     dinnertime: true,
+    toggleTogo: false,
     // detailCompose: false,
     sideBarList: [
       {title: 'Home', icon: 'mdi-view-dashboard', to:'/'},
@@ -94,6 +110,9 @@ export default {
       // console.log("local: " + this.dinnertime)
       // console.log("global: " + this.$store.state.isDinner)
     }
+  },
+  toggleTogo(){
+    this.toggleTogo=true
   }
 }
 </script>

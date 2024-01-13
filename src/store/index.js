@@ -21,6 +21,7 @@ export default createStore({
         DRINKPRICE:1.72,
         tableNum:0,
         catID: 0,
+        seletedTogo: [],
         tables: [
             {
                 number: 1,
@@ -332,7 +333,29 @@ export default createStore({
             // console.log(state)
             // console.log(n)
             state.menu[state.catID].items[n].quantity++
+            let currIndex = state.seletedTogo.findIndex(({item}) => item === state.menu[state.catID].items[n].name)
             // state.sales.totalTogoPriceState = state.menu[state.catID].items[n].quantity * state.menu[state.catID].items[n].listPrice
+            if (currIndex === -1) {
+                // console.log("a")
+                state.seletedTogo.push({
+                    "item":state.menu[state.catID].items[n].name,
+                    "price":state.menu[state.catID].items[n].listPrice.toFixed(2),
+                    "quantity":state.menu[state.catID].items[n].quantity,
+
+                    // George's code
+                    id:state.catID,
+                    nTerm:n
+                    
+                })
+            } else {
+                // console.log("b")
+                state.seletedTogo[currIndex].quantity = state.menu[state.catID].items[n].quantity
+            }
+            
+            console.log(state.seletedTogo)
+            // console.log(state.seletedTogo.find(({item}) => item === "Pork Egg Roll"))
+
+            // console.log(state.menu[state.catID].category)
         },
         decreaseOrderQuantity(state, n){
             // console.log(state.menu[state.catID].items[n].quantity)
@@ -360,10 +383,37 @@ export default createStore({
                 // console.log("side")
             }
             // console.log(totalTogoPrice)
-            state.sales.totalTogoPriceState = totalTogoPrice
+            state.sales.totalTogoPriceState = totalTogoPrice.toFixed(2)
             // console.log(state.sales.totalTogoPriceState)
         },
+        increaseSelectedQuantity(state, n){
+            // console.log(state.menu[state.catID].items[n].quantity)
+            // console.log(state)
+            // console.log(n)
+            this.state.seletedTogo[n].quantity++
+            let temp = this.state.seletedTogo[n]
+            
+            this.state.menu[temp.id].items[temp.nTerm].quantity = temp.quantity
 
+            // let currIndex = state.seletedTogo.findIndex(({item}) => item === state.menu[state.catID].items[n].name)
+            // // state.sales.totalTogoPriceState = state.menu[state.catID].items[n].quantity * state.menu[state.catID].items[n].listPrice
+            // if (currIndex === -1) {
+            //     // console.log("a")
+            //     state.seletedTogo.push({
+            //         "item":state.menu[state.catID].items[n].name,
+            //         "price":state.menu[state.catID].items[n].listPrice.toFixed(2),
+            //         "quantity":state.menu[state.catID].items[n].quantity
+            //     })
+            // } else {
+            //     // console.log("b")
+            //     state.seletedTogo[currIndex].quantity = state.menu[state.catID].items[n].quantity
+            // }
+            
+            // console.log(state.seletedTogo)
+            // console.log(state.seletedTogo.find(({item}) => item === "Pork Egg Roll"))
+
+            // console.log(state.menu[state.catID].category)
+        },
 
 
         addingTogo(state){
