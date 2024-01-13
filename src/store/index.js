@@ -8,7 +8,8 @@ export default createStore({
             adultCount: 0,
             bigKidCount: 0,
             smlKidCount: 0,
-            revenue:0
+            revenue:0,
+            totalTogoPriceState: 0
         },
         ADULTPRICE: 11.12,
         BIGKIDPRICE: 6.47,
@@ -160,18 +161,18 @@ export default createStore({
             items: [
             {
                 name: 'Pork Egg Roll',
-                Quantity: 0,
-                listPrice: 0
+                quantity: 0,
+                listPrice: 1.50
             },
             {
                 name: 'Shrimp Egg Roll',
-                Quantity: 0,
-                listPrice: 0
+                quantity: 0,
+                listPrice: 1.75
             },
             {
                 name: 'Vegetable Egg Roll',
-                Quantity: 0,
-                listPrice: 0
+                quantity: 0,
+                listPrice: 1.00
             }
             ]
         },
@@ -180,13 +181,13 @@ export default createStore({
             items: [
             {
                 name: 'Egg Drop Soup',
-                Quantity: 0,
-                listPrice: 0
+                quantity: 0,
+                listPrice: 2.50
             },
             {
                 name: 'Wanton Soup',
-                Quantity: 0,
-                listPrice: 0
+                quantity: 0,
+                listPrice: 2.50
             }
             ]
         },
@@ -195,13 +196,13 @@ export default createStore({
             items: [
             {
                 name: 'House Specail Lo Mien',
-                Quantity: 0,
-                listPrice: 0
+                quantity: 0,
+                listPrice: 7.00
             },
             {
                 name: 'Beef Lo Mien',
-                Quantity: 0,
-                listPrice: 0
+                quantity: 0,
+                listPrice: 6.00
             }
             ]
         },
@@ -228,7 +229,6 @@ export default createStore({
         decreaseSmlKid(state){
             state.tables[state.tableNum].smlKid--
         },
-
         //calcualte drink price
         // calculateDrinkPrice(state){
         //     let num = state.tables[0].drinks
@@ -323,6 +323,48 @@ export default createStore({
             state.tables[state.tableNum].goodPpl=false
             state.tables[state.tableNum].occupied = false
         },
+
+
+
+        // togo stuff
+        increaseOrderQuantity(state, n){
+            // console.log(state.menu[state.catID].items[n].quantity)
+            // console.log(state)
+            // console.log(n)
+            state.menu[state.catID].items[n].quantity++
+            // state.sales.totalTogoPriceState = state.menu[state.catID].items[n].quantity * state.menu[state.catID].items[n].listPrice
+        },
+        decreaseOrderQuantity(state, n){
+            // console.log(state.menu[state.catID].items[n].quantity)
+            // console.log(state)
+            // console.log(n)
+            state.menu[state.catID].items[n].quantity--
+        },
+        calculateTogoTotal(state){
+            // console.log(state.menu[state.catID].items[n].quantity)
+            // console.log(state)
+            // console.log(n)
+            // state.sales.totalTogoPriceState = state.menu[state.catID].items[n].quantity * state.menu[state.catID].items[n].listPrice
+            let totalTogoPrice = 0
+            let currentMenuItem = state.menu
+            let currentPrice = 0
+            for(var i=0; i<currentMenuItem.length; i++){
+                let items=currentMenuItem[i].items
+                // console.log(currentMenuItem[0].items[0].name)
+                for(var j=0; j<items.length; j++){
+                    // console.log("inside")
+                    currentPrice = items[j].listPrice*items[j].quantity
+                    totalTogoPrice += currentPrice
+                    currentPrice=0
+                }
+                // console.log("side")
+            }
+            // console.log(totalTogoPrice)
+            state.sales.totalTogoPriceState = totalTogoPrice
+            // console.log(state.sales.totalTogoPriceState)
+        },
+
+
 
         addingTogo(state){
             console.log('togo')

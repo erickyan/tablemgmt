@@ -1,5 +1,5 @@
 <template>
-    <v-dialog width="400">
+    <v-dialog width="600">
         <v-card>
             <v-card-title class="headline black d-flex" primary-title>
                 Table No {{ $store.state.tableNum + 1 }} <v-spacer></v-spacer>

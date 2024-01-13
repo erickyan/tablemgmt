@@ -29,12 +29,13 @@ export default {
             <v-card class="mx-auto" height="150" :title=$store.state.menu[i-1].category @click="clickingItem(i)">
               <!-- displaying relevant food menus :title="$store.state.menu(i).title"-->
               <!-- <p>{{ $store.state.menu($store.state.catID).category }}</p> -->
-              <togo-details v-model="togoCompose"></togo-details>
+              
             </v-card>
-
+            
           </v-col>
         </v-row>
       </v-container>
+      <togo-details v-model="togoCompose"></togo-details>
     </v-main>
   </v-app>
 </template>
