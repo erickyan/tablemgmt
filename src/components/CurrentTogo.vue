@@ -31,7 +31,7 @@ export default {
                     <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseSelectedQuantity', index)">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseOrderQuantity', index)">
+                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseSelectedQuantity', index)">
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-card-title>

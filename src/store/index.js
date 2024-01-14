@@ -196,7 +196,7 @@ export default createStore({
             category: 'Lo Mien',
             items: [
             {
-                name: 'House Specail Lo Mien',
+                name: 'House Special Lo Mien',
                 quantity: 0,
                 listPrice: 7.00
             },
@@ -352,7 +352,7 @@ export default createStore({
                 state.seletedTogo[currIndex].quantity = state.menu[state.catID].items[n].quantity
             }
             
-            console.log(state.seletedTogo)
+            // console.log(state.seletedTogo)
             // console.log(state.seletedTogo.find(({item}) => item === "Pork Egg Roll"))
 
             // console.log(state.menu[state.catID].category)
@@ -387,34 +387,17 @@ export default createStore({
             // console.log(state.sales.totalTogoPriceState)
         },
         increaseSelectedQuantity(state, n){
-            // console.log(state.menu[state.catID].items[n].quantity)
-            // console.log(state)
-            // console.log(n)
             this.state.seletedTogo[n].quantity++
             let temp = this.state.seletedTogo[n]
             
             this.state.menu[temp.id].items[temp.nTerm].quantity = temp.quantity
-
-            // let currIndex = state.seletedTogo.findIndex(({item}) => item === state.menu[state.catID].items[n].name)
-            // // state.sales.totalTogoPriceState = state.menu[state.catID].items[n].quantity * state.menu[state.catID].items[n].listPrice
-            // if (currIndex === -1) {
-            //     // console.log("a")
-            //     state.seletedTogo.push({
-            //         "item":state.menu[state.catID].items[n].name,
-            //         "price":state.menu[state.catID].items[n].listPrice.toFixed(2),
-            //         "quantity":state.menu[state.catID].items[n].quantity
-            //     })
-            // } else {
-            //     // console.log("b")
-            //     state.seletedTogo[currIndex].quantity = state.menu[state.catID].items[n].quantity
-            // }
-            
-            // console.log(state.seletedTogo)
-            // console.log(state.seletedTogo.find(({item}) => item === "Pork Egg Roll"))
-
-            // console.log(state.menu[state.catID].category)
         },
-
+        decreaseSelectedQuantity(state, n){
+            this.state.seletedTogo[n].quantity--
+            let temp = this.state.seletedTogo[n]
+            
+            this.state.menu[temp.id].items[temp.nTerm].quantity = temp.quantity
+        },
 
         addingTogo(state){
             console.log('togo')

@@ -47,6 +47,10 @@ import { RouterView } from 'vue-router'
             prepend-icon='mdi-teddy-bear'
           >{{ $store.state.sales.smlKidCount }}</v-list-item>
           <v-divider></v-divider>
+          <v-list-item
+            prepend-icon='mdi-food-takeout-box-outline'
+          >{{ $store.state.sales.totalTogoPriceState }}</v-list-item>
+          <v-divider></v-divider>
           <v-list-item>
             <v-switch
               v-model="dinnertime"
@@ -75,7 +79,7 @@ import { RouterView } from 'vue-router'
                 <span>Togo</span>
                 
               </v-btn>
-              <div v-if="$store.state.sales.totalTogoPriceState !== 0"><v-chip class="ma-2" label> ${{ $store.state.sales.totalTogoPriceState}} </v-chip></div>
+              <div v-if="$store.state.sales.totalTogoPriceState !== 0"><v-chip class="ma-2" label color="red"> ${{ $store.state.sales.totalTogoPriceState}} </v-chip></div>
             </v-bottom-navigation>
          
           </v-layout>
