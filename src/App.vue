@@ -16,13 +16,13 @@ import { RouterView } from 'vue-router'
   
           <v-divider></v-divider>
           <v-list-item
-            prepend-icon='mdi-view-dashboard'
+            prepend-icon='mdi-seat-outline'
             title="Home"
             to='/'
           ></v-list-item>
           <v-divider></v-divider>
           <v-list-item
-            prepend-icon='mdi-forum'
+            prepend-icon='mdi-food-takeout-box'
             title="Order"
             to="about"
           ></v-list-item>
