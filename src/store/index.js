@@ -164,17 +164,42 @@ export default createStore({
             {
                 name: 'Pork Egg Roll',
                 quantity: 0,
+                listPrice: 1.20
+            },
+            {
+                name: 'Spring Roll(2)',
+                quantity: 0,
                 listPrice: 1.50
             },
             {
-                name: 'Shrimp Egg Roll',
+                name: 'Cream Cheese Wonton(8)',
                 quantity: 0,
-                listPrice: 1.75
+                listPrice: 4.99
             },
             {
-                name: 'Vegetable Egg Roll',
+                name: 'Teriyaki Chicken(4)',
                 quantity: 0,
-                listPrice: 1.00
+                listPrice: 5.25
+            },
+            {
+                name: 'Fried Shrimp(20)',
+                quantity: 0,
+                listPrice: 4.99
+            },
+            {
+                name: 'Fried Chicken Wing(4)',
+                quantity: 0,
+                listPrice: 6.99
+            },
+            {
+                name: 'Fried Dumpling(8)',
+                quantity: 0,
+                listPrice: 6.99
+            },
+            {
+                name: 'Steamed Dumpling(8)',
+                quantity: 0,
+                listPrice: 6.99
             }
             ]
         },
@@ -182,32 +207,452 @@ export default createStore({
             category: 'Soup',
             items: [
             {
-                name: 'Egg Drop Soup',
+                name: 'Pt. Wanton Soup',
                 quantity: 0,
-                listPrice: 2.50
+                listPrice: 2.75
             },
             {
-                name: 'Wanton Soup',
+                name: 'Qt. Wanton Soup',
                 quantity: 0,
-                listPrice: 2.50
+                listPrice: 4.25
+            },
+            {
+                name: 'Pt. Egg Drop Soup',
+                quantity: 0,
+                listPrice: 2.75
+            },
+            {
+                name: 'Qt. Egg Drop Soup',
+                quantity: 0,
+                listPrice: 4.25
+            },
+            {
+                name: 'Pt. Wonton Egg Drop Soup',
+                quantity: 0,
+                listPrice: 3.00
+            },
+            {
+                name: 'Qt. Wonton Egg Drop Soup',
+                quantity: 0,
+                listPrice: 4.50
+            },
+            {
+                name: 'Pt. Chicken Noodle Soup',
+                quantity: 0,
+                listPrice: 3.00
+            },
+            {
+                name: 'Qt. Chicken Noodle Soup',
+                quantity: 0,
+                listPrice: 4.50
+            },
+            {
+                name: 'Pt. Chicken Rice Soup',
+                quantity: 0,
+                listPrice: 3.00
+            },
+            {
+                name: 'Qt. Chicken Rice Soup',
+                quantity: 0,
+                listPrice: 4.50
+            },
+            {
+                name: 'Pt. Hot & Sour Soup',
+                quantity: 0,
+                listPrice: 2.75
+            },
+            {
+                name: 'Qt. Hot & Sour Soup',
+                quantity: 0,
+                listPrice: 4.25
             }
             ]
         },
         {
-            category: 'Lo Mien',
+            category: 'Lo Mein',
             items: [
             {
-                name: 'House Special Lo Mien',
+                name: 'Pt. Vegetable Lo Mein',
+                quantity: 0,
+                listPrice: 4.00
+            },
+            {
+                name: 'Qt. Vegetable Lo Mein',
                 quantity: 0,
                 listPrice: 7.00
             },
             {
-                name: 'Beef Lo Mien',
+                name: 'Pt. Roast Pork Lo Mein',
                 quantity: 0,
-                listPrice: 6.00
+                listPrice: 5.00
+            },
+            {
+                name: 'Qt. Roast Pork Lo Mein',
+                quantity: 0,
+                listPrice: 8.50
+            },
+            {
+                name: 'Pt. Chicken Lo Mein',
+                quantity: 0,
+                listPrice: 5.00
+            },
+            {
+                name: 'Qt. Chicken Lo Mein',
+                quantity: 0,
+                listPrice: 8.50
+            },
+            {
+                name: 'Pt. Beef Lo Mein',
+                quantity: 0,
+                listPrice: 5.00
+            },
+            {
+                name: 'Qt. Beef Lo Mein',
+                quantity: 0,
+                listPrice: 8.50
+            },
+            {
+                name: 'Pt. Shrimp Lo Mein',
+                quantity: 0,
+                listPrice: 5.00
+            },
+            {
+                name: 'Qt. Shrimp Lo Mein',
+                quantity: 0,
+                listPrice: 8.50
+            },
+            {
+                name: 'House Special Lo Mein',
+                quantity: 0,
+                listPrice: 9.00
             }
             ]
         },
+        {
+            category: 'Chow Fun',
+            items: [
+            {
+                name: 'Vegetable Chow Fun',
+                quantity: 0,
+                listPrice: 7.00
+            },
+            {
+                name: 'Roast Pork Chow Fun',
+                quantity: 0,
+                listPrice: 7.75
+            },
+            {
+                name: 'Chicken Chow Fun',
+                quantity: 0,
+                listPrice: 7.75
+            },
+            {
+                name: 'Beef Chow Fun',
+                quantity: 0,
+                listPrice: 7.75
+            },
+            {
+                name: 'Shrimp Chow Fun',
+                quantity: 0,
+                listPrice: 7.75
+            },
+            {
+                name: 'House Special Chow Fun',
+                quantity: 0,
+                listPrice: 8.75
+            },
+            {
+                name: 'Singapore Chow Fun',
+                quantity: 0,
+                listPrice: 8.75
+            },
+            ]
+        },
+        {
+            category: 'Vegetable',
+            items: [
+            {
+                name: 'Broccoli w. Brown Sauce',
+                quantity: 0,
+                listPrice: 7.00
+            },
+            {
+                name: 'Mixed Vegetable',
+                quantity: 0,
+                listPrice: 7.00
+            },
+            {
+                name: 'Broccoli w. Garlic Sauce',
+                quantity: 0,
+                listPrice: 7.00
+            },
+            {
+                name: 'Bean Curd Szechuan Style',
+                quantity: 0,
+                listPrice: 7.00
+            },
+            ]
+        },
+        {
+            category: 'Side Order',
+            items: [
+            {
+                name: 'Pt. White Rice',
+                quantity: 0,
+                listPrice: 2.00
+            },
+            {
+                name: 'Qt. White RIce',
+                quantity: 0,
+                listPrice: 3.00
+            },
+            {
+                name: 'Fried Noodle',
+                quantity: 0,
+                listPrice: 0.75
+            },
+            ]
+        },
+        {
+            category: 'Chef\'s Special',
+            items: [
+            {
+                name: 'Peanut Chicken',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Sesame Chicken',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Black Pepper Chicken',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Mongolian Beef',
+                quantity: 0,
+                listPrice: 9.75
+            },
+            {
+                name: 'Happy Family',
+                quantity: 0,
+                listPrice: 11.50
+            },
+            {
+                name: 'Orange Chicken',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'General Tso\'s Chicken',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Hunan Double Style',
+                quantity: 0,
+                listPrice: 10.50
+            },
+            ]
+        },
+        {
+            category: 'Chicken',
+            items: [
+            {
+                name: 'Pt. Sweet & Sour Chicken',
+                quantity: 0,
+                listPrice: 5.50
+            },
+            {
+                name: 'Qt. Sweet & Sour Chicken',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Chicken w. Fresh Mushroom',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Chicken w. Chinese Vegetable',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Chicken w. Broccoli',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Chicken with Cashew Nut',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Chicken w. Mixed Vegetable',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Moo Goo Gai Pan',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Curry Chicken w. Onion',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Chicken w. Garlic Sauce',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Kung Po Chicken',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Hunan Chicken',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Szechuan Chicken',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            {
+                name: 'Hot & Spicy Chicken',
+                quantity: 0,
+                listPrice: 9.00
+            },
+            ]
+        },
+        {
+            category: 'Seafood',
+            items: [
+            {
+                name: 'Jumbo Shrimp w. Lobster Sauce',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Jumbo Shrimp w. Chinese Vegetable',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Jumbo Shrimp w. Pepper & Onion',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Jumbo Shrimp w. Broccoli',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Jumbo Shrimp w. Fresh Mushroom',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Jumbo Shrimp w. Cashew Nut',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Jumbo Shrimp w. Mixed Vegetable',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Jumbo Shrimp w. Garlic Sauce',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Jumbo Shrimp Hunan Style ',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Kung Po Shrimp',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Szechuan Shrimp',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Hot & Spicy Shrimp',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            ]
+        },
+        {
+            category: 'Beef',
+            items: [
+            {
+                name: 'Beef w. Chinese Vegetable',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Pepper Steak w. Onion',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Beef w. Fresh Mushroom',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Beef w. Broccoli',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Beef w. Mixed Vegetable',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Curry Beef w. Onion',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Beef w. Garlic Sauce',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Szechuan Beef',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Hunan Beef',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            {
+                name: 'Hot & Spicy Beef',
+                quantity: 0,
+                listPrice: 9.50
+            },
+            ]
+        }
         ]
     },
     mutations: {

@@ -25,8 +25,8 @@ export default {
     <v-main>
       <v-container>
         <v-row>
-          <v-col v-for="i in 3" :key="i" cols="4">
-            <v-card class="mx-auto" height="150" :title=$store.state.menu[i-1].category @click="clickingItem(i)">
+          <v-col v-for="i in 10" :key="i" cols="4">
+            <v-card class="mx-auto" height="80" :title=$store.state.menu[i-1].category @click="clickingItem(i)">
               <!-- displaying relevant food menus :title="$store.state.menu(i).title"-->
               <!-- <p>{{ $store.state.menu($store.state.catID).category }}</p> -->
             </v-card>
