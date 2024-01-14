@@ -16,7 +16,7 @@ import { RouterView } from 'vue-router'
   
           <v-divider></v-divider>
           <v-list-item
-            prepend-icon='mdi-seat-outline'
+            prepend-icon='mdi-store'
             title="Home"
             to='/'
           ></v-list-item>
