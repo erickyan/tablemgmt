@@ -11,6 +11,7 @@ export default createStore({
             revenue:0,
             totalTogoRevenue: 0
         },
+        TAX_RATE: 1.07,
         ADULTPRICE: 11.12,
         BIGKIDPRICE: 6.47,
         SMALLKIDPRICE: 5.39,
@@ -721,10 +722,10 @@ export default createStore({
             state.tables[state.tableNum].drinkPrice = state.WATERPRICE*numWater + state.DRINKPRICE*numDrink
             if(state.isDinner){
                 // console.log('diner')
-                state.tables[state.tableNum].totalPrice = (state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTDINNERPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDDINNERPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDDINNERPRICE).toFixed(2)
+                state.tables[state.tableNum].totalPrice = ((state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTDINNERPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDDINNERPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDDINNERPRICE)*state.TAX_RATE).toFixed(2)
             }else{
                 // console.log('lunch')
-                state.tables[state.tableNum].totalPrice = (state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDPRICE).toFixed(2)
+                state.tables[state.tableNum].totalPrice = ((state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDPRICE)*state.TAX_RATE).toFixed(2)
             }
             
         },
@@ -829,7 +830,7 @@ export default createStore({
                 // console.log("side")
             }
             // console.log(totalTogoPrice)
-            state.totalTogoPrice = totalTogoPrice.toFixed(2)
+            state.totalTogoPrice = (totalTogoPrice*state.TAX_RATE).toFixed(2)
             // console.log(state.sales.totalTogoPriceState)
         },
         increaseSelectedQuantity(state, n){

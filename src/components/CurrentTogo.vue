@@ -10,7 +10,7 @@ export default {
 </script>
 
 <template>
-    <v-dialog width="700">
+    <v-dialog width="600">
         <v-card>
             <v-card-title class="headline black d-flex" primary-title>
                 <p class="text-h6 ps-3 me-auto">Current Order </p>

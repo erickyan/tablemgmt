@@ -29,7 +29,7 @@ import { RouterView } from 'vue-router'
           <v-divider></v-divider>
           <v-list-item
             prepend-icon='mdi-currency-usd'
-          >${{ $store.state.sales.revenue) }}</v-list-item>
+          >${{ $store.state.sales.revenue }}</v-list-item>
           <v-divider></v-divider>
           <v-list-item
             prepend-icon='mdi-account-multiple'

@@ -1,5 +1,5 @@
 <template>
-    <v-dialog width="600">
+    <v-dialog width="750">
         <v-card>
             <v-card-title class="headline black d-flex" primary-title>
                 <p class="text-h6 ps-3 me-auto">ITEM </p>
