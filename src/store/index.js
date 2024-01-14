@@ -9,7 +9,7 @@ export default createStore({
             bigKidCount: 0,
             smlKidCount: 0,
             revenue:0,
-            totalTogoPriceState: 0
+            totalTogoRevenue: 0
         },
         ADULTPRICE: 11.12,
         BIGKIDPRICE: 6.47,
@@ -155,8 +155,9 @@ export default createStore({
                 togo: 0
             }
         ],
+
+        totalTogoPrice: 0,
         menu : [
-            
         {
             category: 'Appetizers',
             items: [
@@ -383,7 +384,7 @@ export default createStore({
                 // console.log("side")
             }
             // console.log(totalTogoPrice)
-            state.sales.totalTogoPriceState = totalTogoPrice.toFixed(2)
+            state.totalTogoPrice = totalTogoPrice.toFixed(2)
             // console.log(state.sales.totalTogoPriceState)
         },
         increaseSelectedQuantity(state, n){
@@ -398,9 +399,19 @@ export default createStore({
             
             this.state.menu[temp.id].items[temp.nTerm].quantity = temp.quantity
         },
-
-        addingTogo(state){
-            console.log('togo')
+        togoPaid(state){
+            state.sales.totalTogoRevenue = (state.sales.totalTogoRevenue*1 +state.totalTogoPrice*1).toFixed(2)
+            // resetting menu and cart
+            state.seletedTogo=[]
+            state.totalTogoPrice=0
+            let currentMenuItem = state.menu
+            for(var i=0; i<currentMenuItem.length; i++){
+                let items=currentMenuItem[i].items
+                for(var j=0; j<items.length; j++){
+                    items[j].quantity = 0
+                    // console.log("name: " + items[j].name + ", quantity: " + items[j].quantity)
+                }
+            }
         }
         
     },

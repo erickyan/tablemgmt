@@ -39,7 +39,7 @@ export default {
             </div>
 
             <v-card-actions>
-                <v-btn class="ml-auto" @click="" outlined>
+                <v-btn class="ml-auto" @click="$store.commit('togoPaid')" outlined>
                     <v-icon size="x-large" icon="mdi-cash-check"></v-icon>
                 </v-btn>
             </v-card-actions>

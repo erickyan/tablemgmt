@@ -29,7 +29,7 @@ import { RouterView } from 'vue-router'
           <v-divider></v-divider>
           <v-list-item
             prepend-icon='mdi-currency-usd'
-          >{{ $store.state.sales.revenue }}</v-list-item>
+          >${{ $store.state.sales.revenue.toFixed(2) }}</v-list-item>
           <v-divider></v-divider>
           <v-list-item
             prepend-icon='mdi-account-multiple'
@@ -49,7 +49,7 @@ import { RouterView } from 'vue-router'
           <v-divider></v-divider>
           <v-list-item
             prepend-icon='mdi-food-takeout-box-outline'
-          >{{ $store.state.sales.totalTogoPriceState }}</v-list-item>
+          >${{ $store.state.sales.totalTogoRevenue }}</v-list-item>
           <v-divider></v-divider>
           <v-list-item>
             <v-switch
@@ -79,7 +79,7 @@ import { RouterView } from 'vue-router'
                 <span>Togo</span>
                 
               </v-btn>
-              <div v-if="$store.state.sales.totalTogoPriceState !== 0"><v-chip class="ma-2" label color="red"> ${{ $store.state.sales.totalTogoPriceState}} </v-chip></div>
+              <div v-if="$store.state.totalTogoPrice !== 0"><v-chip class="ma-2" label color="red"> ${{ $store.state.totalTogoPrice}} </v-chip></div>
             </v-bottom-navigation>
          
           </v-layout>
