@@ -9,7 +9,7 @@
             <v-card-text>
                 <!-- <v-form ref="sendForm" v-model="valid" lazy-validation> -->
                 <v-sheet class="d-flex">
-                    <p class="text-h6 ma-1 ps-3 me-auto">大人 </p>
+                    <p class="text-h6 ma-1 ps-3 me-auto">Buffet   </p>
                     <p class="text-h6 ma-1 me-auto">{{ $store.state.tables[$store.state.tableNum].adult }}</p>
                     <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseAdult')">
                         <v-icon icon="mdi-plus"></v-icon>
@@ -19,7 +19,7 @@
                     </v-btn>
                 </v-sheet>
                 <v-sheet class="d-flex">
-                    <p class="text-h6 ma-1 ps-3 me-auto">大孩 </p>
+                    <p class="text-h6 ma-1 ps-3 me-auto">B Kid</p>
                     <p class="text-h6 ma-1 me-auto">{{ $store.state.tables[$store.state.tableNum].bigKid }}</p>
                     <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseBigKid')">
                         <v-icon icon="mdi-plus"></v-icon>
@@ -29,7 +29,7 @@
                     </v-btn>
                 </v-sheet>
                 <v-sheet class="d-flex">
-                    <p class="text-h6 ma-1 ps-3 me-auto">小孩</p>
+                    <p class="text-h6 ma-1 ps-3 me-auto">S Kid</p>
                     <p class="text-h6 ma-1 me-auto"> {{ $store.state.tables[$store.state.tableNum].smlKid }} </p>
                     <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseSmlKid')">
                         <v-icon icon="mdi-plus"></v-icon>
