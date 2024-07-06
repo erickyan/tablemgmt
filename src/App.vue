@@ -68,7 +68,7 @@ import { RouterView } from 'vue-router'
         >
         <v-app-bar-nav-icon @click="drawer = !drawer">
         </v-app-bar-nav-icon>
-        <v-app-bar-title>China Buffet</v-app-bar-title>
+        <v-app-bar-title>China Restaurant</v-app-bar-title>
 
 
 
