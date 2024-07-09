@@ -727,7 +727,9 @@ export default createStore({
                 // console.log('lunch')
                 state.tables[state.tableNum].totalPrice = ((state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDPRICE)*state.TAX_RATE).toFixed(2)
             }
-            
+            // remove dialog here?
+            // console.log(state)
+            // console.log(this)
         },
         getTimestamp(state){
             const today = new Date();

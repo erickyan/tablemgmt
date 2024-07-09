@@ -54,7 +54,8 @@
           </v-col>
         </v-row>
       </v-container>
-      <order-details v-model="detailCompose"></order-details>
+      <!-- <order-details v-model="detailCompose"></order-details> -->
+      <order-details v-model="detailCompose" v-if="showDetails"></order-details>
     </v-main>
   </v-app>
 </template>
@@ -65,6 +66,7 @@ export default {
   data: () => ({
     drawer: null,
     detailCompose: false,
+    showDetails: false
     // goodPpl: true,
 
   }),
@@ -73,6 +75,9 @@ export default {
       // console.log($store.state.tables.adult)
       this.$store.state.tableNum = n - 1
       this.detailCompose = true
+      this.showDetails = !this.showDetails
+      console.log(this.detailCompose)
+      console.log(this.showDetails)
 
       // console.log(this.$store.state.tableNum )
     },

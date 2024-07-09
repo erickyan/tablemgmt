@@ -1,9 +1,10 @@
 <template>
-    <v-dialog width="600">
+    <v-dialog width="600" v-if="updateBtn">
         <v-card>
             <v-card-title class="headline black d-flex" primary-title>
                 Table No {{ $store.state.tableNum + 1 }} <v-spacer></v-spacer>
-                <v-btn size="small" @click="$store.commit('calculateTotal')" outlined color="primary">Update</v-btn>
+                <!-- <v-btn size="small" @click="$store.commit('calculateTotal')" outlined color="primary">Update</v-btn> -->
+                <v-btn size="small" @click=updateMenu outlined color="primary">Update</v-btn>
             </v-card-title>
             <v-divider></v-divider>
             <v-card-text>
@@ -111,6 +112,7 @@
 export default {
     data: () => ({
         valid: true,
+        updateBtn: true
 
     }),
     methods: {
@@ -135,6 +137,10 @@ export default {
         reorderDrink(){
             this.$store.state.tables[this.$store.state.tableNum].drinks = []
             // console.log(this.$store.state.tables[this.$store.state.tableNum].drinks )
+        },
+        updateMenu(){
+            this.$store.commit('calculateTotal')
+            this.updateBtn = !this.updateBtn
         }
     },
     // computed: {
