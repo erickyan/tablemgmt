@@ -3,7 +3,8 @@
     <v-main>
       <v-container>
         <v-row>
-          <v-col v-for="n in 10" :key="n" cols="4">
+          <!-- default cols=4 -->
+          <v-col v-for="n in 1" :key="n" cols="12">
             <v-card class="mx-auto" height="200" @click="addDetails(n)">
               <v-card-item>
                 <v-card-title class="headline black d-flex">
