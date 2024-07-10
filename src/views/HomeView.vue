@@ -63,6 +63,13 @@
 
 
 <script>
+
+// const printBtn = document.getElementById('printMeId');
+
+//   printBtn.addEventListener('click', function (){
+//     print()
+//     console.log('1')
+//   })
 export default {
   data: () => ({
     drawer: null,
@@ -82,8 +89,9 @@ export default {
 
       // console.log(this.$store.state.tableNum )
     },
-    printeMe(){
-      print();
+    printMe(){
+      console.log('h')
+      window.print()
     }
   },
   // computed: {
@@ -92,5 +100,7 @@ export default {
 
 }
 
+  
+    
 
 </script>
