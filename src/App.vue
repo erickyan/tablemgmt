@@ -51,7 +51,7 @@ import { RouterView } from 'vue-router'
             prepend-icon='mdi-food-takeout-box-outline'
           >${{ $store.state.sales.totalTogoRevenue }}</v-list-item>
           <v-divider></v-divider>
-          <v-list-item>
+          <!-- <v-list-item>
             <v-switch
               v-model="dinnertime"
               color="primary"
@@ -60,7 +60,7 @@ import { RouterView } from 'vue-router'
               label="Blue is Lunch price"
               density:compact
             ></v-switch>
-          </v-list-item>
+          </v-list-item> -->
           <v-divider></v-divider>
         </v-navigation-drawer>
         <v-app-bar 
@@ -68,16 +68,31 @@ import { RouterView } from 'vue-router'
         >
         <v-app-bar-nav-icon @click="drawer = !drawer">
         </v-app-bar-nav-icon>
-        <v-app-bar-title>How much??</v-app-bar-title>
+        <v-app-bar-title>China Restaurant Calculator</v-app-bar-title>
 
 
 
-        <v-layout style="height: 56px;">
+        <!-- <v-layout style="height: 56px;">
             <v-bottom-navigation v-model="toggleTogo">
               <v-btn value>
                 <v-icon size="x-large" v-bind:style="[($store.state.seletedTogo.length !== 0) ? {'color': 'red'} : {'color': 'black'}]" >mdi-food-takeout-box-outline</v-icon>
                 <span>Togo</span>
                 
+              </v-btn>
+              <div v-if="$store.state.totalTogoPrice !== 0"><v-chip class="ma-2" label color="red"> ${{ $store.state.totalTogoPrice}} </v-chip></div>
+            </v-bottom-navigation>
+         
+          </v-layout> -->
+
+          <v-layout style="height: 56px;">
+            <v-bottom-navigation>
+              <v-btn @click=toggleDinner>
+
+                <v-icon size="x-large" icon="mdi-white-balance-sunny" v-if="$store.state.isDinner == false"></v-icon>
+                <v-icon size="x-large" icon="mdi-weather-night" v-if="$store.state.isDinner == true"></v-icon>
+                <!-- <v-icon size="x-large" v-bind:style="[($store.state.seletedTogo.length !== 0) ? {'color': 'red'} : {'color': 'black'}]" >mdi-food-takeout-box-outline</v-icon> -->
+                <!-- <span v-bind:style="[($store.state.isDinner) ? {'content': 'red'} : {'content': 'black'}]">dinner</span> -->
+                {{ label }}
               </v-btn>
               <div v-if="$store.state.totalTogoPrice !== 0"><v-chip class="ma-2" label color="red"> ${{ $store.state.totalTogoPrice}} </v-chip></div>
             </v-bottom-navigation>
@@ -102,6 +117,7 @@ export default {
     drawer: null,
     dinnertime: true,
     toggleTogo: false,
+    label: 'LUNCH',
     // detailCompose: false,
     sideBarList: [
       {title: 'Home', icon: 'mdi-view-dashboard', to:'/'},
@@ -110,7 +126,12 @@ export default {
   }),
   methods: {
     toggleDinner(){
-      this.$store.state.isDinner = this.dinnertime
+      this.$store.state.isDinner = !this.$store.state.isDinner
+      if (this.$store.state.isDinner === true){
+        this.label = 'DINNER'
+      } else {
+        this.label = 'LUNCH'
+      }
       // console.log("local: " + this.dinnertime)
       // console.log("global: " + this.$store.state.isDinner)
     }

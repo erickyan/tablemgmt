@@ -54,7 +54,7 @@
           </v-col>
         </v-row>
       </v-container>
-      <v-btn @click="printMe">Print Me</v-btn>
+      <!-- <v-btn @click="printMe">Print Me</v-btn> -->
       <!-- <order-details v-model="detailCompose"></order-details> -->
       <order-details v-model="detailCompose" v-if="showDetails"></order-details>
     </v-main>
@@ -89,10 +89,10 @@ export default {
 
       // console.log(this.$store.state.tableNum )
     },
-    printMe(){
-      console.log('h')
-      window.print()
-    }
+    // printMe(){
+    //   console.log('h')
+    //   window.print()
+    // }
   },
   // computed: {
   //   tableNumLocal() { return this.$store.state.tableNum }

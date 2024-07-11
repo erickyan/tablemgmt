@@ -2,46 +2,45 @@
     <v-dialog width="600" v-if="updateBtn">
         <v-card>
             <v-card-title class="headline black d-flex" primary-title>
-                Table No {{ $store.state.tableNum + 1 }} <v-spacer></v-spacer>
+                Table {{ $store.state.tableNum + 1 }} <v-spacer></v-spacer>
                 <!-- <v-btn size="small" @click="$store.commit('calculateTotal')" outlined color="primary">Update</v-btn> -->
+                <p class="text-h6 pr-5 me-auto"> $ {{ $store.state.tables[$store.state.tableNum].totalPrice }} </p>
                 <v-btn size="small" @click=updateMenu outlined color="primary">Update</v-btn>
             </v-card-title>
             <v-divider></v-divider>
             <v-card-text>
                 <!-- <v-form ref="sendForm" v-model="valid" lazy-validation> -->
                 <v-sheet class="d-flex">
-                    <p class="text-h6 ma-1 ps-3 me-auto">Buffet   </p>
+                    <p class="text-h6 ma-1 me-auto">Buffet</p>
                     <p class="text-h6 ma-1 me-auto">{{ $store.state.tables[$store.state.tableNum].adult }}</p>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseAdult')">
+                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseAdult'); $store.commit('calculateTotal')">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseAdult')">
+                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseAdult'); $store.commit('calculateTotal')">
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-sheet>
                 <v-sheet class="d-flex">
-                    <p class="text-h6 ma-1 ps-3 me-auto">B Kid</p>
-                    <p class="text-h6 ma-1 me-auto">{{ $store.state.tables[$store.state.tableNum].bigKid }}</p>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseBigKid')">
+                    <p class="text-h6 ma-1 me-auto">Kid(6-9)</p>
+                    <p class="text-h6 ma-1 pr-5 me-auto">{{ $store.state.tables[$store.state.tableNum].bigKid }}</p>
+                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseBigKid'); $store.commit('calculateTotal')">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseBidKid')">
+                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseBidKid'); $store.commit('calculateTotal')">
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-sheet>
                 <v-sheet class="d-flex">
-                    <p class="text-h6 ma-1 ps-3 me-auto">S Kid</p>
-                    <p class="text-h6 ma-1 me-auto"> {{ $store.state.tables[$store.state.tableNum].smlKid }} </p>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseSmlKid')">
+                    <p class="text-h6 ma-1 me-auto">Kid(2-5)</p>
+                    <p class="text-h6 ma-1 pr-5 me-auto"> {{ $store.state.tables[$store.state.tableNum].smlKid }} </p>
+                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseSmlKid'); $store.commit('calculateTotal')">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseSmlKid')">
+                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseSmlKid'); $store.commit('calculateTotal')">
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-sheet>
                 <v-sheet>
-
-
                     <v-container >
                         <div style="display: flex; height: 70px;">
                             <v-row no-gutters>
@@ -54,17 +53,17 @@
 
                     <v-chip-group size="x-small" style="height: 130px; overflow-y: scroll;">
                         <!-- <v-btn @click="reorderDrink()" icon="mdi-cancel" color="red-accent-4" size="x-small"></v-btn> -->
-                        <v-chip @click="addDrinks('WTER')"><v-icon start icon="mdi-cube"></v-icon>Water</v-chip>
-                        <v-chip @click="addDrinks('COKE')"><v-icon start icon="mdi-cube"></v-icon>Coke</v-chip>
-                        <v-chip @click="addDrinks('STEA')"><v-icon start icon="mdi-cube"></v-icon>SweetTea</v-chip>
-                        <v-chip @click="addDrinks('SPRT')"><v-icon start icon="mdi-cube"></v-icon>Sprite</v-chip>
-                        <v-chip @click="addDrinks('DRPP')"><v-icon start icon="mdi-cube"></v-icon>DrPepper</v-chip>
-                        <v-chip @click="addDrinks('DIET')"><v-icon start icon="mdi-cube"></v-icon>DietCoke</v-chip>
-                        <v-chip @click="addDrinks('UTEA')"><v-icon start icon="mdi-cube"></v-icon>UnsweetTea</v-chip>
-                        <v-chip @click="addDrinks('LMND')"><v-icon start icon="mdi-cube"></v-icon>Lemonade</v-chip>
-                        <v-chip @click="addDrinks('HALF')"><v-icon start icon="mdi-cube"></v-icon>Half-Half</v-chip>
-                        <v-chip @click="addDrinks('COFE')"><v-icon start icon="mdi-cube"></v-icon>Coffee</v-chip>
-                        <v-chip @click="addDrinks('HTEA')"><v-icon start icon="mdi-cube"></v-icon>Hot Tea</v-chip>
+                        <v-chip @click="addDrinks('WTER'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Water</v-chip>
+                        <v-chip @click="addDrinks('COKE'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Coke</v-chip>
+                        <v-chip @click="addDrinks('STEA'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>SweetTea</v-chip>
+                        <v-chip @click="addDrinks('SPRT'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Sprite</v-chip>
+                        <v-chip @click="addDrinks('DRPP'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>DrPepper</v-chip>
+                        <v-chip @click="addDrinks('DIET'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>DietCoke</v-chip>
+                        <v-chip @click="addDrinks('UTEA'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>UnsweetTea</v-chip>
+                        <v-chip @click="addDrinks('LMND'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Lemonade</v-chip>
+                        <v-chip @click="addDrinks('HALF'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Half-Half</v-chip>
+                        <v-chip @click="addDrinks('COFE'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Coffee</v-chip>
+                        <v-chip @click="addDrinks('HTEA'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Hot Tea</v-chip>
                         
                         <!-- <v-chip @click="addDrinks('')">Water</v-chip>
                             <v-chip @click="addDrinks('')">HotTea</v-chip>
@@ -141,7 +140,8 @@ export default {
         updateMenu(){
             this.$store.commit('calculateTotal')
             this.updateBtn = !this.updateBtn
-        }
+            this.$store.commit('getTimestamp')
+        },
     },
     // computed: {
     //     tableNumLocal() { return this.$store.state.tableNum }
