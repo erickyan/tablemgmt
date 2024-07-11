@@ -46,7 +46,7 @@
               </v-card-item>
             </v-card>
             <div class="d-flex justify-end mb-6">
-              <v-list-item-title class="font-weight-black"> Total $ {{
+              <v-list-item-title class="font-weight-black text-h6 pr-3"> Total $ {{
                 $store.state.tables[n - 1].totalPrice }}
               </v-list-item-title>
             </div>
