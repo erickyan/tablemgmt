@@ -4,7 +4,7 @@
       <v-container>
         <v-row>
           <!-- default cols=4 -->
-          <v-col v-for="n in 1" :key="n" cols="12">
+          <v-col v-for="n in 10" :key="n" cols="4">
             <v-card class="mx-auto" height="200" @click="addDetails(n)">
               <v-card-item>
                 <v-card-title class="headline black d-flex">
@@ -54,7 +54,6 @@
           </v-col>
         </v-row>
       </v-container>
-      <!-- <v-btn @click="printMe">Print Me</v-btn> -->
       <!-- <order-details v-model="detailCompose"></order-details> -->
       <order-details v-model="detailCompose" v-if="showDetails"></order-details>
     </v-main>
