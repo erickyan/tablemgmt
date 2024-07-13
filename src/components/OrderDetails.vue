@@ -79,6 +79,7 @@
                 </v-sheet>
                 <!-- </v-form> -->
             </v-card-text>
+            
             <v-card-actions>
 
                 <!-- <v-btn class="ml-auto" @click="$store.commit('addingTogo')" outlined>
@@ -94,8 +95,8 @@
                 <v-btn class="ml-auto" @click="$store.commit('clearEverything')" outlined>
                     <v-icon size="x-large" icon="mdi-cancel"></v-icon>
                 </v-btn>
-                <v-btn class="ml-auto" @click="$store.commit('getTimestamp')" outlined >
-                    <v-icon size="x-large" icon="mdi-clock-check-outline"></v-icon>
+                <v-btn class="ml-auto" @click="printTicket" outlined >
+                    <v-icon size="x-large" icon="mdi-printer"></v-icon>
                 </v-btn>
                 <v-btn class="ml-auto" @click="$store.state.tables[$store.state.tableNum].goodPpl = !$store.state.tables[$store.state.tableNum].goodPpl" outlined color="pink-darken-1">
                     <v-icon size="x-large" icon="mdi-heart-broken" v-if="$store.state.tables[$store.state.tableNum].goodPpl == true"></v-icon>
@@ -103,7 +104,81 @@
                 </v-btn>
             </v-card-actions>
         </v-card>
+
+ <v-card id="printJS-lunch" class="d-none">
+    <img src='/src/assets/RECEIPT_TOP_NO_BG.png' style="display: block;
+                                                        padding-top: 50px;
+                                                        margin-left: auto;
+                                                        margin-right: auto;
+                                                        width: 50%;">
+    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].adult }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1>Buffet</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 140px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+    </div>
+    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].bigKid }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1>Kid(6-9)</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 110px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+    </div>
+    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].smlKid }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1>Kid(2-5)</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 110px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+    </div>
+    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].drinks.length }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1>Drink</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 145px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].totalPrice - ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTPRICE*$store.state.TAX_RATE) - ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDPRICE*$store.state.TAX_RATE).toFixed(2) - ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDPRICE*$store.state.TAX_RATE).toFixed(2)).toFixed(2) }}</h1></div>
+    </div>
+    <div style="width: 50%; padding-left: 200px; margin-bottom: -10px;">
+        <div style="display: inline-block; margin: 10px;"><h1>Total</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 192px;"><h1>$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
+    </div>
+    <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="display: block;
+                                                        margin-left: auto;
+                                                        margin-right: auto;
+                                                        width: 50%;">
+ </v-card>
+
+ <v-card id="printJS-dinner" class="d-none">
+    <img src='/src/assets/RECEIPT_TOP_NO_BG.png' style="display: block;
+                                                        padding-top: 50px;
+                                                        margin-left: auto;
+                                                        margin-right: auto;
+                                                        width: 50%;">
+    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].adult }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1>Buffet</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 140px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTDINNERPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+    </div>
+    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].bigKid }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1>Kid(6-9)</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 110px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+    </div>
+    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].smlKid }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1>Kid(2-5)</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 110px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+    </div>
+    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].drinks.length }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1>Drink</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 145px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].totalPrice - ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTDINNERPRICE*$store.state.TAX_RATE) - ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2) - ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2)).toFixed(2) }}</h1></div>
+    </div>
+    <div style="width: 50%; padding-left: 200px; margin-bottom: -10px;">
+        <div style="display: inline-block; margin: 10px;"><h1>Total</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 192px;"><h1>$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
+    </div>
+    <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="display: block;
+                                                        margin-left: auto;
+                                                        margin-right: auto;
+                                                        width: 50%;">
+ </v-card>
+
     </v-dialog>
+    
 </template>
 
 
@@ -112,7 +187,6 @@ export default {
     data: () => ({
         valid: true,
         updateBtn: true
-
     }),
     methods: {
         addDrinks(btnV) {
@@ -142,6 +216,14 @@ export default {
             this.updateBtn = !this.updateBtn
             this.$store.commit('getTimestamp')
         },
+        printTicket(){
+            if (this.$store.state.isDinner == false){
+                printJS({ printable: 'printJS-lunch', type: 'html'})
+            } else {
+                printJS({ printable: 'printJS-dinner', type: 'html'})
+            }
+        
+        }
     },
     // computed: {
     //     tableNumLocal() { return this.$store.state.tableNum }
@@ -150,9 +232,16 @@ export default {
 }
 </script>
   
+
+
 <!-- <style>
-    #id{
-        /* text-field-details-padding-inline: 0px; */
-        text-field-input-padding-start: 0px
+      @media print{
+    /* @page { 
+            margin-top: 10mm;
+            margin-bottom:10mm; 
+     }; */
+    body * {
+      display: block;
     }
+  }
 </style> -->

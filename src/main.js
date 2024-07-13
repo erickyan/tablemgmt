@@ -6,13 +6,14 @@ import store from './store'
 import orderdetails from './components/OrderDetails.vue'
 import togodetails from './components/TogoDetails.vue'
 import currenttogo from './components/CurrentTogo.vue'
-
+import './assets/print.min.js'
 
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+
 
 const vuetify = createVuetify({
     components,

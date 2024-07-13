@@ -3,6 +3,7 @@ import { RouterView } from 'vue-router'
 
 </script>
 
+
 <template>
   <v-app>
     <v-navigation-drawer 
@@ -146,4 +147,13 @@ export default {
     -ms-touch-action: manipulation;
     touch-action: manipulation;
 }
+  /* @media print{
+     @page { 
+            margin-top: 10mm;
+            margin-bottom:10mm; 
+     }; 
+     * {
+      display: none
+    }
+  } */
 </style>
