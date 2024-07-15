@@ -1,7 +1,7 @@
 <template>
     <v-dialog width="600" v-if="updateBtn">
         <v-card>
-            <v-card-title class="headline black d-flex" primary-title>
+            <v-card-title class="headline black d-flex font-weight-black" primary-title>
                 Table {{ $store.state.tableNum + 1 }} <v-spacer></v-spacer>
                 <!-- <v-btn size="small" @click="$store.commit('calculateTotal')" outlined color="primary">Update</v-btn> -->
                 <p class="text-h6 pr-5 me-auto"> $ {{ $store.state.tables[$store.state.tableNum].totalPrice }} </p>
@@ -44,26 +44,26 @@
                     <v-container >
                         <div style="display: flex; height: 70px;">
                             <v-row no-gutters>
-                                <v-col cols="12" sm="3" v-for="drink in $store.state.tables[$store.state.tableNum].drinks">
+                                <v-col cols="12" sm="2" v-for="drink in $store.state.tables[$store.state.tableNum].drinks">
                                     {{ drink }}
                                 </v-col>
                             </v-row>
                         </div>
                     </v-container>
 
-                    <v-chip-group size="x-small" style="height: 130px; overflow-y: scroll;">
+                    <v-chip-group size="x-small" style="height: auto; overflow-y: auto;">
                         <!-- <v-btn @click="reorderDrink()" icon="mdi-cancel" color="red-accent-4" size="x-small"></v-btn> -->
-                        <v-chip @click="addDrinks('WTER'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Water</v-chip>
-                        <v-chip @click="addDrinks('COKE'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Coke</v-chip>
+                        <v-chip @click="addDrinks('WTER'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cup-water"></v-icon>Water</v-chip>
+                        <v-chip @click="addDrinks('COKE'); $store.commit('calculateTotal')"><v-icon start icon="mdi-bottle-soda-classic"></v-icon>Coke</v-chip>
                         <v-chip @click="addDrinks('STEA'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>SweetTea</v-chip>
                         <v-chip @click="addDrinks('SPRT'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Sprite</v-chip>
                         <v-chip @click="addDrinks('DRPP'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>DrPepper</v-chip>
                         <v-chip @click="addDrinks('DIET'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>DietCoke</v-chip>
                         <v-chip @click="addDrinks('UTEA'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>UnsweetTea</v-chip>
-                        <v-chip @click="addDrinks('LMND'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Lemonade</v-chip>
+                        <v-chip @click="addDrinks('LMND'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Fanta</v-chip>
                         <v-chip @click="addDrinks('HALF'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Half-Half</v-chip>
-                        <v-chip @click="addDrinks('COFE'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Coffee</v-chip>
-                        <v-chip @click="addDrinks('HTEA'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Hot Tea</v-chip>
+                        <v-chip @click="addDrinks('COFE'); $store.commit('calculateTotal')"><v-icon start icon="mdi-coffee"></v-icon>Coffee</v-chip>
+                        <v-chip @click="addDrinks('HTEA'); $store.commit('calculateTotal')"><v-icon start icon="mdi-tea"></v-icon>Hot Tea</v-chip>
                         
                         <!-- <v-chip @click="addDrinks('')">Water</v-chip>
                             <v-chip @click="addDrinks('')">HotTea</v-chip>
@@ -79,7 +79,7 @@
                 </v-sheet>
                 <!-- </v-form> -->
             </v-card-text>
-            
+            <v-divider></v-divider>
             <v-card-actions>
 
                 <!-- <v-btn class="ml-auto" @click="$store.commit('addingTogo')" outlined>
@@ -89,16 +89,16 @@
                     <!-- TOGO:  -->
                     <!-- {{ $store.state.tables[$store.state.tableNum].togo }} -->
                 <!-- </v-text-field> -->
-                <v-btn class="ml-auto" @click="$store.commit('paid')" outlined>
+                <v-btn class="ma-auto" @click="paying" outlined color="green-darken-1">
                     <v-icon size="x-large" icon="mdi-cash-check"></v-icon>
                 </v-btn>
-                <v-btn class="ml-auto" @click="$store.commit('clearEverything')" outlined>
+                <v-btn class="ma-auto" @click="$store.commit('clearEverything')" outlined color="red-darken-4">
                     <v-icon size="x-large" icon="mdi-cancel"></v-icon>
                 </v-btn>
-                <v-btn class="ml-auto" @click="printTicket" outlined >
+                <v-btn class="ma-auto" @click="printTicket" outlined >
                     <v-icon size="x-large" icon="mdi-printer"></v-icon>
                 </v-btn>
-                <v-btn class="ml-auto" @click="$store.state.tables[$store.state.tableNum].goodPpl = !$store.state.tables[$store.state.tableNum].goodPpl" outlined color="pink-darken-1">
+                <v-btn class="ma-auto" @click="$store.state.tables[$store.state.tableNum].goodPpl = !$store.state.tables[$store.state.tableNum].goodPpl" outlined color="pink-darken-1">
                     <v-icon size="x-large" icon="mdi-heart-broken" v-if="$store.state.tables[$store.state.tableNum].goodPpl == true"></v-icon>
                     <v-icon size="x-large" icon="mdi-heart" v-if="$store.state.tables[$store.state.tableNum].goodPpl == false"></v-icon>
                 </v-btn>
@@ -223,6 +223,10 @@ export default {
                 printJS({ printable: 'printJS-dinner', type: 'html'})
             }
         
+        },
+        paying(){
+            this.updateBtn = !this.updateBtn
+            this.$store.commit('paid');
         }
     },
     // computed: {
