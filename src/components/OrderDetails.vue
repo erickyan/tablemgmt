@@ -60,7 +60,7 @@
                         <v-chip @click="addDrinks('DRPP'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>DrPepper</v-chip>
                         <v-chip @click="addDrinks('DIET'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>DietCoke</v-chip>
                         <v-chip @click="addDrinks('UTEA'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>UnsweetTea</v-chip>
-                        <v-chip @click="addDrinks('LMND'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Fanta</v-chip>
+                        <v-chip @click="addDrinks('FANT'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Fanta</v-chip>
                         <v-chip @click="addDrinks('HALF'); $store.commit('calculateTotal')"><v-icon start icon="mdi-cube"></v-icon>Half-Half</v-chip>
                         <v-chip @click="addDrinks('COFE'); $store.commit('calculateTotal')"><v-icon start icon="mdi-coffee"></v-icon>Coffee</v-chip>
                         <v-chip @click="addDrinks('HTEA'); $store.commit('calculateTotal')"><v-icon start icon="mdi-tea"></v-icon>Hot Tea</v-chip>
