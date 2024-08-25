@@ -139,7 +139,7 @@
                                                         margin-left: auto;
                                                         margin-right: auto;
                                                         width: 90%;">
-     <div style="width: 100%; height: 80px">
+     <div style="width: 100%; height: 30px">
     </div>
  </v-card>
 
@@ -177,7 +177,7 @@
                                                         margin-left: auto;
                                                         margin-right: auto;
                                                         width: 90%;">
-     <div style="width: 100%; height: 80px"></div>
+     <div style="width: 100%; height: 30px"></div>
  </v-card>
 
     </v-dialog>
