@@ -139,8 +139,6 @@
                                                         margin-left: auto;
                                                         margin-right: auto;
                                                         width: 90%;">
-     <div style="width: 100%; height: 30px">
-    </div>
  </v-card>
 
  <v-card id="printJS-dinner" class="d-none">
@@ -177,7 +175,7 @@
                                                         margin-left: auto;
                                                         margin-right: auto;
                                                         width: 90%;">
-     <div style="width: 100%; height: 30px"></div>
+     <!-- <div style="width: 100%; height: 30px"></div> -->
  </v-card>
 
     </v-dialog>

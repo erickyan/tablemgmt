@@ -11,8 +11,8 @@ import { RouterView } from 'vue-router'
           temporary
         >
         <v-list-item
-            prepend-avatar="../src/assets/ryan_dp.jpg"
-            title="China Restaurant">
+            prepend-avatar="/src/assets/ryan_dp.jpg"
+            title="China Restaurant v1.0">
         </v-list-item>
   
           <v-divider></v-divider>
@@ -69,7 +69,7 @@ import { RouterView } from 'vue-router'
         >
         <v-app-bar-nav-icon @click="drawer = !drawer">
         </v-app-bar-nav-icon>
-        <v-app-bar-title>China Restaurant 1.1</v-app-bar-title>
+        <v-app-bar-title>China Restaurant</v-app-bar-title>
 
 
 
