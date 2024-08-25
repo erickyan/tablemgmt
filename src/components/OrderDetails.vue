@@ -107,38 +107,40 @@
 
  <v-card id="printJS-lunch" class="d-none">
     <img src='/src/assets/RECEIPT_TOP_NO_BG.png' style="display: block;
-                                                        padding-top: 50px;
+                                                        padding-top: 100px;
                                                         margin-left: auto;
                                                         margin-right: auto;
-                                                        width: 50%;">
-    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
-        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].adult }}</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1>Buffet</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 140px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+                                                        width: 90%;">
+    <div style="width: 150%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">{{ $store.state.tables[$store.state.tableNum].adult }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Buffet</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 270px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
     </div>
-    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
-        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].bigKid }}</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1>Kid(6-9)</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 110px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+    <div style="width: 150%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">{{ $store.state.tables[$store.state.tableNum].bigKid }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Kid(6-9)</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 190px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
     </div>
-    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
-        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].smlKid }}</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1>Kid(2-5)</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 110px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+    <div style="width: 150%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">{{ $store.state.tables[$store.state.tableNum].smlKid }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Kid(2-5)</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 190px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
     </div>
-    <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
-        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].drinks.length }}</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1>Drink</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 145px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].totalPrice - ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTPRICE*$store.state.TAX_RATE) - ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDPRICE*$store.state.TAX_RATE).toFixed(2) - ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDPRICE*$store.state.TAX_RATE).toFixed(2)).toFixed(2) }}</h1></div>
+    <div style="width: 150%; padding-left: 200px; margin-bottom: -50px;">
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">{{ $store.state.tables[$store.state.tableNum].drinks.length }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Drink</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 275px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].totalPrice - ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTPRICE*$store.state.TAX_RATE) - ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDPRICE*$store.state.TAX_RATE).toFixed(2) - ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDPRICE*$store.state.TAX_RATE).toFixed(2)).toFixed(2) }}</h1></div>
     </div>
-    <div style="width: 50%; padding-left: 200px; margin-bottom: -10px;">
-        <div style="display: inline-block; margin: 10px;"><h1>Total</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 192px;"><h1>$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
+    <div style="width: 150%; padding-left: 200px; margin-bottom: -10px;">
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Total</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
     </div>
     <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="display: block;
                                                         margin-left: auto;
                                                         margin-right: auto;
-                                                        width: 50%;">
+                                                        width: 90%;">
+     <div style="width: 100%; height: 100px">
+    </div>
  </v-card>
 
  <v-card id="printJS-dinner" class="d-none">
@@ -146,30 +148,31 @@
                                                         padding-top: 50px;
                                                         margin-left: auto;
                                                         margin-right: auto;
-                                                        width: 50%;">
+                                                        width: 50px;
+                                                        height: auto;">
     <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
-        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].adult }}</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1>Buffet</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 140px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTDINNERPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">{{ $store.state.tables[$store.state.tableNum].adult }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Buffet</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 140px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTDINNERPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
     </div>
     <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
-        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].bigKid }}</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1>Kid(6-9)</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 110px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">{{ $store.state.tables[$store.state.tableNum].bigKid }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Kid(6-9)</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 110px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
     </div>
     <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
-        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].smlKid }}</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1>Kid(2-5)</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 110px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">{{ $store.state.tables[$store.state.tableNum].smlKid }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Kid(2-5)</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 110px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2) }}</h1></div>
     </div>
     <div style="width: 50%; padding-left: 200px; margin-bottom: -50px;">
-        <div style="display: inline-block; margin: 10px;"><h1>{{ $store.state.tables[$store.state.tableNum].drinks.length }}</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1>Drink</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 145px;"><h1>$ {{ ($store.state.tables[$store.state.tableNum].totalPrice - ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTDINNERPRICE*$store.state.TAX_RATE) - ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2) - ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2)).toFixed(2) }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">{{ $store.state.tables[$store.state.tableNum].drinks.length }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Drink</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 145px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].totalPrice - ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTDINNERPRICE*$store.state.TAX_RATE) - ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2) - ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2)).toFixed(2) }}</h1></div>
     </div>
     <div style="width: 50%; padding-left: 200px; margin-bottom: -10px;">
-        <div style="display: inline-block; margin: 10px;"><h1>Total</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 192px;"><h1>$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
+        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Total</h1></div>
+        <div style="display: inline-block; margin: 10px; padding-left: 192px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].totalPrice).toFixed(2) }}</h1></div>
     </div>
     <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="display: block;
                                                         margin-left: auto;
@@ -236,6 +239,7 @@ export default {
 }
 </script>
   
+
 
 
 <!-- <style>
