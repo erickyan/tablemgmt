@@ -55,7 +55,7 @@
         </v-row>
       </v-container>
       <!-- <order-details v-model="detailCompose"></order-details> -->
-      <order-details v-model="detailCompose" v-if="showDetails"></order-details>
+      <order-details v-model="detailCompose" v-if="$store.state.showDetailSwitch"></order-details>
     </v-main>
   </v-app>
 </template>
@@ -81,11 +81,10 @@ export default {
     addDetails(n) {
       // console.log($store.state.tables.adult)
       this.$store.state.tableNum = n - 1
+      // this.detailCompose = true
       this.detailCompose = true
       this.showDetails = !this.showDetails
-      // console.log(this.detailCompose)
-      // console.log(this.showDetails)
-
+      this.$store.state.showDetailSwitch = !this.$store.state.showDetailSwitch
       // console.log(this.$store.state.tableNum )
     },
     // printMe(){

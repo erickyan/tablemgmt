@@ -1,5 +1,5 @@
 <template>
-    <v-dialog width="600" v-if="updateBtn">
+    <v-dialog width="600" v-if="updateBtn" persistent>
         <v-card>
             <v-card-title class="headline black d-flex font-weight-black" primary-title>
                 Table {{ $store.state.tableNum + 1 }} <v-spacer></v-spacer>
@@ -220,6 +220,7 @@ export default {
         updateMenu(){
             this.$store.commit('calculateTotal')
             this.updateBtn = !this.updateBtn
+            this.$store.state.showDetailSwitch = !this.$store.state.showDetailSwitch
             this.$store.commit('getTimestamp')
         },
         printTicket(){
@@ -233,6 +234,7 @@ export default {
         paying(){
             this.updateBtn = !this.updateBtn
             this.$store.commit('paid');
+            this.$store.state.showDetailSwitch = !this.$store.state.showDetailSwitch
         }
     },
     // computed: {

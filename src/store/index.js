@@ -23,6 +23,7 @@ export default createStore({
         tableNum:0,
         catID: 0,
         seletedTogo: [],
+        showDetailSwitch: false,
         tables: [
             {
                 number: 1,
@@ -695,7 +696,7 @@ export default createStore({
         // calculate total price
         calculateTotal(state){
             // change table to occupied
-            state.tables[state.tableNum].occupied = true
+            
             let num = state.tables[state.tableNum].drinks
             let numWater = 0
             let numDrink = 0
@@ -726,6 +727,9 @@ export default createStore({
             }else{
                 // console.log('lunch')
                 state.tables[state.tableNum].totalPrice = ((state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDPRICE)*state.TAX_RATE).toFixed(2)
+            }
+            if(state.tables[state.tableNum].totalPrice > 0){
+                state.tables[state.tableNum].occupied = true
             }
             // remove dialog here?
             // console.log(state)
