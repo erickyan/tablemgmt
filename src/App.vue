@@ -11,8 +11,8 @@ import { RouterView } from 'vue-router'
           temporary
         >
         <v-list-item
-            prepend-avatar="/src/assets/ryan_dp.jpg"
-            title="China Restaurant v1.0">
+            prepend-avatar="/src/assets/ryan_dp.png"
+            title="China Restaurant v1.1">
         </v-list-item>
   
           <v-divider></v-divider>
