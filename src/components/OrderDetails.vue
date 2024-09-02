@@ -1,5 +1,8 @@
 <template>
     <v-dialog width="600" v-if="updateBtn" persistent>
+        
+        <!-- <v-btn size="small" @click=newQuote outlined color="primary">get quote</v-btn> -->
+        <!-- {{ msg }} -->
         <v-card>
             <v-card-title class="headline black d-flex font-weight-black" primary-title>
                 Table {{ $store.state.tableNum + 1 }} <v-spacer></v-spacer>
@@ -133,8 +136,8 @@
     </div>
     <div style="width: 150%; padding-left: 150px;">
         <div><h1>-----------------------------------------------------------------------------</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
+        <div style="display: inline-block; top: -80px; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
+        <div style="display: inline-block; top: -80px; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
         <div style="position: relative; top: -80px; padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
     </div>
     <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="display: block;
@@ -235,6 +238,48 @@ export default {
             this.updateBtn = !this.updateBtn
             this.$store.commit('paid');
             this.$store.state.showDetailSwitch = !this.$store.state.showDetailSwitch
+        },
+        // fetchData() {
+		// 	fetch('https://zenquotes.io/api/quotes/', {
+		// 		// method: 'GET',
+        //         mode: 'no-cors',
+		// 		// headers: {
+        //         //     // 'Content-Type': 'application/json',
+        //         //     // 'Accept': 'application/json',
+        //         //     // 'Content-Type': 'application/json'
+		// 		// 	// 'x-rapidapi-host': 'random-facts2.p.rapidapi.com',
+        //         //     'Access-Control-Allow-Origin': '*',
+        //         //     'Access-Control-Allow-Methods':'GET, POST, PUT, DELETE, OPTIONS'
+		// 		// },
+		// 	})
+        //     .then(response => {
+        //         // if(!response.ok){
+        //         //     throw new Error ('some network error')
+        //         // }
+        //         response.json()
+        //     })
+        //     .then(data => {
+        //         try {
+        //         const data = data ? JSON.parse(data) : {};
+        //         console.log(data);
+        //         } catch (error) {
+        //         console.error('Error parsing JSON:', error);
+        //         }
+        //         console.log(data)
+        //     })
+        //     .catch(err => {console.log("err: ", err)})
+		// },
+        newQuote(){
+            const api_url ="https://api.allorigins.win/get?url=https://zenquotes.io/api/random";
+
+            async function getapi(url){
+            // {
+            const response = await fetch(url, {method: "GET"});
+            var data = await response.json();
+            var resJson = JSON.parse(data.contents)
+            console.log("quote: " + resJson[0].q + ". author: " + resJson[0].a);
+            }
+            getapi(api_url);
         }
     },
     // computed: {
