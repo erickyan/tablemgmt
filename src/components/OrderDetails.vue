@@ -8,7 +8,9 @@
                 Table {{ $store.state.tableNum + 1 }} <v-spacer></v-spacer>
                 <!-- <v-btn size="small" @click="$store.commit('calculateTotal')" outlined color="primary">Update</v-btn> -->
                 <p class="text-h6 pr-5 me-auto"> $ {{ $store.state.tables[$store.state.tableNum].totalPrice }} </p>
-                <v-btn size="small" @click=updateMenu outlined color="primary">Update</v-btn>
+                <v-btn size="small" @click = updateMenu outlined 
+                                    :color = "$store.state.tables[$store.state.tableNum].totalPrice-0 <= 0 ? 'error' : 'primary' "
+                                    :text = "$store.state.tables[$store.state.tableNum].totalPrice-0 <= 0 ? 'X' : 'Update'" ></v-btn>
             </v-card-title>
             <v-divider></v-divider>
             <v-card-text>
@@ -246,7 +248,10 @@ export default {
             this.$store.commit('calculateTotal')
             this.updateBtn = !this.updateBtn
             this.$store.state.showDetailSwitch = !this.$store.state.showDetailSwitch
-            this.$store.commit('getTimestamp')
+            if(this.$store.state.tables[this.$store.state.tableNum].occupied){
+                this.$store.commit('getTimestamp')
+            }
+            
         },
         printTicket(){
             if (this.$store.state.isDinner == false){

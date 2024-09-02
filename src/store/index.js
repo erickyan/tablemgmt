@@ -739,7 +739,9 @@ export default createStore({
             const today = new Date();
             const now = today.getHours() + ":" + today.getMinutes()
             state.tables[state.tableNum].sitDownTime = now
-            // console.log(state.sitDownTime)
+            console.log(today.toLocaleTimeString())
+            // const date = useDate()
+            // console.log(date.getMonth(new Date('March 1, 2021')))
         },
         clearEverything(state){
             state.tables[state.tableNum].sitDownTime=""
