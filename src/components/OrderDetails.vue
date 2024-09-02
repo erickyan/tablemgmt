@@ -113,7 +113,7 @@
                                                         padding-top: 100px;
                                                         margin-left: auto;
                                                         margin-right: auto;
-                                                        width: 90%;">
+                                                        width: 75%;">
     <div style="width: 150%; padding-left: 150px; margin-bottom: -50px;">
         <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">{{ $store.state.tables[$store.state.tableNum].adult }}</h1></div>
         <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px"> Buffet</h1></div>
@@ -135,20 +135,23 @@
         <div style="display: inline-block; margin: 10px; padding-left: 275px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].totalPrice - ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTPRICE*$store.state.TAX_RATE) - ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDPRICE*$store.state.TAX_RATE).toFixed(2) - ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDPRICE*$store.state.TAX_RATE).toFixed(2)).toFixed(2) }}</h1></div>
     </div>
     <div style="width: 150%; padding-left: 150px;">
-        <div><h1>-----------------------------------------------------------------------------</h1></div>
-        <div style="display: inline-block; top: -80px; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
-        <div style="display: inline-block; top: -80px; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
-        <div style="position: relative; top: -80px; padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
+        <div style="position: relative; top: -20px;"><h1>-----------------------------------------------------------------------------</h1></div>
+        <div style="display: inline-block; position: relative; top: -230px; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
+        <div style="display: inline-block; position: relative; top: -230px; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
+        <div style="position: relative; top: -230px; padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
     </div>
-    <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="display: block;
+    <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="
+                                                        display: block;
+                                                        position: relative;
+                                                        top: -150px;
                                                         margin-left: auto;
-                                                        margin-right: auto;
+                                                        margin-right: auto; 
                                                         margin-top: -60px;
-                                                        width: 90%;">
+                                                        width: 75%;">
     <div style="width: 100%; margin-bottom: -50px; ">
         <div>
-            <p style="font-size: 40px; font-style: italic;">{{ quote }}</p>
-            <p style="font-size: 40px; float: inline-end; position: relative; top: -40px; left: -40px">{{ author }}</p>
+            <p style="font-size: 40px; font-style: italic; position: relative; top: -150px;">{{ quote }}</p>
+            <p style="font-size: 40px; float: inline-end; position: relative; top: -190px; left: -40px">{{ author }}</p>
         </div>
     </div>
  </v-card>
@@ -158,7 +161,7 @@
                                                         padding-top: 100px;
                                                         margin-left: auto;
                                                         margin-right: auto;
-                                                        width: 90%;">
+                                                        width: 75%;">
     <div style="width: 150%; padding-left: 150px; margin-bottom: -50px;">
         <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">{{ $store.state.tables[$store.state.tableNum].adult }}</h1></div>
         <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px">Buffet</h1></div>
@@ -185,15 +188,18 @@
         <div style="display: inline-block; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
         <div style="position: relative; top: -80px; padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
     </div>
-    <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="display: block;
+    <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="
+                                                        display: block;
+                                                        position: relative;
+                                                        top: -150px;
                                                         margin-left: auto;
-                                                        margin-right: auto;
+                                                        margin-right: auto; 
                                                         margin-top: -60px;
-                                                        width: 90%;">
+                                                        width: 75%;">
     <div style="width: 100%; margin-bottom: -50px; ">
         <div>
-            <p style="font-size: 40px; font-style: italic;">{{ quote }}</p>
-            <p style="font-size: 40px; float: inline-end; position: relative; top: -40px; left: -40px">{{ author }}</p>
+            <p style="font-size: 40px; font-style: italic; position: relative; top: -150px;">{{ quote }}</p>
+            <p style="font-size: 40px; float: inline-end; position: relative; top: -190px; left: -40px">{{ author }}</p>
         </div>
     </div>
  </v-card>
@@ -284,7 +290,7 @@ export default {
         //     .catch(err => {console.log("err: ", err)})
 		// },
         newQuote(){
-            const api_url ="https://api.allorigins.win/get?url=https://zenquotes.io/api/random";
+            const api_url ="https://zenquotes.io/api/random";
 
             // async function getapi(url){
             // {
