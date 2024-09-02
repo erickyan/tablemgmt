@@ -183,10 +183,10 @@
         <div style="display: inline-block; margin: 10px; padding-left: 275px;"><h1 style="font-size: 80px">$ {{ ($store.state.tables[$store.state.tableNum].totalPrice - ($store.state.tables[$store.state.tableNum].adult * $store.state.ADULTDINNERPRICE*$store.state.TAX_RATE) - ($store.state.tables[$store.state.tableNum].bigKid * $store.state.BIGKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2) - ($store.state.tables[$store.state.tableNum].smlKid * $store.state.SMALLKIDDINNERPRICE*$store.state.TAX_RATE).toFixed(2)).toFixed(2) }}</h1></div>
     </div>
     <div style="width: 150%; padding-left: 150px;">
-        <div><h1>-----------------------------------------------------------------------------</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
-        <div style="position: relative; top: -80px; padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
+        <div style="position: relative; top: -20px;"><h1>-----------------------------------------------------------------------------</h1></div>
+        <div style="display: inline-block; position: relative; top: -230px; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
+        <div style="display: inline-block; position: relative; top: -230px; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
+        <div style="position: relative; top: -230px; padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
     </div>
     <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="
                                                         display: block;
@@ -290,8 +290,8 @@ export default {
         //     .catch(err => {console.log("err: ", err)})
 		// },
         newQuote(){
-            const api_url ="https://zenquotes.io/api/random";
-
+            // const api_url = "https://api.allorigins.win/get?url=https://zenquotes.io/api/random";
+            const api_url ="https://api.allorigins.win/get?url=https://zenquotes.io/api/random"
             // async function getapi(url){
             // {
             const getapi = async (url) => {
