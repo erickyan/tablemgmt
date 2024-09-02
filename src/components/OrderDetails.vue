@@ -98,7 +98,7 @@
                 <v-btn class="ma-auto" @click="$store.commit('clearEverything')" outlined color="red-darken-4">
                     <v-icon size="x-large" icon="mdi-cancel"></v-icon>
                 </v-btn>
-                <v-btn class="ma-auto" @click="printTicket" outlined >
+                <v-btn class="ma-auto" @click="newQuote(); printTicket()" outlined >
                     <v-icon size="x-large" icon="mdi-printer"></v-icon>
                 </v-btn>
                 <v-btn class="ma-auto" @click="$store.state.tables[$store.state.tableNum].goodPpl = !$store.state.tables[$store.state.tableNum].goodPpl" outlined color="pink-darken-1">
@@ -145,6 +145,12 @@
                                                         margin-right: auto;
                                                         margin-top: -60px;
                                                         width: 90%;">
+    <div style="width: 100%; margin-bottom: -50px; ">
+        <div>
+            <p style="font-size: 40px; font-style: italic;">{{ quote }}</p>
+            <p style="font-size: 40px; float: inline-end; position: relative; top: -40px; left: -40px">{{ author }}</p>
+        </div>
+    </div>
  </v-card>
 
  <v-card id="printJS-dinner" class="d-none">
@@ -184,6 +190,12 @@
                                                         margin-right: auto;
                                                         margin-top: -60px;
                                                         width: 90%;">
+    <div style="width: 100%; margin-bottom: -50px; ">
+        <div>
+            <p style="font-size: 40px; font-style: italic;">{{ quote }}</p>
+            <p style="font-size: 40px; float: inline-end; position: relative; top: -40px; left: -40px">{{ author }}</p>
+        </div>
+    </div>
  </v-card>
 
     </v-dialog>
@@ -195,7 +207,9 @@
 export default {
     data: () => ({
         valid: true,
-        updateBtn: true
+        updateBtn: true,
+        quote: "Knowing is not enough, we must apply. Willing is not enough, we must do.",
+        author: "Bruce Lee"
     }),
     methods: {
         addDrinks(btnV) {
@@ -272,12 +286,17 @@ export default {
         newQuote(){
             const api_url ="https://api.allorigins.win/get?url=https://zenquotes.io/api/random";
 
-            async function getapi(url){
+            // async function getapi(url){
             // {
+            const getapi = async (url) => {
             const response = await fetch(url, {method: "GET"});
             var data = await response.json();
             var resJson = JSON.parse(data.contents)
+            this.quote = resJson[0].q
+            this.author = resJson[0].a
             console.log("quote: " + resJson[0].q + ". author: " + resJson[0].a);
+            // this.quote = JSON.stringify(resJson[0].q)
+            // this.author = JSON.stringify(resJson[0].a)
             }
             getapi(api_url);
         }
@@ -288,18 +307,3 @@ export default {
 
 }
 </script>
-  
-
-
-
-<!-- <style>
-      @media print{
-    /* @page { 
-            margin-top: 10mm;
-            margin-bottom:10mm; 
-     }; */
-    body * {
-      display: block;
-    }
-  }
-</style> -->
