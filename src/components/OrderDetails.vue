@@ -19,7 +19,9 @@
                     <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseAdult'); $store.commit('calculateTotal')">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseAdult'); $store.commit('calculateTotal')">
+                    <!-- <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseAdult'); $store.commit('calculateTotal')" v-bind:style="[$store.state.tables[$store.state.tableNum].adult === 0 ? {disabled: true} : {disabled : false}]"> -->
+                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseAdult'); $store.commit('calculateTotal')" :disabled="$store.state.tables[$store.state.tableNum].adult === 0">
+  
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-sheet>
@@ -29,7 +31,7 @@
                     <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseBigKid'); $store.commit('calculateTotal')">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseBidKid'); $store.commit('calculateTotal')">
+                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseBidKid'); $store.commit('calculateTotal')" :disabled="$store.state.tables[$store.state.tableNum].bigKid === 0">
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-sheet>
@@ -39,7 +41,7 @@
                     <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseSmlKid'); $store.commit('calculateTotal')">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseSmlKid'); $store.commit('calculateTotal')">
+                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseSmlKid'); $store.commit('calculateTotal')" :disabled="$store.state.tables[$store.state.tableNum].smlKid === 0">
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-sheet>
