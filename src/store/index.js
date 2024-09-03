@@ -3,6 +3,8 @@ import { numberToZh } from "number-to-zh";
 
 export default createStore({
     state: {
+        quote: 'Knowing is not enough, we must apply. Willing is not enough, we must do.',
+        author: 'Bruce Lee',
         ticketCounter: 1,
         ticketCounterCN: '一',
         isDinner: false,
@@ -875,6 +877,23 @@ export default createStore({
             this.state.ticketCounter ++
             this.state.ticketCounterCN = numberToZh(this.state.ticketCounter)
             // console.log(this.state.ticketCounterCN)
+        },
+        newQuote(){
+            // const api_url = "https://api.allorigins.win/get?url=https://zenquotes.io/api/random";
+            const api_url ="https://api.allorigins.win/get?url=https://zenquotes.io/api/random"
+            // async function getapi(url){
+            // {
+            const getapi = async (url) => {
+            const response = await fetch(url, {method: "GET"});
+            var data = await response.json();
+            var resJson = JSON.parse(data.contents)
+            this.state.quote = resJson[0].q
+            this.state.author = resJson[0].a
+            console.log("quote: " + resJson[0].q + ". author: " + resJson[0].a);
+            // this.quote = JSON.stringify(resJson[0].q)
+            // this.author = JSON.stringify(resJson[0].a)
+            }
+            getapi(api_url);
         }
         
     },

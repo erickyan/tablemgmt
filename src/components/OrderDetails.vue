@@ -102,12 +102,12 @@
                 <v-btn class="ma-auto" @click="$store.commit('clearEverything')" outlined color="red-darken-4">
                     <v-icon size="x-large" icon="mdi-cancel"></v-icon>
                 </v-btn>
-                <v-btn class="ma-auto" @click="newQuote(); printTicket()" outlined >
-                    <v-icon size="x-large" icon="mdi-printer"></v-icon>
-                </v-btn>
-                <!-- <v-btn class="ma-auto" @click="printTicket()" outlined >
+                <!-- <v-btn class="ma-auto" @click="newQuote(); printTicket()" outlined >
                     <v-icon size="x-large" icon="mdi-printer"></v-icon>
                 </v-btn> -->
+                <v-btn class="ma-auto" @click="printTicket()" outlined >
+                    <v-icon size="x-large" icon="mdi-printer"></v-icon>
+                </v-btn>
                 <v-btn class="ma-auto" @click="$store.state.tables[$store.state.tableNum].goodPpl = !$store.state.tables[$store.state.tableNum].goodPpl" outlined color="pink-darken-1">
                     <v-icon size="x-large" icon="mdi-heart-broken" v-if="$store.state.tables[$store.state.tableNum].goodPpl == true"></v-icon>
                     <v-icon size="x-large" icon="mdi-heart" v-if="$store.state.tables[$store.state.tableNum].goodPpl == false"></v-icon>
@@ -159,8 +159,8 @@
                                                         width: 75%;">
     <div style="width: 100%; margin-bottom: -50px; ">
         <div>
-            <p style="font-size: 40px; font-style: italic; position: relative; top: -150px;">{{ quote }}</p>
-            <p style="font-size: 40px; float: inline-end; position: relative; top: -190px; left: -40px">{{ author }}</p>
+            <p style="font-size: 40px; font-style: italic; position: relative; top: -150px;">{{ this.$store.state.quote }}</p>
+            <p style="font-size: 40px; float: inline-end; position: relative; top: -190px; left: -40px">{{ this.$store.state.author }}</p>
         </div>
     </div>
  </v-card>
@@ -206,12 +206,12 @@
                                                         margin-right: auto; 
                                                         margin-top: -60px;
                                                         width: 75%;">
-    <div style="width: 100%; margin-bottom: -50px; ">
+    <!-- <div style="width: 100%; margin-bottom: -50px; ">
         <div>
             <p style="font-size: 40px; font-style: italic; position: relative; top: -150px;">{{ quote }}</p>
             <p style="font-size: 40px; float: inline-end; position: relative; top: -190px; left: -40px">{{ author }}</p>
         </div>
-    </div>
+    </div> -->
  </v-card>
 
     </v-dialog>
@@ -225,8 +225,8 @@ export default {
     data: () => ({
         valid: true,
         updateBtn: true,
-        quote: "Knowing is not enough, we must apply. Willing is not enough, we must do.",
-        author: "Bruce Lee",
+        // quote: "Knowing is not enough, we must apply. Willing is not enough, we must do.",
+        // author: "Bruce Lee",
         // ticketCounter: 1,
         // ticketCounterCN: '一'
     }),
@@ -265,7 +265,7 @@ export default {
         },
         printTicket(){
             // console.log('a'+this.ticketCounterCN)
-            
+            this.$store.commit('newQuote')
             this.$store.commit('increaseTicketCounter')
             if (this.$store.state.isDinner == false){
                 // console.log('b'+this.$store.state.ticketCounterCN)
@@ -315,23 +315,23 @@ export default {
         //     })
         //     .catch(err => {console.log("err: ", err)})
 		// },
-        newQuote(){
-            // const api_url = "https://api.allorigins.win/get?url=https://zenquotes.io/api/random";
-            const api_url ="https://api.allorigins.win/get?url=https://zenquotes.io/api/random"
-            // async function getapi(url){
-            // {
-            const getapi = async (url) => {
-            const response = await fetch(url, {method: "GET"});
-            var data = await response.json();
-            var resJson = JSON.parse(data.contents)
-            this.quote = resJson[0].q
-            this.author = resJson[0].a
-            console.log("quote: " + resJson[0].q + ". author: " + resJson[0].a);
-            // this.quote = JSON.stringify(resJson[0].q)
-            // this.author = JSON.stringify(resJson[0].a)
-            }
-            getapi(api_url);
-        }
+        // newQuote(){
+        //     // const api_url = "https://api.allorigins.win/get?url=https://zenquotes.io/api/random";
+        //     const api_url ="https://api.allorigins.win/get?url=https://zenquotes.io/api/random"
+        //     // async function getapi(url){
+        //     // {
+        //     const getapi = async (url) => {
+        //     const response = await fetch(url, {method: "GET"});
+        //     var data = await response.json();
+        //     var resJson = JSON.parse(data.contents)
+        //     this.quote = resJson[0].q
+        //     this.author = resJson[0].a
+        //     console.log("quote: " + resJson[0].q + ". author: " + resJson[0].a);
+        //     // this.quote = JSON.stringify(resJson[0].q)
+        //     // this.author = JSON.stringify(resJson[0].a)
+        //     }
+        //     getapi(api_url);
+        // }
     },
     // computed: {
     //     tableNumLocal() { return this.$store.state.tableNum }
