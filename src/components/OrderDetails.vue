@@ -206,12 +206,12 @@
                                                         margin-right: auto; 
                                                         margin-top: -60px;
                                                         width: 75%;">
-    <!-- <div style="width: 100%; margin-bottom: -50px; ">
+    <div style="width: 100%; margin-bottom: -50px; ">
         <div>
-            <p style="font-size: 40px; font-style: italic; position: relative; top: -150px;">{{ quote }}</p>
-            <p style="font-size: 40px; float: inline-end; position: relative; top: -190px; left: -40px">{{ author }}</p>
+            <p style="font-size: 40px; font-style: italic; position: relative; top: -150px;">{{ this.$store.state.quote }}</p>
+            <p style="font-size: 40px; float: inline-end; position: relative; top: -190px; left: -40px">{{ this.$store.state.author }}</p>
         </div>
-    </div> -->
+    </div>
  </v-card>
 
     </v-dialog>
