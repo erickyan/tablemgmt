@@ -1,7 +1,10 @@
 import { createStore } from 'vuex'
+import { numberToZh } from "number-to-zh";
 
 export default createStore({
     state: {
+        ticketCounter: 1,
+        ticketCounterCN: '一',
         isDinner: false,
         sales:{
             totalCount: 0,
@@ -739,7 +742,7 @@ export default createStore({
             const today = new Date();
             const now = today.getHours() + ":" + today.getMinutes()
             state.tables[state.tableNum].sitDownTime = now
-            console.log(today.toLocaleTimeString())
+            // console.log(today.toLocaleTimeString())
             // const date = useDate()
             // console.log(date.getMonth(new Date('March 1, 2021')))
         },
@@ -866,6 +869,12 @@ export default createStore({
                     // console.log("name: " + items[j].name + ", quantity: " + items[j].quantity)
                 }
             }
+        },
+        increaseTicketCounter(){
+            // console.log(this.state.ticketCounterCN)
+            this.state.ticketCounter ++
+            this.state.ticketCounterCN = numberToZh(this.state.ticketCounter)
+            // console.log(this.state.ticketCounterCN)
         }
         
     },

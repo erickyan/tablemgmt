@@ -105,6 +105,9 @@
                 <v-btn class="ma-auto" @click="newQuote(); printTicket()" outlined >
                     <v-icon size="x-large" icon="mdi-printer"></v-icon>
                 </v-btn>
+                <!-- <v-btn class="ma-auto" @click="printTicket()" outlined >
+                    <v-icon size="x-large" icon="mdi-printer"></v-icon>
+                </v-btn> -->
                 <v-btn class="ma-auto" @click="$store.state.tables[$store.state.tableNum].goodPpl = !$store.state.tables[$store.state.tableNum].goodPpl" outlined color="pink-darken-1">
                     <v-icon size="x-large" icon="mdi-heart-broken" v-if="$store.state.tables[$store.state.tableNum].goodPpl == true"></v-icon>
                     <v-icon size="x-large" icon="mdi-heart" v-if="$store.state.tables[$store.state.tableNum].goodPpl == false"></v-icon>
@@ -113,6 +116,8 @@
         </v-card>
 
  <v-card id="printJS-lunch" class="d-none">
+    <h1 style="font-size: 40px; float: inline-end; position: relative;left: -40px">{{ this.$store.state.ticketCounterCN }}</h1>
+    <br />
     <img src='/src/assets/RECEIPT_TOP_NO_BG.png' style="display: block;
                                                         padding-top: 100px;
                                                         margin-left: auto;
@@ -161,6 +166,7 @@
  </v-card>
 
  <v-card id="printJS-dinner" class="d-none">
+    <h1 style="font-size: 40px; float: inline-end; position: relative;left: -40px">{{ this.$store.state.ticketCounterCN }}</h1>
     <img src='/src/assets/RECEIPT_TOP_NO_BG.png' style="display: block;
                                                         padding-top: 100px;
                                                         margin-left: auto;
@@ -214,12 +220,15 @@
 
 
 <script>
+    
 export default {
     data: () => ({
         valid: true,
         updateBtn: true,
         quote: "Knowing is not enough, we must apply. Willing is not enough, we must do.",
-        author: "Bruce Lee"
+        author: "Bruce Lee",
+        // ticketCounter: 1,
+        // ticketCounterCN: '一'
     }),
     methods: {
         addDrinks(btnV) {
@@ -251,15 +260,25 @@ export default {
             if(this.$store.state.tables[this.$store.state.tableNum].occupied){
                 this.$store.commit('getTimestamp')
             }
+            // console.log(numberToZh(this.$store.state.ticketCounter)); 
             
         },
         printTicket(){
+            // console.log('a'+this.ticketCounterCN)
+            
+            this.$store.commit('increaseTicketCounter')
             if (this.$store.state.isDinner == false){
+                // console.log('b'+this.$store.state.ticketCounterCN)
                 printJS({ printable: 'printJS-lunch', type: 'html'})
             } else {
                 printJS({ printable: 'printJS-dinner', type: 'html'})
             }
-        
+            // this.$store.state.ticketCounter++
+            // console.log('c'+this.ticketCounterCN)
+            
+            // this.ticketCounterCN = numberToZh(this.$store.state.ticketCounter)
+            // console.log('d'+this.ticketCounterCN)
+            
         },
         paying(){
             this.updateBtn = !this.updateBtn
