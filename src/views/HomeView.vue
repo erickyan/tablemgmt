@@ -4,7 +4,7 @@
       <v-container>
         <v-row>
           <!-- default cols=4 -->
-          <v-col v-for="n in 10" :key="n" cols="4">
+          <v-col v-for="n in 30" :key="n" cols="4">
             <v-card class="mx-auto" height="200" @click="addDetails(n)">
               <v-card-item>
                 <v-card-title class="headline font-weight-black d-flex">
