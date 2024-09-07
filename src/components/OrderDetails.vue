@@ -145,12 +145,14 @@
     </div>
     <div style="width: 150%; padding-left: 150px;">
         <div style="position: relative; top: -20px;"><h1>-----------------------------------------------------------------------------</h1></div>
-        <div style="display: inline-block; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
-        <div style="display: inline-block; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
-        <div style=" padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
+        <div style="display: inline-block; position: relative; top: -50px; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
+        <div style="display: inline-block; position: relative; top: -50px; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
+        <div style="position: relative; top: -50px;  padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
     </div>
     <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="
                                                         display: block;
+                                                        position: relative;
+                                                        top: -50px;
                                                         margin-left: auto;
                                                         margin-right: auto; 
                                                         margin-top: -60px;
