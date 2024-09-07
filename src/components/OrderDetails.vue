@@ -145,22 +145,22 @@
     </div>
     <div style="width: 150%; padding-left: 150px;">
         <div style="position: relative; top: -20px;"><h1>-----------------------------------------------------------------------------</h1></div>
-        <div style="display: inline-block; position: relative; top: -150px; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
-        <div style="display: inline-block; position: relative; top: -150px; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
-        <div style="position: relative; top: -250px;  padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
+        <div style="display: inline-block; position: relative; top: -100px; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
+        <div style="display: inline-block; position: relative; top: -100px; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
+        <div style="position: relative; top: -150px;  padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
     </div>
     <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="
                                                         display: block;
                                                         position: relative;
-                                                        top: -120px;
+                                                        top: -150px;
                                                         margin-left: auto;
                                                         margin-right: auto; 
                                                         margin-top: -60px;
                                                         width: 75%;">
     <div style="width: 100%; margin-bottom: -50px; ">
         <div>
-            <p style="font-size: 40px; font-style: italic; position: relative; top: -90px;">{{ this.$store.state.quote }}</p>
-            <p style="font-size: 40px; float: inline-end; position: relative; top: -130px; left: -40px">{{ this.$store.state.author }}</p>
+            <p style="font-size: 40px; font-style: italic; position: relative; top: -120px;">{{ this.$store.state.quote }}</p>
+            <p style="font-size: 40px; float: inline-end; position: relative; top: -160px; left: -40px">{{ this.$store.state.author }}</p>
         </div>
     </div>
  </v-card>
@@ -194,9 +194,9 @@
     </div>
     <div style="width: 150%; padding-left: 150px;">
         <div style="position: relative; top: -20px;"><h1>-----------------------------------------------------------------------------</h1></div>
-        <div style="display: inline-block; position: relative; top: -230px; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
-        <div style="display: inline-block; position: relative; top: -230px; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
-        <div style="position: relative; top: -230px; padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
+        <div style="display: inline-block; position: relative; top: -100px; margin: 10px;"><h1 style="font-size: 80px"> Total</h1></div>
+        <div style="display: inline-block; position: relative; top: -100px; margin: 10px; padding-left: 360px;"><h1 style="font-size: 80px">$ {{ $store.state.tables[$store.state.tableNum].totalPrice }}</h1></div>
+        <div style="position: relative; top: -150px; padding-left: 260px;"><h1 style="font-size: 50px"> * 7% Tax Included $ {{ ($store.state.tables[$store.state.tableNum].totalPrice*0.07).toFixed(2) }}</h1></div>
     </div>
     <img src='/src/assets/RECEIPT_BTM_NO_BG.png'  style="
                                                         display: block;
@@ -208,8 +208,8 @@
                                                         width: 75%;">
     <div style="width: 100%; margin-bottom: -50px; ">
         <div>
-            <p style="font-size: 40px; font-style: italic; position: relative; top: -150px;">{{ this.$store.state.quote }}</p>
-            <p style="font-size: 40px; float: inline-end; position: relative; top: -190px; left: -40px">{{ this.$store.state.author }}</p>
+            <p style="font-size: 40px; font-style: italic; position: relative; top: -120px;">{{ this.$store.state.quote }}</p>
+            <p style="font-size: 40px; float: inline-end; position: relative; top: -160px; left: -40px">{{ this.$store.state.author }}</p>
         </div>
     </div>
  </v-card>
