@@ -254,6 +254,7 @@ export default {
             // console.log(this.$store.state.tables[this.$store.state.tableNum].drinks )
         },
         updateMenu(){
+            console.log('e')
             this.$store.commit('calculateTotal')
             this.updateBtn = !this.updateBtn
             this.$store.state.showDetailSwitch = !this.$store.state.showDetailSwitch
@@ -261,7 +262,7 @@ export default {
                 this.$store.commit('getTimestamp')
             }
             // console.log(numberToZh(this.$store.state.ticketCounter)); 
-            
+            console.log('e')
         },
         printTicket(){
             // console.log('a'+this.ticketCounterCN)
@@ -273,7 +274,9 @@ export default {
             } else {
                 printJS({ printable: 'printJS-dinner', type: 'html'})
             }
-            this.updateMenu
+            console.log('c')
+            this.updateMenu()
+            console.log('d')
             // this.$store.state.ticketCounter++
             // console.log('c'+this.ticketCounterCN)
             
