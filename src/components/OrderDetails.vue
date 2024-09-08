@@ -159,8 +159,8 @@
                                                         width: 75%;">
     <div style="width: 100%; margin-bottom: -50px; ">
         <div>
-            <p style="font-size: 40px; font-style: italic; position: relative; top: -120px;">{{ this.$store.state.quote }}</p>
-            <p style="font-size: 40px; float: inline-end; position: relative; top: -160px; left: -40px">{{ this.$store.state.author }}</p>
+            <p style="font-size: 46px; font-style: italic; position: relative; top: -120px;">{{ this.$store.state.quote }}</p>
+            <p style="font-size: 46px; float: inline-end; position: relative; top: -160px; left: -80px">{{ this.$store.state.author }}</p>
         </div>
     </div>
  </v-card>
@@ -208,8 +208,8 @@
                                                         width: 75%;">
     <div style="width: 100%; margin-bottom: -50px; ">
         <div>
-            <p style="font-size: 40px; font-style: italic; position: relative; top: -120px;">{{ this.$store.state.quote }}</p>
-            <p style="font-size: 40px; float: inline-end; position: relative; top: -160px; left: -40px">{{ this.$store.state.author }}</p>
+            <p style="font-size: 46px; font-style: italic; position: relative; top: -120px;">{{ this.$store.state.quote }}</p>
+            <p style="font-size: 46px; float: inline-end; position: relative; top: -160px; left: -80px">{{ this.$store.state.author }}</p>
         </div>
     </div>
  </v-card>

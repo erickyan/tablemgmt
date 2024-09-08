@@ -12,7 +12,7 @@ import { RouterView } from 'vue-router'
         >
         <v-list-item
             prepend-avatar="/public/RY_DP.png"
-            title="China Restaurant v1.1">
+            title="China Restaurant v1.2">
         </v-list-item>
   
           <v-divider></v-divider>
