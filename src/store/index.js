@@ -23,7 +23,7 @@ export default createStore({
         ADULTDINNERPRICE: 12.25,
         BIGKIDDINNERPRICE: 6.99,
         SMALLKIDDINNERPRICE: 5.99,
-        WATERPRICE: 0.27,
+        WATERPRICE: 0.25,
         DRINKPRICE:1.75,
         tableNum:0,
         catID: 0,
