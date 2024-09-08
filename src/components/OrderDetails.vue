@@ -116,7 +116,7 @@
         </v-card>
 
  <v-card id="printJS-lunch" class="d-none">
-    <h1 style="font-size: 40px; float: inline-end; position: relative;left: -40px">{{ this.$store.state.ticketCounterCN }}</h1>
+    <h1 style="font-size: 40px; float: inline-end; position: relative;left: -166px">{{ this.$store.state.ticketCounterCN }}</h1>
     <br />
     <img src='/src/assets/RECEIPT_TOP_NO_BG.png' style="display: block;
                                                         padding-top: 100px;
@@ -166,7 +166,7 @@
  </v-card>
 
  <v-card id="printJS-dinner" class="d-none">
-    <h1 style="font-size: 40px; float: inline-end; position: relative;left: -40px">{{ this.$store.state.ticketCounterCN }}</h1>
+    <h1 style="font-size: 40px; float: inline-end; position: relative;left: -166px">{{ this.$store.state.ticketCounterCN }}</h1>
     <img src='/src/assets/RECEIPT_TOP_NO_BG.png' style="display: block;
                                                         padding-top: 100px;
                                                         margin-left: auto;
@@ -273,6 +273,7 @@ export default {
             } else {
                 printJS({ printable: 'printJS-dinner', type: 'html'})
             }
+            this.updateMenu
             // this.$store.state.ticketCounter++
             // console.log('c'+this.ticketCounterCN)
             
