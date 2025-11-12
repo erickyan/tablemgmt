@@ -1,8 +1,7 @@
 <template>
-  <v-app>
-    <v-main>
-      <v-container>
-        <v-row>
+  <div class="home-view">
+    <v-container class="py-6">
+      <v-row>
           <!-- default cols=4 -->
           <v-col 
             v-for="(tableIndex, index) in tableOrder" 
@@ -73,10 +72,9 @@
 
           </v-col>
         </v-row>
-      </v-container>
       <order-details v-model="showDetails"></order-details>
-    </v-main>
-  </v-app>
+    </v-container>
+  </div>
 </template>
 
 

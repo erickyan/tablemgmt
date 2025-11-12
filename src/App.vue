@@ -185,8 +185,8 @@ import { RouterView } from 'vue-router'
           <v-icon>mdi-logout</v-icon>
         </v-btn>
         <v-layout style="height: 56px;">
-          <v-bottom-navigation v-model="toggleTogo">
-            <v-btn value>
+          <v-bottom-navigation v-model="togoNavValue">
+            <v-btn value="togo" @click="openTogoDialog">
               <v-icon
                 size="x-large"
                 :style="($store.state.seletedTogo.length !== 0) ? {'color': 'red'} : {'color': 'black'}"
@@ -206,7 +206,7 @@ import { RouterView } from 'vue-router'
 
       <v-main>
         <RouterView />
-        <currenttogo-details v-model="toggleTogo"></currenttogo-details>
+        <currenttogo-details v-model="togoDialogOpen"></currenttogo-details>
       </v-main>
 
       <admin-menu-manager
@@ -272,7 +272,8 @@ export default {
     },
   data: () => ({ 
     drawer: null,
-    toggleTogo: false,
+    togoNavValue: null,
+    togoDialogOpen: false,
     loginEmail: '',
     loginPassword: '',
     localAuthError: '',
@@ -312,6 +313,10 @@ export default {
     async logout() {
       await this.$store.dispatch('signOut')
       this.drawer = false
+    },
+    openTogoDialog() {
+      this.togoNavValue = 'togo'
+      this.togoDialogOpen = true
     },
     openMenuManager() {
       if (!this.isAdmin) {
@@ -446,6 +451,16 @@ export default {
     '$store.state.authUser'(user) {
       if (user) {
         this.drawer = false
+      }
+    },
+    togoDialogOpen(value) {
+      if (!value) {
+        this.togoNavValue = null
+      }
+    },
+    togoNavValue(value) {
+      if (value === 'togo') {
+        this.togoDialogOpen = true
       }
     },
     isAdmin(value) {

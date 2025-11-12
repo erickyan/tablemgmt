@@ -33,10 +33,9 @@ export default {
 </script>
 
 <template>
-  <v-app>
-    <v-main>
-      <v-container>
-        <v-row>
+  <div class="order-view">
+    <v-container class="py-6">
+      <v-row>
           <v-col
             v-for="category in menuCategories"
             :key="category.index"
@@ -60,10 +59,9 @@ export default {
             </v-alert>
           </v-col>
         </v-row>
-      </v-container>
       <togo-details v-model="togoCompose"></togo-details>
-    </v-main>
-  </v-app>
+    </v-container>
+  </div>
 </template>
 
 

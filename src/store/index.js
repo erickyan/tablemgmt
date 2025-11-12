@@ -694,24 +694,42 @@ const store = createStore({
             persistCurrentTable(state)
         },
         decreaseAdult(state){
-            state.tables[state.tableNum].adult--
-            persistCurrentTable(state)
+            const table = state.tables[state.tableNum]
+            if (!table) {
+                return
+            }
+            if (table.adult > 0) {
+                table.adult -= 1
+                persistCurrentTable(state)
+            }
         },
         increaseBigKid(state){
             state.tables[state.tableNum].bigKid++
             persistCurrentTable(state)
         },
         decreaseBidKid(state){
-            state.tables[state.tableNum].bigKid--
-            persistCurrentTable(state)
+            const table = state.tables[state.tableNum]
+            if (!table) {
+                return
+            }
+            if (table.bigKid > 0) {
+                table.bigKid -= 1
+                persistCurrentTable(state)
+            }
         },
         increaseSmlKid(state){
             state.tables[state.tableNum].smlKid++
             persistCurrentTable(state)
         },
         decreaseSmlKid(state){
-            state.tables[state.tableNum].smlKid--
-            persistCurrentTable(state)
+            const table = state.tables[state.tableNum]
+            if (!table) {
+                return
+            }
+            if (table.smlKid > 0) {
+                table.smlKid -= 1
+                persistCurrentTable(state)
+            }
         },
         addDrink(state, drink){
             state.tables[state.tableNum].drinks.push(drink)
@@ -965,7 +983,25 @@ const store = createStore({
             // console.log(state.menu[state.catID].items[n].quantity)
             // console.log(state)
             // console.log(n)
-            state.menu[state.catID].items[n].quantity--
+            const menuCategory = state.menu[state.catID]
+            if (!menuCategory || !menuCategory.items[n]) {
+                return
+            }
+            const item = menuCategory.items[n]
+            if (item.quantity <= 0) {
+                item.quantity = 0
+                return
+            }
+            item.quantity -= 1
+
+            const currIndex = state.seletedTogo.findIndex(({ item: itemName }) => itemName === item.name)
+            if (currIndex !== -1) {
+                if (item.quantity <= 0) {
+                    state.seletedTogo.splice(currIndex, 1)
+                } else {
+                    state.seletedTogo[currIndex].quantity = item.quantity
+                }
+            }
         },
         calculateTogoTotal(state){
             // console.log(state.menu[state.catID].items[n].quantity)
@@ -991,16 +1027,37 @@ const store = createStore({
             // console.log(state.sales.totalTogoPriceState)
         },
         increaseSelectedQuantity(state, n){
-            state.seletedTogo[n].quantity++
-            let temp = state.seletedTogo[n]
-            
-            state.menu[temp.id].items[temp.nTerm].quantity = temp.quantity
+            const selected = state.seletedTogo[n]
+            if (!selected) {
+                return
+            }
+            selected.quantity++
+            const menuCategory = state.menu[selected.id]
+            const menuItem = menuCategory && menuCategory.items[selected.nTerm]
+            if (menuItem) {
+                menuItem.quantity = selected.quantity
+            }
         },
         decreaseSelectedQuantity(state, n){
-            state.seletedTogo[n].quantity--
-            let temp = state.seletedTogo[n]
-            
-            state.menu[temp.id].items[temp.nTerm].quantity = temp.quantity
+            const selected = state.seletedTogo[n]
+            if (!selected) {
+                return
+            }
+            if (selected.quantity <= 1) {
+                const menuCategory = state.menu[selected.id]
+                const menuItem = menuCategory && menuCategory.items[selected.nTerm]
+                if (menuItem) {
+                    menuItem.quantity = 0
+                }
+                state.seletedTogo.splice(n, 1)
+                return
+            }
+            selected.quantity -= 1
+            const menuCategory = state.menu[selected.id]
+            const menuItem = menuCategory && menuCategory.items[selected.nTerm]
+            if (menuItem) {
+                menuItem.quantity = selected.quantity
+            }
         },
         togoPaid(state){
             // Recalculate togo total before payment (ensure price is up to date)
