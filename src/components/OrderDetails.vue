@@ -4,7 +4,7 @@
             <v-card-title class="headline black d-flex" primary-title>
                 Table No {{ $store.state.tableNum + 1 }} <v-spacer></v-spacer>
                 <!-- <v-btn size="small" @click="$store.commit('calculateTotal')" outlined color="primary">Update</v-btn> -->
-                <v-btn size="small" @click=updateMenu outlined color="primary">Update</v-btn>
+                <v-btn size="small" @click=updateMenu outlined color="accent">Update</v-btn>
             </v-card-title>
             <v-divider></v-divider>
             <v-card-text>
@@ -12,30 +12,30 @@
                 <v-sheet class="d-flex">
                     <p class="text-h6 ma-1 ps-3 me-auto">Buffet   </p>
                     <p class="text-h6 ma-1 me-auto">{{ $store.state.tables[$store.state.tableNum].adult }}</p>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseAdult')">
+                <v-btn size="small" class="ma-1 pa-2" color="accent" @click="$store.commit('increaseAdult')">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseAdult')">
+                <v-btn size="small" class="ma-1 pa-2" color="accent" @click="$store.commit('decreaseAdult')">
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-sheet>
                 <v-sheet class="d-flex">
                     <p class="text-h6 ma-1 ps-3 me-auto">B Kid</p>
                     <p class="text-h6 ma-1 me-auto">{{ $store.state.tables[$store.state.tableNum].bigKid }}</p>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseBigKid')">
+                    <v-btn size="small" class="ma-1 pa-2" color="accent" @click="$store.commit('increaseBigKid')">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseBidKid')">
+                    <v-btn size="small" class="ma-1 pa-2" color="accent" @click="$store.commit('decreaseBidKid')">
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-sheet>
                 <v-sheet class="d-flex">
                     <p class="text-h6 ma-1 ps-3 me-auto">S Kid</p>
                     <p class="text-h6 ma-1 me-auto"> {{ $store.state.tables[$store.state.tableNum].smlKid }} </p>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseSmlKid')">
+                    <v-btn size="small" class="ma-1 pa-2" color="accent" @click="$store.commit('increaseSmlKid')">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseSmlKid')">
+                    <v-btn size="small" class="ma-1 pa-2" color="accent" @click="$store.commit('decreaseSmlKid')">
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-sheet>
@@ -45,8 +45,13 @@
                     <v-container >
                         <div style="display: flex; height: 70px;">
                             <v-row no-gutters>
-                                <v-col cols="12" sm="3" v-for="drink in $store.state.tables[$store.state.tableNum].drinks">
-                                    {{ drink }}
+                        <v-col
+                            cols="12"
+                            sm="3"
+                            v-for="(drink, index) in $store.state.tables[$store.state.tableNum].drinks"
+                            :key="`modal-${index}-${drink}`"
+                        >
+                            {{ drink }}
                                 </v-col>
                             </v-row>
                         </div>
@@ -89,10 +94,10 @@
                     <!-- TOGO:  -->
                     <!-- {{ $store.state.tables[$store.state.tableNum].togo }} -->
                 <!-- </v-text-field> -->
-                <v-btn class="ml-auto" @click="printReceipt" outlined>
+                <v-btn class="ml-auto" @click="printReceipt" outlined color="accent">
                     <v-icon size="x-large" icon="mdi-printer"></v-icon>
                 </v-btn>
-                <v-btn class="ml-auto" @click="payAndClose" outlined>
+                <v-btn class="ml-auto" @click="payAndClose" outlined color="success">
                     <v-icon size="x-large" icon="mdi-cash-check"></v-icon>
                 </v-btn>
                 <v-btn class="ml-auto" @click="$store.commit('clearEverything')" outlined>

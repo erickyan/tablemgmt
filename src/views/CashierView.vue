@@ -3,7 +3,7 @@
     <v-card class="mx-auto" max-width="520">
       <v-card-title class="d-flex align-center justify-space-between">
         Cashier Receipt
-        <v-chip color="primary" variant="tonal">Total ${{ totalWithTax }}</v-chip>
+        <v-chip color="accent" variant="tonal">Total ${{ totalWithTax }}</v-chip>
       </v-card-title>
       <v-card-subtitle>Quick receipt builder for walk-in customers</v-card-subtitle>
 
@@ -112,7 +112,7 @@
         <v-btn variant="outlined" color="secondary" @click="clearForm">
           Clear
         </v-btn>
-        <v-btn color="primary" @click="printReceipt" :disabled="!hasActivity">
+        <v-btn color="accent" @click="printReceipt" :disabled="!hasActivity">
           <v-icon start>mdi-printer</v-icon>
           Print Receipt
         </v-btn>

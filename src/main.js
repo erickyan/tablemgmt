@@ -17,25 +17,77 @@ import * as directives from 'vuetify/directives'
 const vuetify = createVuetify({
     components,
     directives,
+    theme: {
+      defaultTheme: 'lunchTheme',
+      themes: {
+        lunchTheme: {
+          dark: false,
+          colors: {
+            background: '#FDF6EA',
+            surface: '#FFFFFF',
+            primary: '#C62828',
+            'primary-soft': '#F8D7C5',
+            accent: '#00897B',
+            toolbar: '#FFE4CC',
+            drawer: '#FFF9F0',
+            info: '#1E88E5',
+            success: '#2E7D32',
+            warning: '#FB8C00',
+            error: '#D84315'
+          }
+        },
+        dinnerTheme: {
+          dark: false,
+          colors: {
+            background: '#191E29',
+            surface: '#F4F6FB',
+            primary: '#C62828',
+            'primary-soft': '#F8D7C5',
+            accent: '#00897B',
+            toolbar: '#FFE4CC',
+            drawer: '#FFF9F0',
+            info: '#82B1FF',
+            success: '#43A047',
+            warning: '#FB8C00',
+            error: '#EF5350'
+          }
+        }
+      }
+    }
   })
 
-const app = createApp(App)
+async function bootstrap() {
+  const app = createApp(App)
 
-app.use(router)
-app.use(vuetify)
-app.use(store)
-app.component('order-details', orderdetails)
-app.component('togo-details', togodetails)
-app.component('currenttogo-details', currenttogo)
+  app.use(router)
+  app.use(vuetify)
+  app.use(store)
+  app.component('order-details', orderdetails)
+  app.component('togo-details', togodetails)
+  app.component('currenttogo-details', currenttogo)
 
-app.mount('#app')
+  if (import.meta.env.DEV) {
+    app.config.warnHandler = (msg, instance, trace) => {
+      console.warn('[Vue warn]', msg, trace)
+    }
+    app.config.errorHandler = (err, instance, info) => {
+      console.error('[Vue error]', err, info, instance)
+    }
+  }
 
-// Make store accessible from browser console for debugging
-if (import.meta.env.DEV) {
-  window.store = store
+  try {
+    await store.dispatch('initializeAuth')
+  } catch (err) {
+    console.error('Failed to initialize Firebase Auth:', err)
+  }
+
+  await router.isReady()
+
+  app.mount('#app')
+
+  if (import.meta.env.DEV) {
+    window.store = store
+  }
 }
 
-// Initialize authentication (which will in turn bootstrap Firestore listeners)
-store.dispatch('initializeAuth').catch(err => {
-  console.error('Failed to initialize Firebase Auth:', err)
-})
+bootstrap()

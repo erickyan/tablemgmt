@@ -5,7 +5,7 @@ import { RouterView } from 'vue-router'
 
 <template>
   <v-app>
-    <template v-if="requiresAuth && authLoading">
+    <template v-if="requiresAuth && (authLoading || (isAuthenticated && !firebaseReady))">
       <v-main class="d-flex align-center justify-center">
         <v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
       </v-main>
@@ -49,7 +49,7 @@ import { RouterView } from 'vue-router'
             </v-card-text>
             <v-card-actions class="px-4 pb-4">
               <v-btn
-                color="primary"
+                color="accent"
                 block
                 :loading="authLoading"
                 @click="login"
@@ -67,6 +67,9 @@ import { RouterView } from 'vue-router'
         v-if="isAdmin"
         v-model="drawer"
         temporary
+        :color="drawerColor"
+        border="0"
+        :elevation="0"
       >
         <v-list-item
           prepend-avatar="https://randomuser.me/api/portraits/men/78.jpg"
@@ -138,14 +141,14 @@ import { RouterView } from 'vue-router'
         ></v-list-item>
         <v-divider></v-divider>
         <v-list-item>
-          <v-btn color="primary" variant="outlined" block @click="logout">
+          <v-btn color="accent" variant="outlined" block @click="logout">
             <v-icon start>mdi-logout</v-icon>
             Sign Out
           </v-btn>
         </v-list-item>
       </v-navigation-drawer>
 
-      <v-app-bar :elevation="2">
+      <v-app-bar :elevation="2" :color="toolbarColor" density="comfortable" class="app-bar">
         <v-app-bar-nav-icon v-if="isAdmin" @click="drawer = !drawer" />
         <v-app-bar-title>China Buffet</v-app-bar-title>
         <v-btn-toggle
@@ -153,7 +156,7 @@ import { RouterView } from 'vue-router'
           mandatory
           density="comfortable"
           variant="outlined"
-          class="ml-4"
+          class="ml-4 price-toggle"
         >
           <v-btn value="lunch">
             <v-icon start size="18">mdi-white-balance-sunny</v-icon>
@@ -164,49 +167,59 @@ import { RouterView } from 'vue-router'
             Dinner
           </v-btn>
         </v-btn-toggle>
-        <v-btn
-          class="ml-4"
-          variant="outlined"
-          color="primary"
-          :to="{ name: 'cashier' }"
-        >
-          <v-icon start>mdi-receipt</v-icon>
-          Cashier
-        </v-btn>
+        <div class="d-flex align-center ml-4">
+          <v-btn
+            variant="outlined"
+            color="accent"
+            :to="{ name: 'home' }"
+            class="mr-2"
+          >
+            <v-icon start>mdi-store</v-icon>
+            Home
+          </v-btn>
+          <v-btn
+            variant="outlined"
+            color="accent"
+            :to="{ name: 'about' }"
+            class="mr-2"
+          >
+            <v-icon start>mdi-food-fork-drink</v-icon>
+            Order
+          </v-btn>
+          <v-btn
+            variant="outlined"
+            color="accent"
+            :to="{ name: 'cashier' }"
+            class="mr-2"
+          >
+            <v-icon start>mdi-receipt</v-icon>
+            Cashier
+          </v-btn>
+          <v-btn
+            variant="tonal"
+            color="accent"
+            @click="openTogoDialog"
+          >
+            <v-icon start>mdi-printer</v-icon>
+            Print Togo
+          </v-btn>
+        </div>
         <v-spacer></v-spacer>
         <v-btn
           v-if="requiresAuth"
           icon
           variant="text"
-          color="primary"
+          color="accent"
           @click="logout"
           :title="'Sign Out'"
         >
           <v-icon>mdi-logout</v-icon>
         </v-btn>
-        <v-layout style="height: 56px;">
-          <v-bottom-navigation v-model="togoNavValue">
-            <v-btn value="togo" @click="openTogoDialog">
-              <v-icon
-                size="x-large"
-                :style="($store.state.seletedTogo.length !== 0) ? {'color': 'red'} : {'color': 'black'}"
-              >
-                mdi-food-takeout-box-outline
-              </v-icon>
-              <span>Togo</span>
-            </v-btn>
-            <div v-if="$store.state.totalTogoPrice !== 0">
-              <v-chip class="ma-2" label color="red">
-                ${{ $store.state.totalTogoPrice }}
-              </v-chip>
-            </div>
-          </v-bottom-navigation>
-        </v-layout>
       </v-app-bar>
 
-      <v-main>
-        <RouterView />
-        <currenttogo-details v-model="togoDialogOpen"></currenttogo-details>
+      <v-main :class="['app-main', priceMode]">
+        <RouterView v-if="firebaseReady" />
+        <currenttogo-details v-if="firebaseReady" v-model="togoDialogOpen"></currenttogo-details>
       </v-main>
 
       <admin-menu-manager
@@ -272,7 +285,6 @@ export default {
     },
   data: () => ({ 
     drawer: null,
-    togoNavValue: null,
     togoDialogOpen: false,
     loginEmail: '',
     loginPassword: '',
@@ -315,8 +327,18 @@ export default {
       this.drawer = false
     },
     openTogoDialog() {
-      this.togoNavValue = 'togo'
       this.togoDialogOpen = true
+    },
+    applyTheme(mode) {
+      const themeName = mode === 'dinner' ? 'dinnerTheme' : 'lunchTheme'
+      const theme = this.$vuetify && this.$vuetify.theme
+      if (theme && theme.global && typeof theme.global.name === 'object' && 'value' in theme.global.name) {
+        if (theme.global.name.value !== themeName) {
+          theme.global.name.value = themeName
+        }
+      } else if (theme && theme.global && 'name' in theme.global) {
+        theme.global.name = themeName
+      }
     },
     openMenuManager() {
       if (!this.isAdmin) {
@@ -392,6 +414,10 @@ export default {
       },
       set(value) {
         this.$store.commit('setDinnerMode', value === 'dinner')
+        this.applyTheme(value)
+        if (this.$route.name !== 'home') {
+          this.$router.push({ name: 'home' })
+        }
       }
     },
     requiresAuth() {
@@ -403,6 +429,13 @@ export default {
     isAuthenticated() {
       if (!this.requiresAuth) return true
       return !!this.$store.state.authUser
+    },
+    firebaseReady() {
+      if (!this.requiresAuth) return true
+      if (!this.$store.state.firebaseInitialized) return false
+      if (!Array.isArray(this.$store.state.menu) || this.$store.state.menu.length === 0) return false
+      if (!Array.isArray(this.$store.state.tables) || this.$store.state.tables.length === 0) return false
+      return true
     },
     showLogin() {
       return this.requiresAuth && !this.authLoading && !this.isAuthenticated
@@ -429,7 +462,16 @@ export default {
       const togo = parseFloat(this.$store.state.sales.totalTogoRevenue || 0)
       const buffet = Math.max(0, revenue - togo)
       return buffet.toFixed(2)
-    }
+    },
+    drawerColor() {
+      return 'drawer'
+    },
+    toolbarColor() {
+      return 'toolbar'
+    },
+  },
+  mounted() {
+    this.applyTheme(this.priceMode)
   },
   watch: {
     loginEmail() {
@@ -453,15 +495,8 @@ export default {
         this.drawer = false
       }
     },
-    togoDialogOpen(value) {
-      if (!value) {
-        this.togoNavValue = null
-      }
-    },
-    togoNavValue(value) {
-      if (value === 'togo') {
-        this.togoDialogOpen = true
-      }
+    '$store.state.isDinner'(value) {
+      this.applyTheme(value ? 'dinner' : 'lunch')
     },
     isAdmin(value) {
       if (!value) {
@@ -478,5 +513,85 @@ export default {
 * {
     -ms-touch-action: manipulation;
     touch-action: manipulation;
+}
+
+.app-main {
+  min-height: calc(100vh - 64px);
+  padding-bottom: 32px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--v-theme-background) 70%, #ffffff 30%),
+    color-mix(in srgb, var(--v-theme-surface) 65%, #ffffff 35%)
+  );
+  color: var(--v-theme-on-background);
+  transition: background 300ms ease, color 300ms ease;
+}
+
+.app-main.dinner {
+  background: radial-gradient(circle at top left, rgba(44, 156, 219, 0.25), transparent 45%),
+              linear-gradient(190deg, rgba(21, 28, 40, 0.9), rgba(33, 41, 52, 0.9));
+  color: #f7f9ff;
+}
+
+.app-main.lunch {
+  background: radial-gradient(circle at top left, rgba(255, 231, 186, 0.6), transparent 45%),
+              linear-gradient(180deg, rgba(253, 246, 234, 0.95), rgba(255, 255, 255, 0.92));
+}
+
+.app-main .v-container {
+  transition: color 300ms ease;
+}
+
+.app-main .v-card,
+.app-main .v-sheet,
+.app-main .v-dialog .v-card {
+  background-color: color-mix(in srgb, var(--v-theme-surface) 90%, transparent);
+  backdrop-filter: blur(12px);
+  transition: background-color 300ms ease, color 300ms ease;
+  border-radius: 18px;
+}
+
+.app-main.dinner .v-card,
+.app-main.dinner .v-sheet,
+.app-main.dinner .v-dialog .v-card {
+  background-color: rgba(248, 250, 255, 0.92);
+  color: #1f2733;
+  box-shadow: 0 10px 22px rgba(15, 25, 35, 0.35);
+}
+
+.app-main.lunch .v-card,
+.app-main.lunch .v-sheet,
+.app-main.lunch .v-dialog .v-card {
+  box-shadow: 0 10px 20px rgba(255, 192, 203, 0.18);
+}
+
+.app-main .v-divider {
+  border-color: color-mix(in srgb, var(--v-theme-primary) 35%, transparent);
+}
+
+.app-bar {
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid color-mix(in srgb, var(--v-theme-primary) 12%, transparent);
+}
+
+.price-toggle .v-btn {
+  border-radius: 999px;
+  transition: background-color 200ms ease, color 200ms ease, box-shadow 200ms ease;
+  border: none;
+}
+
+.price-toggle .v-btn.v-btn--active {
+  background-color: var(--v-theme-primary-soft);
+  color: var(--v-theme-primary) !important;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.price-toggle .v-btn:not(.v-btn--active) {
+  color: var(--v-theme-primary);
+}
+
+.v-navigation-drawer {
+  backdrop-filter: blur(18px);
+  border-right: 1px solid color-mix(in srgb, var(--v-theme-primary) 12%, transparent) !important;
 }
 </style>

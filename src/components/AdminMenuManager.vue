@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="internalOpen" fullscreen scrollable transition="dialog-bottom-transition">
     <v-card>
-      <v-toolbar color="primary" density="comfortable" dark>
+      <v-toolbar color="accent" density="comfortable" dark>
         <v-btn icon="mdi-close" @click="close" />
         <v-toolbar-title>Manage Menu</v-toolbar-title>
         <v-spacer></v-spacer>

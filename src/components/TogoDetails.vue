@@ -5,26 +5,81 @@
                 <p class="text-h6 ps-3 me-auto">Item</p>
                 <p class="text-h6 pr-3">Price</p>
                 <p class="text-h6 pr-8">Quantity</p>
-                <v-btn size="small" @click="$store.commit('calculateTogoTotal')" outlined color="primary">Update</v-btn>
-                <v-btn size="small" class="ml-2" variant="tonal" color="primary" @click="printReceipt">
+                <v-btn
+                    size="small"
+                    outlined
+                    color="accent"
+                    @click="updateAndClose"
+                >
+                    Update
+                </v-btn>
+                <v-btn size="small" class="ml-2" variant="tonal" color="accent" @click="printReceipt">
                     <v-icon icon="mdi-printer"></v-icon>
                 </v-btn>
             </v-card-title>
-            <div v-for="(item, index) in menuItems" :key="index">
-                <v-card-title class="headline black d-flex" primary-title>
-                    <p class="text-h6 ma-1 ps-3 me-auto">{{ item.name }}</p>
-                    <p class="text-h6 pr-10">${{ item.listPrice.toFixed(2) }}</p>
-                    <p class="text-h6 pr-10">{{ item.quantity }}</p>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('increaseOrderQuantity', index)">
+            <div v-for="(item, index) in menuItems" :key="item.name || index">
+                <v-card-title class="headline black d-flex align-center" primary-title>
+                    <div class="d-flex align-center flex-wrap ma-1 ps-3 me-auto">
+                        <span class="text-h6">{{ item.name }}</span>
+                        <v-chip
+                            v-if="getCustomization(item.name)?.label"
+                            class="ml-2"
+                            size="small"
+                            color="accent"
+                            variant="tonal"
+                        >
+                            {{ getCustomization(item.name).label }}
+                        </v-chip>
+                    </div>
+                    <p class="text-h6 pr-6">${{ formattedPrice(item).toFixed(2) }}</p>
+                    <p class="text-h6 pr-6">{{ item.quantity }}</p>
+                    <v-btn
+                        icon
+                        variant="text"
+                        color="accent"
+                        class="ma-1"
+                        @click="openCustomization(item)"
+                        :title="'Edit special request'"
+                    >
+                        <v-icon>mdi-square-edit-outline</v-icon>
+                    </v-btn>
+                    <v-btn size="small" class="ma-1 pa-2" color="accent" @click="$store.commit('increaseOrderQuantity', index)">
                         <v-icon icon="mdi-plus"></v-icon>
                     </v-btn>
-                    <v-btn size="small" class="ma-1 pa-2" color="primary" @click="$store.commit('decreaseOrderQuantity', index)">
+                    <v-btn size="small" class="ma-1 pa-2" color="accent" @click="$store.commit('decreaseOrderQuantity', index)">
                         <v-icon icon="mdi-minus"></v-icon>
                     </v-btn>
                 </v-card-title>
                 <v-divider></v-divider>
             </div>
         </v-card>
+
+        <v-dialog v-model="customizationDialog.open" max-width="420">
+            <v-card>
+                <v-card-title class="text-h6">
+                    Special Request — {{ customizationDialog.item?.name || '' }}
+                </v-card-title>
+                <v-card-subtitle>
+                    Select an add-on. Additional price applies per item.
+                </v-card-subtitle>
+                <v-divider></v-divider>
+                <v-card-text>
+                    <v-radio-group v-model="customizationDialog.selected" hide-details>
+                        <v-radio
+                            v-for="option in customizationOptions"
+                            :key="option.label"
+                            :label="optionLabel(option)"
+                            :value="option"
+                        ></v-radio>
+                    </v-radio-group>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn variant="text" @click="customizationDialog.open = false">Cancel</v-btn>
+                    <v-btn color="accent" variant="tonal" @click="applyCustomization">Apply</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-dialog>
 </template>
 
@@ -38,6 +93,20 @@ export default {
         }
     },
     emits: ['update:modelValue'],
+    data: () => ({
+        customizationDialog: {
+            open: false,
+            item: null,
+            selected: null
+        },
+        customizationOptions: [
+            { label: 'No special request', price: 0 },
+            { label: 'Extra Beef', price: 2 },
+            { label: 'Extra Chicken', price: 2 },
+            { label: 'Extra Shrimp', price: 3 },
+            { label: 'Extra Sauce', price: 0.5 }
+        ]
+    }),
     computed: {
         dialogOpen: {
             get() {
@@ -57,17 +126,91 @@ export default {
         },
         selectedItems() {
             const store = this.$store.state
-            return (store.seletedTogo || []).filter(item => Number(item.quantity ?? 0) > 0)
+            return (store.seletedTogo || [])
+                .filter(item => Number(item.quantity ?? 0) > 0)
+                .map(item => {
+                    const basePrice = this.findBasePrice(item.item)
+                    const customization = this.getCustomization(item.item)
+                    const extra = Number(customization?.price ?? 0)
+                    return {
+                        name: item.item,
+                        quantity: Number(item.quantity ?? 0),
+                        price: basePrice + extra,
+                        note: customization?.label || ''
+                    }
+                })
+        },
+        togoCustomizations() {
+            return this.$store.state.togoCustomizations || {}
         }
     },
     methods: {
+        updateAndClose() {
+            this.$store.commit('calculateTogoTotal')
+            this.dialogOpen = false
+        },
+        getCustomization(itemName) {
+            if (!itemName) return null
+            return this.togoCustomizations[itemName] || null
+        },
+        findBasePrice(itemName) {
+            const menu = this.$store.state.menu || []
+            for (const category of menu) {
+                if (!Array.isArray(category?.items)) continue
+                const match = category.items.find(menuItem => menuItem?.name === itemName)
+                if (match) {
+                    return Number(match.listPrice ?? 0)
+                }
+            }
+            return 0
+        },
+        formattedPrice(item) {
+            const base = Number(item.listPrice ?? 0)
+            const customization = this.getCustomization(item.name)
+            const extra = Number(customization?.price ?? 0)
+            return base + extra
+        },
+        openCustomization(item) {
+            const current = this.getCustomization(item.name) || { label: 'No special request', price: 0 }
+            const selectedOption = this.customizationOptions.find(option =>
+                option.label === current.label && Number(option.price) === Number(current.price)
+            ) || this.customizationOptions[0]
+            this.customizationDialog = {
+                open: true,
+                item,
+                selected: selectedOption
+            }
+        },
+        optionLabel(option) {
+            if (!option) return ''
+            const price = Number(option.price || 0)
+            if (price > 0) {
+                return `${option.label} (+$${price.toFixed(2)})`
+            }
+            return option.label
+        },
+        applyCustomization() {
+            if (!this.customizationDialog.item || !this.customizationDialog.selected) {
+                this.customizationDialog.open = false
+                return
+            }
+            const option = this.customizationDialog.selected
+            const label = option.label === 'No special request' ? '' : option.label
+            this.$store.commit('setTogoCustomization', {
+                itemName: this.customizationDialog.item.name,
+                label,
+                price: Number(option.price || 0)
+            })
+            this.customizationDialog.open = false
+        },
         printReceipt() {
             this.$store.commit('calculateTogoTotal')
             const store = this.$store.state
             const items = this.selectedItems.map(item => ({
                 name: item.name,
                 quantity: Number(item.quantity ?? 0),
-                price: Number(item.price ?? 0)
+                price: Number(item.price ?? 0),
+                note: item.note ? item.note : ''
             }))
 
             if (items.length === 0) {
@@ -79,13 +222,21 @@ export default {
             const total = parseFloat(store.totalTogoPrice || (subtotal * store.TAX_RATE).toFixed(2))
             const taxAmount = parseFloat((total - subtotal).toFixed(2))
 
+            const escapeHtml = (str = '') => String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+
             const rows = items.map(item => `
                 <tr>
-                    <td>${item.name}</td>
+                    <td>${escapeHtml(item.name)}</td>
                     <td class="qty">${item.quantity}</td>
                     <td class="price">$${item.price.toFixed(2)}</td>
                     <td class="price">$${(item.price * item.quantity).toFixed(2)}</td>
                 </tr>
+                ${item.note ? `<tr class="note-row"><td colspan="4"><strong>Note:</strong> ${escapeHtml(item.note)}</td></tr>` : ''}
             `).join('')
 
             const receiptHtml = '<html>' +
@@ -105,6 +256,7 @@ export default {
                   '.totals div { display: flex; justify-content: space-between; margin-bottom: 4px; }' +
                   '.totals div strong { font-size: 16px; }' +
                   '.footer { margin-top: 24px; text-align: center; font-size: 12px; color: #777; }' +
+                  '.note-row td { padding: 6px 6px 10px; font-style: italic; color: #4a4a4a; background: #f9fbff; border-bottom: 1px solid #ddd; }' +
                 '</style>' +
               '</head>' +
               '<body>' +

@@ -5,7 +5,7 @@
           <!-- default cols=4 -->
           <v-col 
             v-for="(tableIndex, index) in tableOrder" 
-            :key="tableIndex" 
+            :key="`${index}-${tableIndex}`" 
             cols="12" 
             md="6" 
             lg="4"
@@ -57,7 +57,12 @@
                       <v-list-item-title> {{ $store.state.tables[tableIndex - 1].smlKid }}</v-list-item-title>
                     </div>
                     <v-row no-gutters>
-                      <v-col cols="12" sm="3" v-for="drink in $store.state.tables[tableIndex - 1].drinks" :key="drink"> 
+                      <v-col
+                        cols="12"
+                        sm="3"
+                        v-for="(drink, drinkIndex) in $store.state.tables[tableIndex - 1].drinks"
+                        :key="`${tableIndex}-${drinkIndex}-${drink}`"
+                      > 
                        {{ drink }}
                       </v-col>
                     </v-row>

@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="internalOpen" max-width="720" scrollable>
     <v-card>
-      <v-toolbar color="primary" density="comfortable" dark>
+      <v-toolbar color="accent" density="comfortable" dark>
         <v-toolbar-title>To-Go Sales</v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon="mdi-close" @click="close"></v-btn>
@@ -64,7 +64,7 @@
           Total Orders: <strong>{{ sales.length }}</strong>
           &nbsp;|&nbsp; Total Revenue: <strong>${{ totalRevenue }}</strong>
         </div>
-        <v-btn variant="tonal" color="primary" @click="close">Close</v-btn>
+        <v-btn variant="tonal" color="accent" @click="close">Close</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -153,7 +153,9 @@ export default {
         .filter(item => item?.name)
         .map(item => {
           const qty = Number(item.quantity ?? 0)
-          return qty > 1 ? `${item.name} x${qty}` : item.name
+          const base = qty > 1 ? `${item.name} x${qty}` : item.name
+          const note = item.note ? ` — ${item.note}` : ''
+          return `${base}${note}`
         })
     }
   }

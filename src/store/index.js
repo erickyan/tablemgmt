@@ -51,6 +51,7 @@ const store = createStore({
         tableNum:0,
         catID: 0,
         seletedTogo: [],
+        togoCustomizations: {},
         tables: [
             {
                 number: 1,
@@ -980,9 +981,6 @@ const store = createStore({
             // console.log(state.menu[state.catID].category)
         },
         decreaseOrderQuantity(state, n){
-            // console.log(state.menu[state.catID].items[n].quantity)
-            // console.log(state)
-            // console.log(n)
             const menuCategory = state.menu[state.catID]
             if (!menuCategory || !menuCategory.items[n]) {
                 return
@@ -998,8 +996,28 @@ const store = createStore({
             if (currIndex !== -1) {
                 if (item.quantity <= 0) {
                     state.seletedTogo.splice(currIndex, 1)
+                    delete state.togoCustomizations[item.name]
                 } else {
                     state.seletedTogo[currIndex].quantity = item.quantity
+                }
+            }
+        },
+        setTogoCustomization(state, { itemName, label, price }) {
+            if (!itemName) {
+                return
+            }
+            const trimmedLabel = (label || '').trim()
+            const extraPrice = Number(price) || 0
+            if (!trimmedLabel && extraPrice === 0) {
+                const { [itemName]: _removed, ...rest } = state.togoCustomizations || {}
+                state.togoCustomizations = rest
+            } else {
+                state.togoCustomizations = {
+                    ...(state.togoCustomizations || {}),
+                    [itemName]: {
+                        label: trimmedLabel,
+                        price: extraPrice
+                    }
                 }
             }
         },
@@ -1010,15 +1028,19 @@ const store = createStore({
             // state.sales.totalTogoPriceState = state.menu[state.catID].items[n].quantity * state.menu[state.catID].items[n].listPrice
             let totalTogoPrice = 0
             let currentMenuItem = state.menu
-            let currentPrice = 0
             for(var i=0; i<currentMenuItem.length; i++){
                 let items=currentMenuItem[i].items
                 // console.log(currentMenuItem[0].items[0].name)
                 for(var j=0; j<items.length; j++){
-                    // console.log("inside")
-                    currentPrice = items[j].listPrice*items[j].quantity
-                    totalTogoPrice += currentPrice
-                    currentPrice=0
+                    const basePrice = Number(items[j].listPrice ?? 0)
+                    const quantity = Number(items[j].quantity ?? 0)
+                    if (quantity <= 0) {
+                        continue
+                    }
+                    const customization = state.togoCustomizations?.[items[j].name] || {}
+                    const extra = Number(customization.price ?? 0)
+                    const unitPrice = basePrice + extra
+                    totalTogoPrice += unitPrice * quantity
                 }
                 // console.log("side")
             }
@@ -1050,6 +1072,7 @@ const store = createStore({
                     menuItem.quantity = 0
                 }
                 state.seletedTogo.splice(n, 1)
+                delete state.togoCustomizations[selected.item]
                 return
             }
             selected.quantity -= 1
@@ -1069,12 +1092,20 @@ const store = createStore({
                 for(var j=0; j<items.length; j++){
                     const quantity = Number(items[j].quantity ?? 0)
                     if (quantity > 0) {
+                        const customization = state.togoCustomizations?.[items[j].name] || {}
+                        const note = customization.label || ''
+                        const extra = Number(customization.price ?? 0)
+                        const basePrice = Number(items[j].listPrice ?? 0)
+                        const unitPrice = basePrice + extra
                         orderItems.push({
                             name: items[j].name,
                             quantity,
-                            price: Number(items[j].listPrice ?? 0)
+                            price: unitPrice,
+                            note,
+                            basePrice,
+                            extraCharge: extra
                         })
-                        totalTogoPrice += items[j].listPrice * quantity
+                        totalTogoPrice += unitPrice * quantity
                     }
                 }
             }
@@ -1104,7 +1135,8 @@ const store = createStore({
                             adultCount: 0,
                             bigKidCount: 0,
                             smlKidCount: 0,
-                            items: orderItems
+                            items: orderItems,
+                            notes: JSON.parse(JSON.stringify(state.togoCustomizations || {}))
                         }),
                         firestore.saveSalesSummary(buildSalesSummaryForFirestore(state.sales))
                     ]).then(() => {
@@ -1119,6 +1151,7 @@ const store = createStore({
             
             // resetting menu and cart (always clear cart after payment attempt)
             state.seletedTogo=[]
+            state.togoCustomizations = {}
             state.totalTogoPrice=0
             for(var i=0; i<currentMenuItem.length; i++){
                 let items=currentMenuItem[i].items
@@ -1187,9 +1220,8 @@ const store = createStore({
             state.isDinner = isDinner
         },
         setTableOrder(state, order = []) {
-            if (Array.isArray(order) && order.length > 0) {
-                state.tableOrder = order.slice()
-            }
+            const tableCount = Array.isArray(state.tables) ? state.tables.length : 10
+            state.tableOrder = normalizeTableOrder(order, tableCount)
         },
         setAppState(state, payload = {}) {
             const usingFirebase = !!state.useFirebase
@@ -1204,6 +1236,19 @@ const store = createStore({
             }
             if (Array.isArray(payload.seletedTogo)) {
                 state.seletedTogo = JSON.parse(JSON.stringify(payload.seletedTogo))
+            }
+            if (payload.togoCustomizations && typeof payload.togoCustomizations === 'object') {
+                state.togoCustomizations = JSON.parse(JSON.stringify(payload.togoCustomizations))
+            } else if (payload.togoNotes && typeof payload.togoNotes === 'object') {
+                const converted = {}
+                Object.entries(payload.togoNotes).forEach(([key, value]) => {
+                    if (!key) return
+                    converted[key] = {
+                        label: typeof value === 'string' ? value : '',
+                        price: 0
+                    }
+                })
+                state.togoCustomizations = converted
             }
             if (payload.totalTogoPrice !== undefined && payload.totalTogoPrice !== null) {
                 state.totalTogoPrice = payload.totalTogoPrice
@@ -1222,7 +1267,8 @@ const store = createStore({
                 state.tables = JSON.parse(JSON.stringify(payload.tables))
             }
             if (Array.isArray(payload.tableOrder) && payload.tableOrder.length > 0) {
-                state.tableOrder = JSON.parse(JSON.stringify(payload.tableOrder))
+                const tableCount = Array.isArray(state.tables) ? state.tables.length : 10
+                state.tableOrder = normalizeTableOrder(payload.tableOrder, tableCount)
             }
             if (!usingFirebase && Array.isArray(payload.menu)) {
                 state.menu = JSON.parse(JSON.stringify(payload.menu))
@@ -1494,38 +1540,46 @@ const store = createStore({
 
         async initializeAuth({ state, commit, dispatch }) {
             if (!state.useFirebase) {
-                return
+                return Promise.resolve()
             }
             if (!auth) {
                 console.warn('[Firebase] Auth is not configured. Check environment variables.')
                 commit('setAuthLoading', false)
-                return
+                return Promise.resolve()
             }
             if (state.authUnsubscriber) {
-                return
+                return Promise.resolve()
             }
             commit('setAuthLoading', true)
             commit('setAuthError', null)
 
-            const unsubscribe = onAuthStateChanged(auth, async user => {
-                if (user) {
-                    commit('setAuthUser', user)
-                    commit('setAuthRole', determineRoleForUser(user))
-                    commit('setAuthError', null)
-                    await dispatch('initializeFirebase')
-                } else {
-                    commit('setAuthUser', null)
-                    commit('setAuthRole', 'server')
-                    await dispatch('cleanupFirebase')
-                }
-                commit('setAuthLoading', false)
-            }, error => {
-                console.error('[Firebase] Auth state change error:', error)
-                commit('setAuthError', error.message)
-                commit('setAuthLoading', false)
+            const unsubscribePromise = new Promise(resolve => {
+                const unsubscribe = onAuthStateChanged(auth, async user => {
+                    try {
+                        if (user) {
+                            commit('setAuthUser', user)
+                            commit('setAuthRole', determineRoleForUser(user))
+                            commit('setAuthError', null)
+                            await dispatch('initializeFirebase')
+                        } else {
+                            commit('setAuthUser', null)
+                            commit('setAuthRole', 'server')
+                            await dispatch('cleanupFirebase')
+                        }
+                    } finally {
+                        commit('setAuthLoading', false)
+                        resolve()
+                    }
+                }, error => {
+                    console.error('[Firebase] Auth state change error:', error)
+                    commit('setAuthError', error.message)
+                    commit('setAuthLoading', false)
+                    resolve()
+                })
+                commit('setAuthUnsubscriber', unsubscribe)
             })
 
-            commit('setAuthUnsubscriber', unsubscribe)
+            return unsubscribePromise
         },
 
         async signIn({ commit }, { email, password }) {
@@ -1593,14 +1647,16 @@ function getAppStateSnapshot(state) {
         tableNum: state.tableNum,
         catID: state.catID,
         seletedTogo: JSON.parse(JSON.stringify(state.seletedTogo)),
+        togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
         totalTogoPrice: state.totalTogoPrice,
-        tableOrder: JSON.parse(JSON.stringify(state.tableOrder))
+        tableOrder: normalizeTableOrder(state.tableOrder, Array.isArray(state.tables) ? state.tables.length : 10)
     }
 
     if (!state.useFirebase) {
         snapshot.sales = JSON.parse(JSON.stringify(state.sales))
         snapshot.tables = JSON.parse(JSON.stringify(state.tables))
         snapshot.menu = JSON.parse(JSON.stringify(state.menu))
+        snapshot.togoCustomizations = JSON.parse(JSON.stringify(state.togoCustomizations || {}))
     }
 
     return snapshot
@@ -1697,4 +1753,33 @@ function determineRoleForUser(user) {
         return 'admin'
     }
     return 'server'
+}
+
+function normalizeTableOrder(order, tableCount = 10) {
+    const defaultOrder = Array.from({ length: tableCount }, (_, index) => index + 1)
+    if (!Array.isArray(order) || order.length === 0) {
+        return defaultOrder
+    }
+    const seen = new Set()
+    const normalized = []
+    order.forEach(value => {
+        const num = Number(value)
+        if (!Number.isInteger(num)) {
+            return
+        }
+        if (num < 1 || num > tableCount) {
+            return
+        }
+        if (seen.has(num)) {
+            return
+        }
+        seen.add(num)
+        normalized.push(num)
+    })
+    defaultOrder.forEach(num => {
+        if (!seen.has(num)) {
+            normalized.push(num)
+        }
+    })
+    return normalized
 }

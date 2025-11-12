@@ -208,9 +208,12 @@ export async function loadTogoSalesHistory() {
       ? record.items.map(item => ({
           name: item?.name || '',
           quantity: Number(item?.quantity ?? 0),
-          price: Number(item?.price ?? 0)
+          price: Number(item?.price ?? 0),
+          note: item?.note || '',
+          extraCharge: Number(item?.extraCharge ?? (item?.price ?? 0) - Number(item?.basePrice ?? item?.price ?? 0)) || 0
         }))
       : []
+    const notes = record.notes && typeof record.notes === 'object' ? record.notes : {}
     return {
       ...record,
       revenue: Number(record.revenue ?? 0),
@@ -218,6 +221,7 @@ export async function loadTogoSalesHistory() {
       bigKidCount: Number(record.bigKidCount ?? 0),
       smlKidCount: Number(record.smlKidCount ?? 0),
       items: parsedItems,
+      notes,
       timestamp: record.timestamp || null
     }
   })
