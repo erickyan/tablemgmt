@@ -29,3 +29,13 @@ app.component('togo-details', togodetails)
 app.component('currenttogo-details', currenttogo)
 
 app.mount('#app')
+
+// Make store accessible from browser console for debugging
+if (import.meta.env.DEV) {
+  window.store = store
+}
+
+// Initialize authentication (which will in turn bootstrap Firestore listeners)
+store.dispatch('initializeAuth').catch(err => {
+  console.error('Failed to initialize Firebase Auth:', err)
+})

@@ -2,6 +2,7 @@
 
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 
 // TODO: Add SDKs for Firebase products that you want to use
@@ -9,28 +10,27 @@ import { getFirestore } from "firebase/firestore";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 
-// Your web app's Firebase configuration
-
+// Your web app's Firebase configuration (loaded from environment variables)
 const firebaseConfig = {
-
-  apiKey: "AIzaSyBo1fCidF3cW_ge2J8d1hAetwI2Z84Rs5s",
-
-  authDomain: "cnbf-3ba9e.firebaseapp.com",
-
-  projectId: "cnbf-3ba9e",
-
-  storageBucket: "cnbf-3ba9e.appspot.com",
-
-  messagingSenderId: "334954577666",
-
-  appId: "1:334954577666:web:a78bcace6b445b05df4c1b"
-
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+const hasValidConfig = Object.values(firebaseConfig).every(Boolean);
 
-// Initialize Firebase
+let db = null;
+let auth = null;
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+if (hasValidConfig) {
+  const firebaseApp = initializeApp(firebaseConfig);
+  db = getFirestore(firebaseApp);
+  auth = getAuth(firebaseApp);
+} else {
+  console.warn('[Firebase] Missing configuration. Firestore/Auth features are disabled until environment variables are set.');
+}
 
-export {db}
+export { db, auth }
