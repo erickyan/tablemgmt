@@ -7,13 +7,13 @@
     <v-card class="pos-dialog">
       <div class="pos-dialog__header">
         <div class="pos-dialog__header-titles">
-          <h3 class="dialog-title">Build to-go order</h3>
-          <p class="dialog-subtitle">Tap an item to adjust quantity or add special requests.</p>
+          <h3 class="dialog-title">{{ getTranslatedLabel('Build to-go order') }}</h3>
+          <p class="dialog-subtitle">{{ getTranslatedLabel('Tap an item to adjust quantity or add special requests.') }}</p>
         </div>
         <div class="pos-dialog__header-actions">
           <v-btn color="accent" variant="flat" @click="updateAndClose">
             <v-icon start>mdi-check</v-icon>
-            Update
+            {{ getTranslatedLabel('Update') }}
           </v-btn>
         </div>
       </div>
@@ -28,7 +28,7 @@
         >
           <div class="item-row__info">
             <div class="item-row__title">
-              <span class="item-name">{{ item.name }}</span>
+              <span class="item-name">{{ isDrinksCategory ? getTranslatedLabel(item.name) : item.name }}</span>
               <v-chip
                 v-if="getCustomizationForKey(dialogKey(index))?.label"
                 size="small"
@@ -40,7 +40,7 @@
             </div>
             <div class="item-row__meta">
               <span class="price">${{ formattedPrice(item, index).toFixed(2) }}</span>
-              <span class="quantity">Qty {{ draftQuantities[dialogKey(index)] || 0 }}</span>
+              <span class="quantity">{{ getTranslatedLabel('Qty') }} {{ draftQuantities[dialogKey(index)] || 0 }}</span>
             </div>
           </div>
           <div class="item-row__actions">
@@ -51,7 +51,7 @@
               color="accent"
               density="comfortable"
               @click="openCustomization(item, index)"
-              :title="'Edit special request'"
+              :title="getTranslatedLabel('Edit special request')"
             >
               <v-icon>mdi-square-edit-outline</v-icon>
             </v-btn>
@@ -77,7 +77,7 @@
         </div>
         <div v-if="menuItems.length === 0" class="empty-state">
           <v-icon size="36" color="accent">mdi-food-takeout-box</v-icon>
-          <p>No menu items configured for this category.</p>
+          <p>{{ getTranslatedLabel('No menu items configured for this category.') }}</p>
         </div>
       </div>
     </v-card>
@@ -85,7 +85,7 @@
     <v-dialog v-model="customizationDialog.open" max-width="420">
       <v-card class="custom-dialog">
         <div class="custom-dialog__header">
-          <h4>Special request</h4>
+          <h4>{{ getTranslatedLabel('Special request') }}</h4>
           <p>{{ customizationDialog.item?.name }}</p>
         </div>
         <v-divider></v-divider>
@@ -141,6 +141,7 @@
 
 <script>
 import { DRINK_OPTIONS, getDrinkLabel, isWater } from '../utils/drinkOptions.js'
+import { translate } from '../utils/translations.js'
 
 export default {
     props: {
@@ -207,6 +208,9 @@ export default {
         isDrinksCategory() {
             return this.$store.state.catID === -1
         },
+        isChinese() {
+            return this.$store.state.language === 'zh'
+        },
         visibleItems() {
             const base = this.menuItems.map((item, index) => ({ item, index }))
             return base
@@ -240,6 +244,9 @@ export default {
         }
     },
     methods: {
+        getTranslatedLabel(label) {
+            return translate(label, this.isChinese)
+        },
         dialogKey(index) {
             return `${this.$store.state.catID}-${index}`
         },

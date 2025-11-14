@@ -72,6 +72,7 @@ const store = createStore({
         authUnsubscriber: null,
         authRole: 'server',
         isDinner: false,
+        language: 'en', // 'en' for English, 'zh' for Chinese
         sales:{
             totalCount: 0,
             adultCount: 0,
@@ -1262,6 +1263,12 @@ const store = createStore({
             state.isDinner = isDinner
             // Do not recalculate prices for occupied/seated or printed tables
             // Prices should remain fixed once a table is seated or has been printed
+        },
+        setLanguage(state, lang) {
+            state.language = lang === 'zh' ? 'zh' : 'en'
+        },
+        toggleLanguage(state) {
+            state.language = state.language === 'zh' ? 'en' : 'zh'
         },
         setCashierMode(state, mode) {
             if (state.cashierForm) {

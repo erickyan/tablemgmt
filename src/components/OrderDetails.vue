@@ -8,17 +8,17 @@
       <div class="pos-dialog__header">
         <div class="header-info">
           <div class="header-title-row">
-            <h3 class="dialog-title">Table {{ tableNumber }}</h3>
+            <h3 class="dialog-title">{{ getTranslatedLabel('Table') }} {{ tableNumber }}</h3>
             <v-chip
               size="small"
               variant="tonal"
               color="accent"
             >
-              {{ pricingModeWasDinner ? 'Dinner pricing' : 'Lunch pricing' }}
+              {{ getTranslatedLabel(pricingModeWasDinner ? 'Dinner pricing' : 'Lunch pricing') }}
             </v-chip>
             <span class="meta-time" v-if="table.sitDownTime">
               <v-icon size="16" icon="mdi-clock-outline" class="me-1"></v-icon>
-              Sat {{ table.sitDownTime }}
+              {{ getTranslatedLabel('Sat') }} {{ table.sitDownTime }}
             </span>
           </div>
         </div>
@@ -30,7 +30,7 @@
             @click="clearTable"
           >
             <v-icon start>mdi-trash-can-outline</v-icon>
-            Clear
+            {{ getTranslatedLabel('Clear') }}
           </v-btn>
           <v-btn
             variant="outlined"
@@ -39,7 +39,7 @@
             @click="printReceipt"
           >
             <v-icon start>mdi-printer</v-icon>
-            Print
+            {{ getTranslatedLabel('Print') }}
           </v-btn>
           <v-btn
             variant="outlined"
@@ -50,7 +50,7 @@
             <v-icon start>
               {{ table.goodPpl ? 'mdi-heart-off' : 'mdi-heart' }}
             </v-icon>
-            {{ table.goodPpl ? 'Remove VIP' : 'Mark VIP' }}
+            {{ getTranslatedLabel(table.goodPpl ? 'Remove VIP' : 'Mark VIP') }}
           </v-btn>
           <v-btn
             variant="outlined"
@@ -59,7 +59,7 @@
             @click="payAndClose"
           >
             <v-icon start>mdi-cash-check</v-icon>
-            Paid
+            {{ getTranslatedLabel('Paid') }}
           </v-btn>
           <v-btn
             variant="outlined"
@@ -68,7 +68,7 @@
             @click="updateMenu"
           >
             <v-icon start>mdi-check</v-icon>
-            Update
+            {{ getTranslatedLabel('Update') }}
           </v-btn>
         </div>
       </div>
@@ -76,8 +76,8 @@
       <div class="pos-dialog__content">
         <section class="dialog-section dialog-section--guests">
           <header class="section-header">
-             <h4>Buffet guests</h4>
-             <span class="section-note">Tap + or − to adjust counts.</span>
+             <h4>{{ getTranslatedLabel('Buffet guests') }}</h4>
+             <span class="section-note">{{ getTranslatedLabel('Tap + or − to adjust counts.') }}</span>
           </header>
           <div class="counter-grid">
             <div class="counter-card">
@@ -116,7 +116,7 @@
             </div>
             <div class="counter-card">
               <div class="counter-heading">
-                <span class="counter-label">Kid (6-9)</span>
+                <span class="counter-label">{{ getTranslatedLabel('Kid (6-9)') }}</span>
                  <v-chip
                    size="x-small"
                    color="accent"
@@ -150,7 +150,7 @@
             </div>
             <div class="counter-card">
               <div class="counter-heading">
-                <span class="counter-label">Kid (2-5)</span>
+                <span class="counter-label">{{ getTranslatedLabel('Kid (2-5)') }}</span>
                  <v-chip
                    size="x-small"
                    color="accent"
@@ -187,9 +187,9 @@
 
         <section class="dialog-section dialog-section--drinks">
           <header class="section-header">
-            <h4>Drinks</h4>
+            <h4>{{ getTranslatedLabel('Drinks') }}</h4>
             <span class="section-note">
-              {{ table.drinks.length ? table.drinks.length : 'No' }} drinks added.
+              {{ table.drinks.length ? table.drinks.length : getTranslatedLabel('No') }} {{ getTranslatedLabel('drinks') }} {{ getTranslatedLabel('added.') }}
             </span>
           </header>
 
@@ -260,7 +260,8 @@
 
 
 <script>
-import { DRINK_OPTIONS } from '../utils/drinkOptions.js'
+import { DRINK_OPTIONS, getDrinkLabel } from '../utils/drinkOptions.js'
+import { translate } from '../utils/translations.js'
 
 export default {
     props: {
@@ -403,8 +404,21 @@ export default {
             this.notifyPanel('drinks', { tab: 'check' })
         },
         drinkLabel(code) {
+            // For UI display, use translated label (English with Chinese appended)
+            const match = this.drinkOptions.find(option => option.code === code)
+            const label = match ? match.label : code
+            return this.getTranslatedLabel(label)
+        },
+        drinkLabelEnglish(code) {
+            // For receipts, use English-only label (no translation)
             const match = this.drinkOptions.find(option => option.code === code)
             return match ? match.label : code
+        },
+        getTranslatedLabel(label) {
+            return translate(label, this.isChinese)
+        },
+        isChinese() {
+            return this.$store.state.language === 'zh'
         },
         openPrintDocument(html) {
             // Use the same print method as togo orders - try popup first, then iframe
@@ -614,7 +628,8 @@ export default {
             }, {})
 
             Object.entries(drinkCounts).forEach(([code, qty]) => {
-                const label = this.drinkLabel(code)
+                // For receipts, use English-only labels (not translated)
+                const label = this.drinkLabelEnglish(code)
                 const unitPrice = code === 'WTER' ? pricing.water : pricing.drink
                 addLine(label, qty, unitPrice)
             })

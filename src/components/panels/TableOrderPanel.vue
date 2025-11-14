@@ -4,7 +4,7 @@
       <div>
         <h3 class="panel__title">Table {{ tableNumber }}</h3>
         <p class="panel__subtitle">
-          {{ pricingModeWasDinner ? 'Dinner pricing' : 'Lunch pricing' }}
+          {{ getTranslatedLabel(pricingModeWasDinner ? 'Dinner pricing' : 'Lunch pricing') }}
         </p>
       </div>
       <v-chip
@@ -29,8 +29,8 @@
           class="line-item"
         >
           <div>
-            <div class="line-item__label">{{ item.label }}</div>
-            <div class="line-item__meta">Qty {{ item.qty }}</div>
+            <div class="line-item__label">{{ getTranslatedLabel(item.label) }}</div>
+            <div class="line-item__meta">{{ getTranslatedLabel('Qty') }} {{ item.qty }}</div>
           </div>
           <div class="line-item__amount">
             ${{ item.total.toFixed(2) }}
@@ -39,7 +39,7 @@
       </div>
       <div class="line-items line-items--empty" v-else>
         <v-icon size="28" color="accent">mdi-receipt-outline</v-icon>
-        <p>No guests or drinks recorded yet.</p>
+        <p>{{ getTranslatedLabel('No guests or drinks recorded yet.') }}</p>
       </div>
       
       <div :class="['action-list', { 'action-list--highlighted': highlightSection === 'actions' }]">
@@ -51,7 +51,7 @@
           @click="emitManage"
         >
           <v-icon start>mdi-square-edit-outline</v-icon>
-          Manage table
+          {{ getTranslatedLabel('Manage table') }}
         </v-btn>
         <v-btn
           block
@@ -62,7 +62,7 @@
           :disabled="!hasGuests"
         >
           <v-icon start>mdi-printer</v-icon>
-          Print preview
+          {{ getTranslatedLabel('Print Preview') }}
         </v-btn>
         <v-btn
           block
@@ -72,18 +72,18 @@
           @click="emitPaid"
         >
           <v-icon start>mdi-cash-check</v-icon>
-          Mark paid
+          {{ getTranslatedLabel('Mark Paid') }}
         </v-btn>
       </div>
     </div>
 
     <div :class="['panel__summary', { 'panel__summary--highlighted': highlightSection === 'summary' }]">
       <div class="summary-row">
-        <span>Subtotal</span>
+        <span>{{ getTranslatedLabel('Subtotal') }}</span>
         <strong>${{ subtotal.toFixed(2) }}</strong>
       </div>
       <div class="summary-row">
-        <span>Total (incl. tax)</span>
+        <span>{{ getTranslatedLabel('Total (incl. tax)') }}</span>
         <strong class="summary-accent">
           ${{ totalWithTax.toFixed(2) }}
         </strong>
@@ -93,6 +93,8 @@
 </template>
 
 <script>
+import { translate, getTranslation } from '../../utils/translations.js'
+
 export default {
   name: 'TableOrderPanel',
   props: {
@@ -272,6 +274,7 @@ export default {
     drinkLabel(code) {
       const map = {
         WTER: 'Water',
+        DRNK: 'Drink',
         COKE: 'Coke',
         STEA: 'Sweet tea',
         UTEA: 'Unsweet tea',
@@ -283,7 +286,15 @@ export default {
         HALF: 'Half & Half',
         COFE: 'Coffee'
       }
-      return map[code] || code
+      const label = map[code] || code
+      // For display, use translated label (English with Chinese appended)
+      return this.getTranslatedLabel(label)
+    },
+    getTranslatedLabel(label) {
+      return translate(label, this.isChinese)
+    },
+    isChinese() {
+      return this.$store.state.language === 'zh'
     },
     emitManage() {
       this.setHighlight('actions')

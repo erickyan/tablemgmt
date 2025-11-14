@@ -3,7 +3,7 @@
     <div class="floor-plan__grid">
       <div
         v-for="(tableIndex, index) in tableOrder"
-        :key="`${index}-${tableIndex}`"
+        :key="`${index}-${tableIndex}-${currentLanguage}`"
         class="floor-plan__tile"
         :class="[statusForTable(tableIndex).appearance, { 'is-dragged': draggedIndex === index, 'is-drag-over': draggedOverIndex === index }]"
         draggable="true"
@@ -42,31 +42,31 @@
           <div class="tile-counts">
             <span class="count">
               <strong>{{ $store.state.tables[tableIndex - 1].adult }}</strong>
-              Adult
+              {{ getTranslatedLabel('Adult') }}
             </span>
             <span class="count">
               <strong>{{ $store.state.tables[tableIndex - 1].bigKid }}</strong>
-              Kid (6-9)
+              {{ getTranslatedLabel('Kid (6-9)') }}
             </span>
             <span class="count">
               <strong>{{ $store.state.tables[tableIndex - 1].smlKid }}</strong>
-              Kid (2-5)
+              {{ getTranslatedLabel('Kid (2-5)') }}
             </span>
           </div>
           <div class="tile-meta">
             <span class="meta-item">
               <v-icon size="16" icon="mdi-cup-water" class="me-1"></v-icon>
-              {{ drinkCount(tableIndex) }} drinks
+              {{ drinkCount(tableIndex) }} {{ getTranslatedLabel('drinks') }}
             </span>
             <span class="meta-item">
               <v-icon size="16" icon="mdi-food-takeout-box" class="me-1"></v-icon>
-              {{ $store.state.tables[tableIndex - 1].togo || 0 }} to-go
+              {{ $store.state.tables[tableIndex - 1].togo || 0 }} {{ getTranslatedLabel('to-go') }}
             </span>
           </div>
         </div>
 
         <div class="floor-plan__tile-footer">
-          <span class="tile-total">Total ${{ Number($store.state.tables[tableIndex - 1].totalPrice || 0).toFixed(2) }}</span>
+          <span class="tile-total">{{ getTranslatedLabel('Total') }} ${{ Number($store.state.tables[tableIndex - 1].totalPrice || 0).toFixed(2) }}</span>
           <v-icon
             icon="mdi-cards-heart"
             color="pink-darken-1"
@@ -83,6 +83,8 @@
 
 
 <script>
+import { translate } from '../utils/translations.js'
+
 export default {
   data: () => ({
     showDetails: false,
@@ -93,6 +95,13 @@ export default {
   computed: {
     tableOrder() {
       return this.$store.state.tableOrder || []
+    },
+    isChinese() {
+      return this.$store.state.language === 'zh'
+    },
+    // This computed property ensures Vue tracks language changes
+    currentLanguage() {
+      return this.$store.state.language
     }
   },
   methods: {
@@ -202,8 +211,9 @@ export default {
         return acc
       }, {})
       
+      // For receipts, use English-only labels (no translation)
       const drinkLabelMap = {
-        WTER: 'Water', COKE: 'Coke', STEA: 'Sweet tea', UTEA: 'Unsweet tea',
+        WTER: 'Water', DRNK: 'Drink', COKE: 'Coke', STEA: 'Sweet tea', UTEA: 'Unsweet tea',
         HTEA: 'Hot tea', SPRT: 'Sprite', DRPP: 'Dr Pepper', DIET: 'Diet Coke',
         LMND: 'Lemonade', HALF: 'Half & Half', COFE: 'Coffee'
       }
@@ -441,7 +451,7 @@ export default {
       this.$store.commit('setOrderPanel', { type: 'table', tableIndex })
 
       const status = this.statusForTable(n)
-      if (status && status.label === 'Vacant') {
+      if (status && status.label === this.getTranslatedLabel('Empty')) {
         this.showDetails = true
       } else {
         this.showDetails = false
@@ -454,7 +464,15 @@ export default {
       const drinks = this.$store.state.tables[tableIndex - 1]?.drinks || []
       return drinks.length
     },
+    isChinese() {
+      return this.$store.state.language === 'zh'
+    },
+    getTranslatedLabel(label) {
+      return translate(label, this.isChinese)
+    },
     statusForTable(tableIndex) {
+      // Explicitly reference language to ensure reactivity
+      const _lang = this.currentLanguage // This ensures Vue tracks language changes
       const table = this.$store.state.tables[tableIndex - 1] || {}
       const total = parseFloat(table.totalPrice || 0)
       const guestCount = Number(table.adult || 0) + Number(table.bigKid || 0) + Number(table.smlKid || 0)
@@ -463,18 +481,18 @@ export default {
       const hasActivity = guestCount > 0 || drinks > 0 || togo > 0
 
       if (!hasActivity && !table.occupied) {
-        return { label: 'Vacant', appearance: 'status-vacant', icon: 'mdi-checkbox-blank-circle-outline' }
+        return { label: this.getTranslatedLabel('Empty'), appearance: 'status-vacant', icon: 'mdi-checkbox-blank-circle-outline' }
       }
 
       if (total > 0 && !table.occupied) {
-        return { label: 'Printed', appearance: 'status-ready', icon: 'mdi-check-circle' }
+        return { label: this.getTranslatedLabel('Printed'), appearance: 'status-ready', icon: 'mdi-check-circle' }
       }
 
       if (table.occupied || hasActivity) {
-        return { label: 'Seated', appearance: 'status-seated', icon: 'mdi-account-clock-outline' }
+        return { label: this.getTranslatedLabel('Occupied'), appearance: 'status-seated', icon: 'mdi-account-clock-outline' }
       }
 
-      return { label: 'Vacant', appearance: 'status-vacant', icon: 'mdi-checkbox-blank-circle-outline' }
+      return { label: this.getTranslatedLabel('Empty'), appearance: 'status-vacant', icon: 'mdi-checkbox-blank-circle-outline' }
     },
     handleDragStart(event, index) {
       this.draggedIndex = index

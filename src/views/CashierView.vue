@@ -2,10 +2,10 @@
   <v-container class="cashier-view pa-4">
     <v-card class="mx-auto" max-width="520">
       <v-card-title class="d-flex align-center justify-space-between">
-        Cashier Receipt
-        <v-chip color="accent" variant="tonal">Total ${{ totalWithTax }}</v-chip>
+        {{ getTranslatedLabel('Cashier Receipt') }}
+        <v-chip color="accent" variant="tonal">{{ getTranslatedLabel('Total') }} ${{ totalWithTax }}</v-chip>
       </v-card-title>
-      <v-card-subtitle>Quick receipt builder for walk-in customers</v-card-subtitle>
+      <v-card-subtitle>{{ getTranslatedLabel('Quick receipt builder for walk-in customers') }}</v-card-subtitle>
 
       <v-card-text>
         <div class="mb-4 price-mode-section">
@@ -19,11 +19,11 @@
             >
               <v-btn value="lunch">
                 <v-icon start size="18">mdi-white-balance-sunny</v-icon>
-                Lunch
+                {{ getTranslatedLabel('Lunch') }}
               </v-btn>
               <v-btn value="dinner">
                 <v-icon start size="18">mdi-weather-night</v-icon>
-                Dinner
+                {{ getTranslatedLabel('Dinner') }}
               </v-btn>
             </v-btn-toggle>
             <v-btn 
@@ -33,7 +33,7 @@
               class="clear-btn"
             >
               <v-icon start size="18">mdi-refresh</v-icon>
-              Clear
+              {{ getTranslatedLabel('Clear') }}
             </v-btn>
           </div>
         </div>
@@ -69,7 +69,7 @@
         <v-divider class="my-4"></v-divider>
 
         <section>
-          <div class="text-subtitle-2 mb-2">Drinks</div>
+          <div class="text-subtitle-2 mb-2">{{ getTranslatedLabel('Drinks') }}</div>
           <v-row dense>
             <v-col
               v-for="drink in drinkOptions"
@@ -78,7 +78,7 @@
               class="py-2"
             >
               <v-card variant="outlined" class="pa-2 d-flex align-center">
-                <div class="flex-grow-1">{{ drink.label }}</div>
+                <div class="flex-grow-1">{{ getTranslatedLabel(drink.label) }}</div>
                 <div class="count-controls">
                   <v-btn
                     icon="mdi-minus"
@@ -123,6 +123,7 @@
 
 <script>
 import { DRINK_OPTIONS } from '../utils/drinkOptions.js'
+import { translate } from '../utils/translations.js'
 
 export default {
   name: 'CashierView',
@@ -144,6 +145,9 @@ export default {
       label: opt.label,
       type: opt.type
     })),
+    isChinese() {
+      return this.$store.state.language === 'zh'
+    }
   }),
   computed: {
     pricing() {
@@ -241,6 +245,9 @@ export default {
     }
   },
   methods: {
+    getTranslatedLabel(label) {
+      return translate(label, this.isChinese)
+    },
     stepBuffet(key, delta) {
       const next = Math.max(0, (this.buffetCounts[key] || 0) + delta)
       this.buffetCounts[key] = next

@@ -180,11 +180,11 @@ import { RouterView } from 'vue-router'
               >
                 <v-btn value="lunch">
                   <v-icon start size="18">mdi-white-balance-sunny</v-icon>
-                  Lunch
+                  {{ getTranslatedLabel('Lunch') }}
                 </v-btn>
                 <v-btn value="dinner">
                   <v-icon start size="18">mdi-weather-night</v-icon>
-                  Dinner
+                  {{ getTranslatedLabel('Dinner') }}
                 </v-btn>
               </v-btn-toggle>
             </div>
@@ -212,10 +212,10 @@ import { RouterView } from 'vue-router'
           <div v-else class="pos-content__panel-placeholder">
             <v-icon size="42" color="accent">mdi-receipt-outline</v-icon>
             <p class="text-subtitle-1 font-weight-medium mt-3">
-              Orders you open will appear here.
+              {{ getTranslatedLabel('Orders you open will appear here.') }}
             </p>
             <p class="text-body-2 text-medium-emphasis">
-              Select a table or build a to-go order to review items, actions, and guest details.
+              {{ getTranslatedLabel('Select a table or build a to-go order to review items, actions, and guest details.') }}
             </p>
           </div>
             </aside>
@@ -253,7 +253,19 @@ import { RouterView } from 'vue-router'
           <span class="pos-bottom-nav__icon">
             <v-icon :icon="item.icon"></v-icon>
           </span>
-          <span class="pos-bottom-nav__label">{{ item.label }}</span>
+          <span class="pos-bottom-nav__label">{{ getTranslatedLabel(item.label) }}</span>
+        </v-btn>
+        <v-btn
+          key="language"
+          value="language"
+          :ripple="false"
+          @click="toggleLanguage"
+          class="pos-bottom-nav__lang-btn"
+        >
+          <span class="pos-bottom-nav__icon">
+            <v-icon icon="mdi-translate"></v-icon>
+          </span>
+          <span class="pos-bottom-nav__label">{{ currentLanguageLabel }}</span>
         </v-btn>
       </v-bottom-navigation>
 
@@ -317,6 +329,7 @@ import TableOrderPanel from './components/panels/TableOrderPanel.vue'
 import TogoOrderPanel from './components/panels/TogoOrderPanel.vue'
 import TogoEditItems from './components/TogoEditItems.vue'
 import CashierReceiptPanel from './components/panels/CashierReceiptPanel.vue'
+import { translate } from './utils/translations.js'
 
 export default {
   components: {
@@ -357,6 +370,14 @@ export default {
     togoSalesHistory: []
   }),
   methods: {
+    getTranslatedLabel(label) {
+      return translate(label, this.isChinese)
+    },
+    toggleLanguage() {
+      this.$store.commit('toggleLanguage')
+      // Prevent navigation when clicking language button
+      this.syncBottomNavWithRoute()
+    },
     async login() {
       this.localAuthError = ''
       if (!this.loginEmail || !this.loginPassword) {
@@ -381,6 +402,10 @@ export default {
       this.togoDialogOpen = true
     },
     handleBottomNavChange(value) {
+      // Don't handle language toggle here, it's handled in toggleLanguage method
+      if (value === 'language') {
+        return
+      }
       const item = this.bottomNavItems.find(entry => entry.value === value)
       if (!item) {
         return
@@ -668,11 +693,13 @@ export default {
     },
     drawerColor() {
       return 'drawer'
+    },
+    isChinese() {
+      return this.$store.state.language === 'zh'
+    },
+    currentLanguageLabel() {
+      return this.isChinese ? '中文' : 'English'
     }
-  },
-  mounted() {
-    this.applyTheme(this.priceMode)
-    this.syncBottomNavWithRoute()
   },
   watch: {
     loginEmail() {

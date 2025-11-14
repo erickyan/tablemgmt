@@ -1,4 +1,6 @@
 <script>
+import { translate } from '../utils/translations.js'
+
 export default {
   data: () => ({
     togoCompose: false,
@@ -34,10 +36,20 @@ export default {
         isDrinks: true
       })
       
-      return categories
+      // Translate category titles for display
+      return categories.map(cat => ({
+        ...cat,
+        title: cat.isDrinks ? this.getTranslatedLabel(cat.title) : cat.title
+      }))
+    },
+    isChinese() {
+      return this.$store.state.language === 'zh'
     }
   },
   methods: {
+    getTranslatedLabel(label) {
+      return translate(label, this.isChinese)
+    },
     categoryStyle(category) {
       return {
         background: `linear-gradient(135deg, ${category.color} 0%, rgba(255,255,255,0.08) 100%)`
@@ -150,9 +162,9 @@ export default {
   <section class="menu-view">
     <div class="menu-view__header">
       <div>
-        <h2 class="menu-title">To-go menu</h2>
+        <h2 class="menu-title">{{ getTranslatedLabel('To-go menu') }}</h2>
         <p class="menu-subtitle">
-          Tap a category, then add items with the controls below.
+          {{ getTranslatedLabel('Tap a category, then add items with the controls below.') }}
         </p>
       </div>
     </div>

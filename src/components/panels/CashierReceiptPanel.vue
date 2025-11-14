@@ -2,9 +2,9 @@
   <div class="panel">
     <div class="panel__header">
       <div>
-        <h3 class="panel__title">Cashier Receipt</h3>
+        <h3 class="panel__title">{{ getTranslatedLabel('Cashier Receipt') }}</h3>
         <p class="panel__subtitle">
-          {{ isDinner ? 'Dinner pricing' : 'Lunch pricing' }}
+          {{ getTranslatedLabel(isDinner ? 'Dinner pricing' : 'Lunch pricing') }}
         </p>
       </div>
     </div>
@@ -20,8 +20,8 @@
           class="line-item"
         >
           <div>
-            <div class="line-item__label">{{ item.label }}</div>
-            <div class="line-item__meta">Qty {{ item.qty }}</div>
+            <div class="line-item__label">{{ getTranslatedLabel(item.label) }}</div>
+            <div class="line-item__meta">{{ getTranslatedLabel('Qty') }} {{ item.qty }}</div>
           </div>
           <div class="line-item__amount">
             ${{ item.total.toFixed(2) }}
@@ -30,17 +30,17 @@
       </div>
       <div class="line-items line-items--empty" v-else>
         <v-icon size="28" color="accent">mdi-receipt-outline</v-icon>
-        <p>No items added yet.</p>
+        <p>{{ getTranslatedLabel('No items added yet.') }}</p>
       </div>
     </div>
 
     <div class="panel__summary">
       <div class="summary-row">
-        <span>Subtotal</span>
+        <span>{{ getTranslatedLabel('Subtotal') }}</span>
         <strong>${{ subtotal.toFixed(2) }}</strong>
       </div>
       <div class="summary-row">
-        <span>Total (incl. tax)</span>
+        <span>{{ getTranslatedLabel('Total (incl. tax)') }}</span>
         <strong class="summary-accent">
           ${{ totalWithTax.toFixed(2) }}
         </strong>
@@ -56,7 +56,7 @@
         @click="printReceipt"
       >
         <v-icon start>mdi-printer</v-icon>
-        Print Receipt
+        {{ getTranslatedLabel('Print Receipt') }}
       </v-btn>
     </div>
   </div>
@@ -64,6 +64,7 @@
 
 <script>
 import { DRINK_OPTIONS, getDrinkLabel, isWater } from '../../utils/drinkOptions.js'
+import { translate } from '../../utils/translations.js'
 
 export default {
   name: 'CashierReceiptPanel',
@@ -111,6 +112,7 @@ export default {
       Object.entries(drinkCounts).forEach(([code, qty]) => {
         const quantity = Number(qty || 0)
         if (quantity <= 0) return
+        // For UI display, use translated label (English with Chinese appended)
         const label = getDrinkLabel(code)
         const price = isWater(code) ? this.pricing.water : this.pricing.drink
         addItem(label, quantity, price)
@@ -129,9 +131,15 @@ export default {
     },
     taxAmount() {
       return this.totalWithTax - this.subtotal
+    },
+    isChinese() {
+      return this.$store.state.language === 'zh'
     }
   },
   methods: {
+    getTranslatedLabel(label) {
+      return translate(label, this.isChinese)
+    },
     printReceipt() {
       if (!this.hasActivity) {
         return
@@ -156,7 +164,8 @@ export default {
       Object.entries(drinkCounts).forEach(([code, qty]) => {
         const qtyNum = Number(qty || 0)
         if (!qtyNum) return
-        const label = getDrinkLabel(code)
+        // For receipts, use English-only label (no translation)
+        const label = getDrinkLabel(code) // getDrinkLabel already returns English-only
         const unitPrice = isWater(code) ? this.pricing.water : this.pricing.drink
         addLine(label, qtyNum, unitPrice)
       })
