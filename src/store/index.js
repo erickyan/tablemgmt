@@ -2,11 +2,52 @@ import { createStore } from 'vuex'
 import * as firestore from '../services/firestoreData'
 import { auth } from '../firebase'
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth'
+import { DRINK_OPTIONS } from '../utils/drinkOptions.js'
 
 const ADMIN_EMAILS = (import.meta.env.VITE_FIREBASE_ADMIN_EMAILS || '')
   .split(',')
   .map(email => email.trim().toLowerCase())
   .filter(Boolean)
+
+const resetMenuQuantities = (menu = []) => {
+  menu.forEach(category => {
+    if (!Array.isArray(category?.items)) return
+    category.items.forEach(item => {
+      if (item && typeof item === 'object') {
+        item.quantity = 0
+      }
+    })
+  })
+}
+
+const syncLegacyTogoState = (state) => {
+  const selections = (state.togoLines || []).map(line => ({
+    item: line.itemName,
+    quantity: Number(line.quantity ?? 0),
+    price: (Number(line.basePrice ?? 0) + Number(line.extraPrice ?? 0)).toFixed(2),
+    id: Number.isInteger(line.categoryIndex) ? line.categoryIndex : null,
+    nTerm: Number.isInteger(line.itemIndex) ? line.itemIndex : null
+  }))
+  state.seletedTogo = JSON.parse(JSON.stringify(selections))
+  const customizations = {}
+  state.togoLines.forEach(line => {
+    const note = line.note || ''
+    const extra = Number(line.extraPrice ?? 0)
+    if (!customizations[line.itemName]) {
+      customizations[line.itemName] = { label: note, price: extra }
+    }
+  })
+  state.togoCustomizations = customizations
+}
+
+const recalcTogoTotals = (state) => {
+  const subtotal = (state.togoLines || []).reduce((sum, line) => {
+    const unitPrice = Number(line.basePrice ?? 0) + Number(line.extraPrice ?? 0)
+    return sum + unitPrice * Number(line.quantity ?? 0)
+  }, 0)
+  state.totalTogoPrice = (subtotal * state.TAX_RATE).toFixed(2)
+  syncLegacyTogoState(state)
+}
 
 /**
  * Vuex Store with Firebase Firestore & Authentication Integration
@@ -49,9 +90,31 @@ const store = createStore({
         WATERPRICE: 0.27,
         DRINKPRICE:1.75,
         tableNum:0,
+        orderPanel: {
+            type: null,
+            tableIndex: null
+        },
         catID: 0,
+        togoLines: [],
+        nextTogoLineId: 1,
         seletedTogo: [],
         togoCustomizations: {},
+        cashierForm: (() => {
+            // Initialize drinkCounts with all drink options from shared list
+            const drinkCounts = {}
+            DRINK_OPTIONS.forEach(opt => {
+                drinkCounts[opt.code] = 0
+            })
+            return {
+                mode: 'lunch',
+                buffetCounts: {
+                    adult: 0,
+                    bigKid: 0,
+                    smallKid: 0,
+                },
+                drinkCounts,
+            }
+        })(),
         tables: [
             {
                 number: 1,
@@ -688,6 +751,23 @@ const store = createStore({
         ]
     },
     mutations: {
+        setOrderPanel(state, payload = null) {
+            if (!payload || !payload.type) {
+                state.orderPanel = {
+                    type: null,
+                    tableIndex: null
+                }
+                return
+            }
+            const nextPanel = {
+                type: payload.type,
+                tableIndex: typeof payload.tableIndex === 'number' ? payload.tableIndex : state.orderPanel.tableIndex ?? null
+            }
+            state.orderPanel = nextPanel
+            if (typeof nextPanel.tableIndex === 'number') {
+                state.tableNum = nextPanel.tableIndex
+            }
+        },
         // set ppl number
         increaseAdult(state){
             // console.log(state.tableNum )
@@ -737,6 +817,14 @@ const store = createStore({
             state.tables[state.tableNum].drinks.sort()
             persistCurrentTable(state)
         },
+        setTableOccupied(state, payload = {}) {
+            const index = typeof payload.index === 'number' ? payload.index : state.tableNum
+            if (index < 0 || index >= state.tables.length) {
+                return
+            }
+            state.tables[index].occupied = !!payload.value
+            persistTableByIndex(state, index)
+        },
         updateTableGoodPpl(state, value){
             state.tables[state.tableNum].goodPpl = value
             persistCurrentTable(state)
@@ -758,9 +846,27 @@ const store = createStore({
         // },
         // calculate total price
         calculateTotal(state){
+            const table = state.tables[state.tableNum]
+            if (!table) {
+                return
+            }
+            
+            // If table is already occupied OR has a totalPrice set, don't recalculate price
+            // Prices should remain fixed once a table is seated, has been printed, or has a price set
+            // Note: Don't store pricingModeDinner here for already-occupied/printed tables
+            // because we can't know the original mode. The inference logic in components will handle it.
+            const hasPriceSet = table.totalPrice && parseFloat(table.totalPrice) > 0
+            const isOccupied = table.occupied
+            const isPrinted = !isOccupied && hasPriceSet
+            const hasTimeStamp = table.time && table.time > 0
+            
+            if (isOccupied || hasPriceSet || hasTimeStamp) {
+                return
+            }
+            
             // change table to occupied
-            state.tables[state.tableNum].occupied = true
-            let num = state.tables[state.tableNum].drinks
+            table.occupied = true
+            let num = table.drinks
             let numWater = 0
             let numDrink = 0
             if (num.length!=0){
@@ -783,13 +889,16 @@ const store = createStore({
             // Object.keys(myObj).length
             // console.log('water: ' + result.Water)
             // console.log('others: '+ (num.length - result.Water))
-            state.tables[state.tableNum].drinkPrice = state.WATERPRICE*numWater + state.DRINKPRICE*numDrink
+            table.drinkPrice = state.WATERPRICE*numWater + state.DRINKPRICE*numDrink
+            // Store the pricing mode used when calculating this table's price
+            // This ensures line items always show the correct prices even after mode changes
+            table.pricingModeDinner = state.isDinner
             if(state.isDinner){
                 // console.log('diner')
-                state.tables[state.tableNum].totalPrice = ((state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTDINNERPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDDINNERPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDDINNERPRICE)*state.TAX_RATE).toFixed(2)
+                table.totalPrice = ((table.drinkPrice + table.adult * state.ADULTDINNERPRICE + table.bigKid * state.BIGKIDDINNERPRICE + table.smlKid * state.SMALLKIDDINNERPRICE)*state.TAX_RATE).toFixed(2)
             }else{
                 // console.log('lunch')
-                state.tables[state.tableNum].totalPrice = ((state.tables[state.tableNum].drinkPrice + state.tables[state.tableNum].adult * state.ADULTPRICE + state.tables[state.tableNum].bigKid * state.BIGKIDPRICE + state.tables[state.tableNum].smlKid * state.SMALLKIDPRICE)*state.TAX_RATE).toFixed(2)
+                table.totalPrice = ((table.drinkPrice + table.adult * state.ADULTPRICE + table.bigKid * state.BIGKIDPRICE + table.smlKid * state.SMALLKIDPRICE)*state.TAX_RATE).toFixed(2)
             }
             persistCurrentTable(state)
         },
@@ -824,6 +933,7 @@ const store = createStore({
             state.tables[state.tableNum].totalPrice=0
             state.tables[state.tableNum].goodPpl=false
             state.tables[state.tableNum].occupied = false
+            delete state.tables[state.tableNum].pricingModeDinner
             persistCurrentTable(state)
         },
         // saveFile(state) {
@@ -858,6 +968,12 @@ const store = createStore({
             const smlKidCount = parseInt(table.smlKid) || 0
             const drinks = table.drinks || []
             
+            // If table is already occupied OR has a totalPrice set, preserve existing totalPrice
+            // Don't recalculate based on current mode - use the price that was set when seated
+            // This ensures prices remain fixed for occupied/seated tables when mode changes
+            const hasPriceSet = table.totalPrice && parseFloat(table.totalPrice) > 0
+            const shouldPreservePrice = table.occupied || hasPriceSet || (table.time && table.time > 0)
+            
             // Always recalculate total before payment to ensure accuracy
             // This ensures the total is always correct, even if "Update" wasn't clicked
             // Calculate drink prices
@@ -877,16 +993,28 @@ const store = createStore({
             
             table.drinkPrice = state.WATERPRICE * numWater + state.DRINKPRICE * numDrink
             
-            // Calculate total price based on lunch/dinner
-            let subtotal = table.drinkPrice
-            if (state.isDinner) {
-                subtotal += (adultCount * state.ADULTDINNERPRICE) + (bigKidCount * state.BIGKIDDINNERPRICE) + (smlKidCount * state.SMALLKIDDINNERPRICE)
+            let revenue = 0
+            // Only recalculate total price if table is not already occupied with a price set
+            // This preserves prices for seated/printed tables when mode changes
+            if (!shouldPreservePrice) {
+                // Store the pricing mode used when calculating this table's price
+                table.pricingModeDinner = state.isDinner
+                // Calculate total price based on lunch/dinner
+                let subtotal = table.drinkPrice
+                if (state.isDinner) {
+                    subtotal += (adultCount * state.ADULTDINNERPRICE) + (bigKidCount * state.BIGKIDDINNERPRICE) + (smlKidCount * state.SMALLKIDDINNERPRICE)
+                } else {
+                    subtotal += (adultCount * state.ADULTPRICE) + (bigKidCount * state.BIGKIDPRICE) + (smlKidCount * state.SMALLKIDPRICE)
+                }
+                
+                revenue = parseFloat((subtotal * state.TAX_RATE).toFixed(2))
+                table.totalPrice = revenue.toFixed(2)
             } else {
-                subtotal += (adultCount * state.ADULTPRICE) + (bigKidCount * state.BIGKIDPRICE) + (smlKidCount * state.SMALLKIDPRICE)
+                // Use existing totalPrice if preserving price
+                // Don't update pricingModeDinner - keep the original mode that was used
+                revenue = parseFloat(table.totalPrice) || 0
             }
             
-            const revenue = parseFloat((subtotal * state.TAX_RATE).toFixed(2))
-            table.totalPrice = revenue.toFixed(2)
             table.occupied = true
             
             // Only process payment if there's actual revenue or customers
@@ -945,220 +1073,134 @@ const store = createStore({
             table.totalPrice=0
             table.goodPpl=false
             table.occupied = false
+            delete table.pricingModeDinner
             persistCurrentTable(state)
         },
 
 
 
-        // togo stuff
-        increaseOrderQuantity(state, n){
-            // console.log(state.menu[state.catID].items[n].quantity)
-            // console.log(state)
-            // console.log(n)
-            state.menu[state.catID].items[n].quantity++
-            let currIndex = state.seletedTogo.findIndex(({item}) => item === state.menu[state.catID].items[n].name)
-            // state.sales.totalTogoPriceState = state.menu[state.catID].items[n].quantity * state.menu[state.catID].items[n].listPrice
-            if (currIndex === -1) {
-                // console.log("a")
-                state.seletedTogo.push({
-                    "item":state.menu[state.catID].items[n].name,
-                    "price":state.menu[state.catID].items[n].listPrice.toFixed(2),
-                    "quantity":state.menu[state.catID].items[n].quantity,
-
-                    // George's code
-                    id:state.catID,
-                    nTerm:n
-                    
-                })
-            } else {
-                // console.log("b")
-                state.seletedTogo[currIndex].quantity = state.menu[state.catID].items[n].quantity
-            }
-            
-            // console.log(state.seletedTogo)
-            // console.log(state.seletedTogo.find(({item}) => item === "Pork Egg Roll"))
-
-            // console.log(state.menu[state.catID].category)
-        },
-        decreaseOrderQuantity(state, n){
-            const menuCategory = state.menu[state.catID]
-            if (!menuCategory || !menuCategory.items[n]) {
-                return
-            }
-            const item = menuCategory.items[n]
-            if (item.quantity <= 0) {
-                item.quantity = 0
-                return
-            }
-            item.quantity -= 1
-
-            const currIndex = state.seletedTogo.findIndex(({ item: itemName }) => itemName === item.name)
-            if (currIndex !== -1) {
-                if (item.quantity <= 0) {
-                    state.seletedTogo.splice(currIndex, 1)
-                    delete state.togoCustomizations[item.name]
+        // to-go order lines
+        appendTogoLines(state, lines = []) {
+            lines.forEach(line => {
+                if (!line || Number(line.quantity) <= 0) {
+                    return
+                }
+                const itemName = line.itemName || line.item
+                const note = (line.note || '').trim()
+                const basePrice = Number(line.basePrice ?? line.price ?? 0)
+                const extraPrice = Number(line.extraPrice ?? line.extra ?? 0)
+                const quantity = Number(line.quantity ?? 0)
+                const categoryIndex = Number.isInteger(line.categoryIndex) ? line.categoryIndex : (Number.isInteger(line.id) ? line.id : null)
+                const itemIndex = Number.isInteger(line.itemIndex) ? line.itemIndex : (Number.isInteger(line.nTerm) ? line.nTerm : null)
+                const existing = state.togoLines.find(entry =>
+                    entry.itemName === itemName &&
+                    entry.note === note &&
+                    Math.abs(entry.basePrice - basePrice) < 0.0001 &&
+                    Math.abs(entry.extraPrice - extraPrice) < 0.0001
+                )
+                if (existing) {
+                    existing.quantity += quantity
                 } else {
-                    state.seletedTogo[currIndex].quantity = item.quantity
+                    state.togoLines.push({
+                        lineId: state.nextTogoLineId++,
+                        itemName,
+                        categoryIndex,
+                        itemIndex,
+                        quantity,
+                        basePrice,
+                        extraPrice,
+                        note
+                    })
                 }
-            }
+            })
+            recalcTogoTotals(state)
         },
-        setTogoCustomization(state, { itemName, label, price }) {
-            if (!itemName) {
+        updateTogoLine(state, payload = {}) {
+            const lineId = payload.lineId
+            const line = typeof lineId === 'number'
+                ? state.togoLines.find(entry => entry.lineId === lineId)
+                : null
+            if (!line) {
                 return
             }
-            const trimmedLabel = (label || '').trim()
-            const extraPrice = Number(price) || 0
-            if (!trimmedLabel && extraPrice === 0) {
-                const { [itemName]: _removed, ...rest } = state.togoCustomizations || {}
-                state.togoCustomizations = rest
-            } else {
-                state.togoCustomizations = {
-                    ...(state.togoCustomizations || {}),
-                    [itemName]: {
-                        label: trimmedLabel,
-                        price: extraPrice
-                    }
+            if (payload.quantity !== undefined) {
+                const quantity = Number(payload.quantity)
+                if (Number.isFinite(quantity) && quantity >= 0) {
+                    line.quantity = quantity
                 }
             }
+            if (payload.note !== undefined) {
+                line.note = (payload.note || '').trim()
+            }
+            if (payload.basePrice !== undefined) {
+                line.basePrice = Number(payload.basePrice || 0)
+            }
+            if (payload.extraPrice !== undefined) {
+                line.extraPrice = Number(payload.extraPrice || 0)
+            }
+            if (line.quantity <= 0) {
+                state.togoLines = state.togoLines.filter(entry => entry.lineId !== line.lineId)
+            }
+            recalcTogoTotals(state)
         },
-        calculateTogoTotal(state){
-            // console.log(state.menu[state.catID].items[n].quantity)
-            // console.log(state)
-            // console.log(n)
-            // state.sales.totalTogoPriceState = state.menu[state.catID].items[n].quantity * state.menu[state.catID].items[n].listPrice
-            let totalTogoPrice = 0
-            let currentMenuItem = state.menu
-            for(var i=0; i<currentMenuItem.length; i++){
-                let items=currentMenuItem[i].items
-                // console.log(currentMenuItem[0].items[0].name)
-                for(var j=0; j<items.length; j++){
-                    const basePrice = Number(items[j].listPrice ?? 0)
-                    const quantity = Number(items[j].quantity ?? 0)
-                    if (quantity <= 0) {
-                        continue
-                    }
-                    const customization = state.togoCustomizations?.[items[j].name] || {}
-                    const extra = Number(customization.price ?? 0)
-                    const unitPrice = basePrice + extra
-                    totalTogoPrice += unitPrice * quantity
+        removeTogoLine(state, lineId) {
+            state.togoLines = state.togoLines.filter(entry => entry.lineId !== lineId)
+            recalcTogoTotals(state)
+        },
+        replaceTogoLines(state, lines = []) {
+            state.togoLines = []
+            state.nextTogoLineId = 1
+            lines.forEach(line => {
+                if (!line || Number(line.quantity) <= 0) {
+                    return
                 }
-                // console.log("side")
-            }
-            // console.log(totalTogoPrice)
-            state.totalTogoPrice = (totalTogoPrice*state.TAX_RATE).toFixed(2)
-            // console.log(state.sales.totalTogoPriceState)
+                state.togoLines.push({
+                    lineId: state.nextTogoLineId++,
+                    itemName: line.itemName || line.item,
+                    categoryIndex: Number.isInteger(line.categoryIndex) ? line.categoryIndex : (Number.isInteger(line.id) ? line.id : null),
+                    itemIndex: Number.isInteger(line.itemIndex) ? line.itemIndex : (Number.isInteger(line.nTerm) ? line.nTerm : null),
+                    quantity: Number(line.quantity ?? 0),
+                    basePrice: Number(line.basePrice ?? line.price ?? 0),
+                    extraPrice: Number(line.extraPrice ?? line.extra ?? 0),
+                    note: (line.note || '').trim()
+                })
+            })
+            recalcTogoTotals(state)
         },
-        increaseSelectedQuantity(state, n){
-            const selected = state.seletedTogo[n]
-            if (!selected) {
-                return
-            }
-            selected.quantity++
-            const menuCategory = state.menu[selected.id]
-            const menuItem = menuCategory && menuCategory.items[selected.nTerm]
-            if (menuItem) {
-                menuItem.quantity = selected.quantity
-            }
-        },
-        decreaseSelectedQuantity(state, n){
-            const selected = state.seletedTogo[n]
-            if (!selected) {
-                return
-            }
-            if (selected.quantity <= 1) {
-                const menuCategory = state.menu[selected.id]
-                const menuItem = menuCategory && menuCategory.items[selected.nTerm]
-                if (menuItem) {
-                    menuItem.quantity = 0
-                }
-                state.seletedTogo.splice(n, 1)
-                delete state.togoCustomizations[selected.item]
-                return
-            }
-            selected.quantity -= 1
-            const menuCategory = state.menu[selected.id]
-            const menuItem = menuCategory && menuCategory.items[selected.nTerm]
-            if (menuItem) {
-                menuItem.quantity = selected.quantity
-            }
+        clearTogoLines(state) {
+            state.togoLines = []
+            state.nextTogoLineId = 1
+            resetMenuQuantities(state.menu)
+            recalcTogoTotals(state)
         },
         togoPaid(state){
             // Recalculate togo total before payment (ensure price is up to date)
-            let totalTogoPrice = 0
-            let currentMenuItem = state.menu
-            const orderItems = []
-            for(var i=0; i<currentMenuItem.length; i++){
-                let items=currentMenuItem[i].items
-                for(var j=0; j<items.length; j++){
-                    const quantity = Number(items[j].quantity ?? 0)
-                    if (quantity > 0) {
-                        const customization = state.togoCustomizations?.[items[j].name] || {}
-                        const note = customization.label || ''
-                        const extra = Number(customization.price ?? 0)
-                        const basePrice = Number(items[j].listPrice ?? 0)
-                        const unitPrice = basePrice + extra
-                        orderItems.push({
-                            name: items[j].name,
-                            quantity,
-                            price: unitPrice,
-                            note,
-                            basePrice,
-                            extraCharge: extra
-                        })
-                        totalTogoPrice += unitPrice * quantity
-                    }
-                }
+            const orderItems = state.togoLines.map(line => ({
+                name: line.itemName,
+                quantity: line.quantity,
+                price: (line.basePrice + line.extraPrice),
+                note: line.note,
+                basePrice: line.basePrice,
+                extraCharge: line.extraPrice
+            }))
+            const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+            const togoRevenue = (subtotal * state.TAX_RATE).toFixed(2)
+            if (state.useFirebase && state.firebaseInitialized) {
+                firestore.addTogoSalesRecord({
+                    createdAt: Date.now(),
+                    items: orderItems,
+                    subtotal,
+                    total: parseFloat(togoRevenue),
+                    taxRate: state.TAX_RATE
+                }).catch(err => console.error('Failed to persist to-go sales:', err))
             }
-            const togoRevenue = (totalTogoPrice * state.TAX_RATE).toFixed(2)
-            const togoRevenueNum = parseFloat(togoRevenue) || 0
-            
-            // Only process payment if there's actual revenue
-            if (togoRevenueNum > 0) {
-                // Update sales summary in state (this updates the UI immediately)
-                const currentTogoRevenue = parseFloat(state.sales.totalTogoRevenue) || 0
-                const currentTotalRevenue = parseFloat(state.sales.revenue) || 0
-                state.sales.totalTogoRevenue = (currentTogoRevenue + togoRevenueNum).toFixed(2)
-                state.sales.revenue = (currentTotalRevenue + togoRevenueNum).toFixed(2)
-                
-                console.log('Togo sales updated:', {
-                    totalTogoRevenue: state.sales.totalTogoRevenue,
-                    orderRevenue: togoRevenueNum
-                })
-                
-                // Add sales record to Firestore if enabled
-                if (state.useFirebase && state.firebaseInitialized) {
-                    Promise.all([
-                        firestore.addSalesRecord({
-                            tableNumber: 0,
-                            orderType: 'togo',
-                            revenue: togoRevenueNum,
-                            adultCount: 0,
-                            bigKidCount: 0,
-                            smlKidCount: 0,
-                            items: orderItems,
-                            notes: JSON.parse(JSON.stringify(state.togoCustomizations || {}))
-                        }),
-                        firestore.saveSalesSummary(buildSalesSummaryForFirestore(state.sales))
-                    ]).then(() => {
-                        console.log('[Firestore] Togo sales saved')
-                    }).catch(err => {
-                        console.error('[Firestore] Failed to save togo sales:', err)
-                    })
-                }
-            } else {
-                console.warn('Togo payment attempted but no items in order')
-            }
-            
-            // resetting menu and cart (always clear cart after payment attempt)
-            state.seletedTogo=[]
-            state.togoCustomizations = {}
-            state.totalTogoPrice=0
-            for(var i=0; i<currentMenuItem.length; i++){
-                let items=currentMenuItem[i].items
-                for(var j=0; j<items.length; j++){
-                    items[j].quantity = 0
-                }
-            }
+            state.totalTogoPrice = (subtotal * state.TAX_RATE).toFixed(2)
+            state.sales.totalTogoRevenue = Number(state.sales.totalTogoRevenue || 0) + Number(state.totalTogoPrice || 0)
+            state.togoLines = []
+            state.nextTogoLineId = 1
+            state.catID = 0
+            resetMenuQuantities(state.menu)
+            recalcTogoTotals(state)
         },
         
         // Mutations for Firestore integration
@@ -1218,6 +1260,40 @@ const store = createStore({
                 return
             }
             state.isDinner = isDinner
+            // Do not recalculate prices for occupied/seated or printed tables
+            // Prices should remain fixed once a table is seated or has been printed
+        },
+        setCashierMode(state, mode) {
+            if (state.cashierForm) {
+                state.cashierForm.mode = mode === 'dinner' ? 'dinner' : 'lunch'
+            }
+        },
+        setCashierBuffetCount(state, payload) {
+            const { key, count } = payload
+            if (state.cashierForm && state.cashierForm.buffetCounts) {
+                state.cashierForm.buffetCounts[key] = Math.max(0, Number(count || 0))
+            }
+        },
+        setCashierDrinkCount(state, payload) {
+            const { code, count } = payload
+            if (state.cashierForm && state.cashierForm.drinkCounts) {
+                state.cashierForm.drinkCounts[code] = Math.max(0, Number(count || 0))
+            }
+        },
+        clearCashierForm(state) {
+            if (state.cashierForm) {
+                state.cashierForm.buffetCounts = {
+                    adult: 0,
+                    bigKid: 0,
+                    smallKid: 0,
+                }
+                // Initialize drinkCounts with all drink options from shared list
+                const drinkCounts = {}
+                DRINK_OPTIONS.forEach(opt => {
+                    drinkCounts[opt.code] = 0
+                })
+                state.cashierForm.drinkCounts = drinkCounts
+            }
         },
         setTableOrder(state, order = []) {
             const tableCount = Array.isArray(state.tables) ? state.tables.length : 10
@@ -1234,21 +1310,45 @@ const store = createStore({
             if (typeof payload.catID === 'number') {
                 state.catID = payload.catID
             }
-            if (Array.isArray(payload.seletedTogo)) {
-                state.seletedTogo = JSON.parse(JSON.stringify(payload.seletedTogo))
+            if (Array.isArray(payload.togoLines)) {
+                state.togoLines = []
+                state.nextTogoLineId = 1
+                payload.togoLines.forEach(line => {
+                    if (!line || Number(line.quantity) <= 0) return
+                    state.togoLines.push({
+                        lineId: Number(line.lineId) || state.nextTogoLineId++,
+                        itemName: line.itemName || line.item,
+                        categoryIndex: Number.isInteger(line.categoryIndex) ? line.categoryIndex : (Number.isInteger(line.id) ? line.id : null),
+                        itemIndex: Number.isInteger(line.itemIndex) ? line.itemIndex : (Number.isInteger(line.nTerm) ? line.nTerm : null),
+                        quantity: Number(line.quantity ?? 0),
+                        basePrice: Number(line.basePrice ?? line.price ?? 0),
+                        extraPrice: Number(line.extraPrice ?? line.extra ?? 0),
+                        note: (line.note || '').trim()
+                    })
+                })
+                const maxId = state.togoLines.reduce((max, line) => Math.max(max, Number(line.lineId) || 0), 0)
+                state.nextTogoLineId = maxId + 1
+                recalcTogoTotals(state)
+            } else if (Array.isArray(payload.seletedTogo)) {
+                state.togoLines = []
+                state.nextTogoLineId = 1
+                payload.seletedTogo.forEach(entry => {
+                    if (!entry || Number(entry.quantity) <= 0) return
+                    state.togoLines.push({
+                        lineId: state.nextTogoLineId++,
+                        itemName: entry.item,
+                        categoryIndex: Number.isInteger(entry.id) ? entry.id : null,
+                        itemIndex: Number.isInteger(entry.nTerm) ? entry.nTerm : null,
+                        quantity: Number(entry.quantity ?? 0),
+                        basePrice: Number(entry.price ?? 0),
+                        extraPrice: 0,
+                        note: ''
+                    })
+                })
+                recalcTogoTotals(state)
             }
             if (payload.togoCustomizations && typeof payload.togoCustomizations === 'object') {
                 state.togoCustomizations = JSON.parse(JSON.stringify(payload.togoCustomizations))
-            } else if (payload.togoNotes && typeof payload.togoNotes === 'object') {
-                const converted = {}
-                Object.entries(payload.togoNotes).forEach(([key, value]) => {
-                    if (!key) return
-                    converted[key] = {
-                        label: typeof value === 'string' ? value : '',
-                        price: 0
-                    }
-                })
-                state.togoCustomizations = converted
             }
             if (payload.totalTogoPrice !== undefined && payload.totalTogoPrice !== null) {
                 state.totalTogoPrice = payload.totalTogoPrice
@@ -1279,7 +1379,10 @@ const store = createStore({
         },
         setAppStateSyncTimestamp(state, timestamp) {
             state.lastAppStateSyncedAt = timestamp || null
-        }
+        },
+        calculateTogoTotal(state) {
+            recalcTogoTotals(state)
+        },
         
     },
     getters: {
@@ -1646,7 +1749,7 @@ function getAppStateSnapshot(state) {
         isDinner: state.isDinner,
         tableNum: state.tableNum,
         catID: state.catID,
-        seletedTogo: JSON.parse(JSON.stringify(state.seletedTogo)),
+        togoLines: JSON.parse(JSON.stringify(state.togoLines)),
         togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
         totalTogoPrice: state.totalTogoPrice,
         tableOrder: normalizeTableOrder(state.tableOrder, Array.isArray(state.tables) ? state.tables.length : 10)

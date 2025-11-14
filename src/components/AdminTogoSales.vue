@@ -1,13 +1,24 @@
 <template>
-  <v-dialog v-model="internalOpen" max-width="720" scrollable>
-    <v-card>
+  <v-dialog v-model="internalOpen" max-width="760" scrollable transition="dialog-bottom-transition">
+    <v-card class="togo-sales">
       <v-toolbar color="accent" density="comfortable" dark>
         <v-toolbar-title>To-Go Sales</v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon="mdi-close" @click="close"></v-btn>
       </v-toolbar>
 
-      <v-card-text>
+      <v-card-text class="pa-6">
+        <div class="summary-row">
+          <v-chip color="accent" variant="tonal" size="small">
+            <v-icon start size="18">mdi-receipt</v-icon>
+            {{ sales.length }} Orders
+          </v-chip>
+          <v-chip color="accent" variant="tonal" size="small">
+            <v-icon start size="18">mdi-currency-usd</v-icon>
+            ${{ totalRevenue }}
+          </v-chip>
+        </div>
+
         <v-alert
           v-if="!loading && sales.length === 0"
           type="info"
@@ -20,47 +31,48 @@
         <v-progress-linear
           v-if="loading"
           indeterminate
-          color="primary"
+          color="accent"
           class="mb-4"
         ></v-progress-linear>
 
-        <v-list
-          v-if="!loading && enrichedSales.length > 0"
-          density="comfortable"
-          lines="two"
-        >
-          <v-list-item
+        <div class="sales-list" v-if="!loading && enrichedSales.length > 0">
+          <div
             v-for="(entry, index) in enrichedSales"
             :key="index"
+            class="sales-card"
           >
-            <v-list-item-title class="text-subtitle-1 font-weight-medium">
-              Order {{ enrichedSales.length - index }}
-            </v-list-item-title>
-            <v-list-item-subtitle>
-              <div v-if="entry.itemsList.length" class="d-flex flex-wrap py-1" style="gap: 8px;">
+            <div class="sales-card__header">
+              <h4>Order {{ enrichedSales.length - index }}</h4>
+              <span class="sales-card__timestamp">{{ formatTimestamp(entry.timestamp) }}</span>
+            </div>
+            <div class="sales-card__body">
+              <div v-if="entry.itemsList.length" class="chip-group">
                 <v-chip
                   v-for="(itemLabel, chipIndex) in entry.itemsList"
                   :key="chipIndex"
                   size="small"
                   variant="tonal"
-                  color="primary"
+                  color="accent"
                 >
                   {{ itemLabel }}
                 </v-chip>
               </div>
-              <div v-else class="text-caption">Items unavailable for this order</div>
-              <div class="text-caption mt-1">
-                {{ formatTimestamp(entry.timestamp) }} • ${{ formatCurrency(entry.revenue) }}
+              <div v-else class="text-caption text-medium-emphasis">
+                Items unavailable for this order.
               </div>
-            </v-list-item-subtitle>
-          </v-list-item>
-        </v-list>
+            </div>
+            <div class="sales-card__footer">
+              <span class="footer-label">Total</span>
+              <span class="footer-value">${{ formatCurrency(entry.revenue) }}</span>
+            </div>
+          </div>
+        </div>
       </v-card-text>
 
       <v-divider></v-divider>
 
-      <v-card-actions class="d-flex justify-space-between">
-        <div class="text-caption">
+      <v-card-actions class="pa-4 justify-end">
+        <div class="text-caption mr-auto">
           Total Orders: <strong>{{ sales.length }}</strong>
           &nbsp;|&nbsp; Total Revenue: <strong>${{ totalRevenue }}</strong>
         </div>
@@ -161,3 +173,82 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.togo-sales {
+  border-radius: 26px;
+  box-shadow: 0 24px 44px rgba(15, 25, 35, 0.24);
+  background: linear-gradient(180deg, rgba(247, 249, 255, 0.95), rgba(255, 255, 255, 0.98));
+}
+
+.summary-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.sales-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sales-card {
+  border-radius: 18px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 14px 28px rgba(15, 25, 35, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sales-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.sales-card__header h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sales-card__timestamp {
+  font-size: 13px;
+  color: rgba(31, 39, 51, 0.62);
+}
+
+.sales-card__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sales-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: rgba(31, 39, 51, 0.85);
+}
+
+.footer-label {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.footer-value {
+  font-size: 18px;
+}
+</style>

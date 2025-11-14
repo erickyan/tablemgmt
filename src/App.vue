@@ -63,7 +63,7 @@ import { RouterView } from 'vue-router'
     </template>
 
     <template v-else>
-      <v-navigation-drawer 
+      <v-navigation-drawer
         v-if="isAdmin"
         v-model="drawer"
         temporary
@@ -135,6 +135,11 @@ import { RouterView } from 'vue-router'
           @click="openTogoSales"
         ></v-list-item>
         <v-list-item
+          prepend-icon="mdi-chart-line"
+          title="Live Sales"
+          @click="openLiveSales"
+        ></v-list-item>
+        <v-list-item
           prepend-icon="mdi-trash-can-outline"
           title="Reset Sales Data"
           @click="showResetConfirm = true"
@@ -148,79 +153,109 @@ import { RouterView } from 'vue-router'
         </v-list-item>
       </v-navigation-drawer>
 
-      <v-app-bar :elevation="2" :color="toolbarColor" density="comfortable" class="app-bar">
-        <v-app-bar-nav-icon v-if="isAdmin" @click="drawer = !drawer" />
-        <v-app-bar-title>China Buffet</v-app-bar-title>
-        <v-btn-toggle
-          v-model="priceMode"
-          mandatory
-          density="comfortable"
-          variant="outlined"
-          class="ml-4 price-toggle"
-        >
-          <v-btn value="lunch">
-            <v-icon start size="18">mdi-white-balance-sunny</v-icon>
-            Lunch
-          </v-btn>
-          <v-btn value="dinner">
-            <v-icon start size="18">mdi-weather-night</v-icon>
-            Dinner
-          </v-btn>
-        </v-btn-toggle>
-        <div class="d-flex align-center ml-4">
-          <v-btn
-            variant="outlined"
-            color="accent"
-            :to="{ name: 'home' }"
-            class="mr-2"
-          >
-            <v-icon start>mdi-store</v-icon>
-            Home
-          </v-btn>
-          <v-btn
-            variant="outlined"
-            color="accent"
-            :to="{ name: 'about' }"
-            class="mr-2"
-          >
-            <v-icon start>mdi-food-fork-drink</v-icon>
-            Order
-          </v-btn>
-          <v-btn
-            variant="outlined"
-            color="accent"
-            :to="{ name: 'cashier' }"
-            class="mr-2"
-          >
-            <v-icon start>mdi-receipt</v-icon>
-            Cashier
-          </v-btn>
-          <v-btn
-            variant="tonal"
-            color="accent"
-            @click="openTogoDialog"
-          >
-            <v-icon start>mdi-printer</v-icon>
-            Print Togo
-          </v-btn>
-        </div>
-        <v-spacer></v-spacer>
-        <v-btn
-          v-if="requiresAuth"
-          icon
-          variant="text"
-          color="accent"
-          @click="logout"
-          :title="'Sign Out'"
-        >
-          <v-icon>mdi-logout</v-icon>
-        </v-btn>
-      </v-app-bar>
+      <v-main :class="['pos-main', priceMode]">
+        <div class="pos-shell">
+          <header v-if="!isCashierRoute" class="pos-header">
+            <div class="pos-header__left">
+              <div class="pos-brand">
+                <v-btn
+                  v-if="isAdmin"
+                  icon
+                  variant="text"
+                  color="accent"
+                  @click="drawer = !drawer"
+                  class="pos-brand__drawer"
+                >
+                  <v-icon>mdi-menu</v-icon>
+                </v-btn>
+                <span class="pos-brand__title">China Buffet</span>
+                <span class="pos-brand__mode">Staff POS</span>
+              </div>
+              <v-btn-toggle
+                v-model="priceMode"
+                mandatory
+                density="comfortable"
+                variant="outlined"
+                class="price-toggle"
+              >
+                <v-btn value="lunch">
+                  <v-icon start size="18">mdi-white-balance-sunny</v-icon>
+                  Lunch
+                </v-btn>
+                <v-btn value="dinner">
+                  <v-icon start size="18">mdi-weather-night</v-icon>
+                  Dinner
+                </v-btn>
+              </v-btn-toggle>
+            </div>
+            <div class="pos-header__actions">
+            </div>
+          </header>
 
-      <v-main :class="['app-main', priceMode]">
-        <RouterView v-if="firebaseReady" />
-        <currenttogo-details v-if="firebaseReady" v-model="togoDialogOpen"></currenttogo-details>
+          <section class="pos-content">
+            <div class="pos-content__primary">
+          <RouterView v-if="firebaseReady" />
+            </div>
+            <aside v-if="showOrderPanel" class="pos-content__panel">
+          <component
+            v-if="activeOrderPanelComponent"
+            :is="activeOrderPanelComponent"
+            v-bind="activeOrderPanelProps"
+            @manage-table="handlePanelManageTable"
+            @print-table="handlePanelPrintTable"
+            @pay-table="handlePanelPayTable"
+            @edit="handlePanelEditItems"
+            @print="handlePanelPrintTogo"
+            @paid="handlePanelTogoPaid"
+          />
+          <cashier-receipt-panel v-else-if="isCashierRoute" />
+          <div v-else class="pos-content__panel-placeholder">
+            <v-icon size="42" color="accent">mdi-receipt-outline</v-icon>
+            <p class="text-subtitle-1 font-weight-medium mt-3">
+              Orders you open will appear here.
+            </p>
+            <p class="text-body-2 text-medium-emphasis">
+              Select a table or build a to-go order to review items, actions, and guest details.
+            </p>
+          </div>
+            </aside>
+          </section>
+        </div>
+        <currenttogo-details
+          v-if="firebaseReady"
+          ref="currentTogoDialog"
+          v-model="togoDialogOpen"
+          @edit="openTogoEditFromCurrent"
+        ></currenttogo-details>
+        <togo-edit-items
+          v-if="firebaseReady"
+          v-model="togoEditDialogOpen"
+        ></togo-edit-items>
       </v-main>
+
+      <v-bottom-navigation
+        class="pos-bottom-nav"
+        grow
+        :elevation="6"
+        height="68"
+        active-class="pos-bottom-nav__btn--active"
+        v-model="bottomNav"
+        @update:modelValue="handleBottomNavChange"
+      >
+        <v-btn
+          v-for="item in bottomNavItems"
+          :key="item.value"
+          :value="item.value"
+          :to="item.to"
+          :ripple="false"
+          :disabled="item.disabled"
+        >
+          <span class="pos-bottom-nav__icon">
+            <v-icon :icon="item.icon"></v-icon>
+          </span>
+          <span class="pos-bottom-nav__label">{{ item.label }}</span>
+        </v-btn>
+      </v-bottom-navigation>
 
       <admin-menu-manager
         v-model="showMenuManager"
@@ -233,6 +268,9 @@ import { RouterView } from 'vue-router'
         v-model="showTogoSales"
         :sales="togoSalesHistory"
         :loading="togoSalesLoading"
+      />
+      <admin-live-sales
+        v-model="showLiveSales"
       />
 
       <v-dialog v-model="showResetConfirm" max-width="420">
@@ -274,11 +312,21 @@ import { RouterView } from 'vue-router'
 <script>
 import AdminMenuManager from './components/AdminMenuManager.vue'
 import AdminTogoSales from './components/AdminTogoSales.vue'
+import AdminLiveSales from './components/AdminLiveSales.vue'
+import TableOrderPanel from './components/panels/TableOrderPanel.vue'
+import TogoOrderPanel from './components/panels/TogoOrderPanel.vue'
+import TogoEditItems from './components/TogoEditItems.vue'
+import CashierReceiptPanel from './components/panels/CashierReceiptPanel.vue'
 
 export default {
   components: {
     AdminMenuManager,
-    AdminTogoSales
+    AdminTogoSales,
+    AdminLiveSales,
+    TableOrderPanel,
+    TogoOrderPanel,
+    TogoEditItems,
+    CashierReceiptPanel
   },
   props: {
         // adultNo: 
@@ -286,6 +334,8 @@ export default {
   data: () => ({ 
     drawer: null,
     togoDialogOpen: false,
+    togoEditDialogOpen: false,
+    bottomNav: null,
     loginEmail: '',
     loginPassword: '',
     localAuthError: '',
@@ -302,6 +352,7 @@ export default {
     snackbarMessage: '',
     snackbarColor: 'success',
     showTogoSales: false,
+    showLiveSales: false,
     togoSalesLoading: false,
     togoSalesHistory: []
   }),
@@ -328,6 +379,32 @@ export default {
     },
     openTogoDialog() {
       this.togoDialogOpen = true
+    },
+    handleBottomNavChange(value) {
+      const item = this.bottomNavItems.find(entry => entry.value === value)
+      if (!item) {
+        return
+      }
+      if (item.action) {
+        item.action()
+        this.syncBottomNavWithRoute()
+        return
+      }
+      if (item.to && item.to.name && this.$route.name !== item.to.name) {
+        this.$router.push(item.to)
+      }
+    },
+    syncBottomNavWithRoute() {
+      this.bottomNav = this.resolveNavValue(this.$route.name)
+    },
+    resolveNavValue(routeName) {
+      const match = this.bottomNavItems.find(item => item.to?.name === routeName)
+      return match ? match.value : null
+    },
+    navigateTo(routeName) {
+      if (this.$route.name !== routeName) {
+        this.$router.push({ name: routeName })
+      }
     },
     applyTheme(mode) {
       const themeName = mode === 'dinner' ? 'dinnerTheme' : 'lunchTheme'
@@ -365,6 +442,13 @@ export default {
       } finally {
         this.togoSalesLoading = false
       }
+    },
+    openLiveSales() {
+      if (!this.isAdmin) {
+        return
+      }
+      this.drawer = false
+      this.showLiveSales = true
     },
     async handleMenuSave(menu) {
       this.menuSaving = true
@@ -405,6 +489,54 @@ export default {
         this.drawer = false
         this.resetLoading = false
       }
+    },
+    ensureRoute(target) {
+      if (this.$route.name === target) {
+        return Promise.resolve()
+      }
+      return this.$router.push({ name: target })
+    },
+    handlePanelManageTable(index) {
+      const tableIndex = typeof index === 'number' ? index : this.$store.state.tableNum || 0
+      this.$store.commit('setOrderPanel', { type: 'table', tableIndex })
+      this.ensureRoute('home').finally(() => {
+        window.dispatchEvent(
+          new CustomEvent('pos-open-table-details', { detail: { tableIndex } })
+        )
+      })
+    },
+    handlePanelPrintTable(index) {
+      const tableIndex = typeof index === 'number' ? index : this.$store.state.tableNum || 0
+      this.$store.commit('setOrderPanel', { type: 'table', tableIndex })
+      this.ensureRoute('home').finally(() => {
+        window.dispatchEvent(
+          new CustomEvent('pos-print-table', { detail: { tableIndex } })
+        )
+      })
+    },
+    handlePanelPayTable(index) {
+      const tableIndex = typeof index === 'number' ? index : this.$store.state.tableNum || 0
+      this.$store.commit('setOrderPanel', { type: 'table', tableIndex })
+      this.$store.commit('paid')
+    },
+    handlePanelEditItems() {
+      this.togoDialogOpen = false
+      this.togoEditDialogOpen = true
+    },
+    handlePanelPrintTogo() {
+      const ref = this.$refs.currentTogoDialog
+      if (ref && typeof ref.printTogoReceipt === 'function') {
+        ref.printTogoReceipt()
+        return
+      }
+      this.$store.commit('calculateTogoTotal')
+    },
+    handlePanelTogoPaid() {
+      this.$store.commit('togoPaid')
+    },
+    openTogoEditFromCurrent() {
+      this.togoDialogOpen = false;
+      this.togoEditDialogOpen = true;
     }
   },
   computed: {
@@ -449,6 +581,77 @@ export default {
     isAdmin() {
       return this.$store.getters.isAdmin
     },
+    bottomNavItems() {
+      const items = [
+        {
+          value: 'logout',
+          label: 'Log out',
+          icon: 'mdi-logout',
+          action: () => this.logout()
+        },
+        {
+          value: 'home',
+          label: 'Floor plan',
+          icon: 'mdi-floor-plan',
+          to: { name: 'home' }
+        },
+        {
+          value: 'about',
+          label: 'Menu',
+          icon: 'mdi-view-grid-outline',
+          to: { name: 'about' }
+        }
+      ]
+
+      // Add Cashier tab for both admin and server users
+      items.push({
+        value: 'cashier',
+        label: 'Cashier',
+        icon: 'mdi-receipt',
+        to: { name: 'cashier' }
+      })
+
+      if (this.isAdmin) {
+        // Admin-only tabs
+        items.push({
+          value: 'admin',
+          label: 'Admin',
+          icon: 'mdi-dots-horizontal',
+          action: () => {
+            this.drawer = true
+          }
+        })
+      }
+
+      return items
+    },
+    showOrderPanel() {
+      return !this.showLogin && !this.authLoading
+    },
+    isCashierRoute() {
+      return this.$route.name === 'cashier'
+    },
+    activeOrderPanel() {
+      return this.$store.state.orderPanel || { type: null }
+    },
+    activeOrderPanelComponent() {
+      switch (this.activeOrderPanel.type) {
+        case 'table':
+          return TableOrderPanel
+        case 'togo':
+          return TogoOrderPanel
+        default:
+          return null
+      }
+    },
+    activeOrderPanelProps() {
+      if (this.activeOrderPanel.type === 'table') {
+        return {
+          tableIndex: this.activeOrderPanel.tableIndex ?? this.$store.state.tableNum ?? 0
+        }
+      }
+      return {}
+    },
     totalRevenue() {
       const revenue = parseFloat(this.$store.state.sales.revenue || 0)
       return revenue.toFixed(2)
@@ -465,13 +668,11 @@ export default {
     },
     drawerColor() {
       return 'drawer'
-    },
-    toolbarColor() {
-      return 'toolbar'
-    },
+    }
   },
   mounted() {
     this.applyTheme(this.priceMode)
+    this.syncBottomNavWithRoute()
   },
   watch: {
     loginEmail() {
@@ -504,7 +705,11 @@ export default {
         this.showMenuManager = false
         this.showResetConfirm = false
         this.showTogoSales = false
+        this.showLiveSales = false
       }
+    },
+    '$route.name'() {
+      this.syncBottomNavWithRoute()
     }
   }
 }
@@ -515,63 +720,74 @@ export default {
     touch-action: manipulation;
 }
 
-.app-main {
-  min-height: calc(100vh - 64px);
-  padding-bottom: 32px;
+.pos-main {
+  min-height: 100vh;
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--v-theme-background) 70%, #ffffff 30%),
-    color-mix(in srgb, var(--v-theme-surface) 65%, #ffffff 35%)
+    color-mix(in srgb, var(--v-theme-background) 65%, #ffffff 35%),
+    color-mix(in srgb, var(--v-theme-surface) 70%, #ffffff 30%)
   );
   color: var(--v-theme-on-background);
   transition: background 300ms ease, color 300ms ease;
+  display: flex;
+  flex-direction: column;
 }
 
-.app-main.dinner {
-  background: radial-gradient(circle at top left, rgba(44, 156, 219, 0.25), transparent 45%),
-              linear-gradient(190deg, rgba(21, 28, 40, 0.9), rgba(33, 41, 52, 0.9));
-  color: #f7f9ff;
-}
-
-.app-main.lunch {
+.pos-main.lunch,
+.pos-main.dinner {
   background: radial-gradient(circle at top left, rgba(255, 231, 186, 0.6), transparent 45%),
               linear-gradient(180deg, rgba(253, 246, 234, 0.95), rgba(255, 255, 255, 0.92));
 }
 
-.app-main .v-container {
-  transition: color 300ms ease;
+.pos-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 32px 88px;
+  gap: 24px;
 }
 
-.app-main .v-card,
-.app-main .v-sheet,
-.app-main .v-dialog .v-card {
-  background-color: color-mix(in srgb, var(--v-theme-surface) 90%, transparent);
-  backdrop-filter: blur(12px);
-  transition: background-color 300ms ease, color 300ms ease;
-  border-radius: 18px;
+.pos-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--v-theme-surface) 92%, transparent);
+  box-shadow: 0 12px 32px rgba(15, 25, 35, 0.12);
+  backdrop-filter: blur(14px);
 }
 
-.app-main.dinner .v-card,
-.app-main.dinner .v-sheet,
-.app-main.dinner .v-dialog .v-card {
-  background-color: rgba(248, 250, 255, 0.92);
-  color: #1f2733;
-  box-shadow: 0 10px 22px rgba(15, 25, 35, 0.35);
+.pos-header__left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
 }
 
-.app-main.lunch .v-card,
-.app-main.lunch .v-sheet,
-.app-main.lunch .v-dialog .v-card {
-  box-shadow: 0 10px 20px rgba(255, 192, 203, 0.18);
+.pos-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 22px;
 }
 
-.app-main .v-divider {
-  border-color: color-mix(in srgb, var(--v-theme-primary) 35%, transparent);
+.pos-brand__title {
+  letter-spacing: 0.2px;
 }
 
-.app-bar {
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid color-mix(in srgb, var(--v-theme-primary) 12%, transparent);
+.pos-brand__mode {
+  font-size: 14px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--v-theme-primary) 75%, var(--v-theme-on-background) 25%);
+}
+
+.pos-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .price-toggle .v-btn {
@@ -588,6 +804,99 @@ export default {
 
 .price-toggle .v-btn:not(.v-btn--active) {
   color: var(--v-theme-primary);
+}
+
+.pos-content {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+
+@media (min-width: 820px) {
+   .pos-content {
+     grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+   }
+ }
+
+.pos-content__primary {
+  min-height: 0;
+}
+
+.pos-content__panel {
+  background: color-mix(in srgb, var(--v-theme-surface) 92%, transparent);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 16px 38px rgba(15, 25, 35, 0.16);
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.pos-content__panel-placeholder {
+  text-align: center;
+  padding: 24px 12px;
+  border: 1px dashed color-mix(in srgb, var(--v-theme-primary) 40%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--v-theme-surface) 88%, transparent);
+}
+
+.pos-main .v-card,
+.pos-main .v-sheet,
+.pos-main .v-dialog .v-card {
+  background-color: color-mix(in srgb, var(--v-theme-surface) 90%, transparent);
+  backdrop-filter: blur(12px);
+  transition: background-color 300ms ease, color 300ms ease;
+  border-radius: 18px;
+}
+
+.pos-main.lunch .v-card,
+.pos-main.lunch .v-sheet,
+.pos-main.lunch .v-dialog .v-card,
+.pos-main.dinner .v-card,
+.pos-main.dinner .v-sheet,
+.pos-main.dinner .v-dialog .v-card {
+  box-shadow: 0 10px 20px rgba(255, 192, 203, 0.18);
+}
+
+.pos-main .v-divider {
+  border-color: color-mix(in srgb, var(--v-theme-primary) 35%, transparent);
+}
+
+.pos-bottom-nav {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(960px, calc(100% - 32px));
+  border-radius: 32px;
+  background: color-mix(in srgb, var(--v-theme-surface) 96%, transparent);
+  box-shadow: 0 16px 36px rgba(15, 25, 35, 0.22);
+  backdrop-filter: blur(16px);
+  padding-inline: 12px;
+}
+
+.pos-bottom-nav__btn--active {
+  background: color-mix(in srgb, var(--v-theme-primary-soft) 80%, transparent) !important;
+  color: var(--v-theme-primary) !important;
+}
+
+.pos-bottom-nav__icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.pos-bottom-nav__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
 }
 
 .v-navigation-drawer {

@@ -8,29 +8,39 @@
       <v-card-subtitle>Quick receipt builder for walk-in customers</v-card-subtitle>
 
       <v-card-text>
-        <div class="mb-4">
-          <div class="text-subtitle-2 mb-2">Price Mode</div>
-          <v-btn-toggle
-            v-model="mode"
-            density="comfortable"
-            variant="outlined"
-            mandatory
-          >
-            <v-btn value="lunch">
-              <v-icon start size="18">mdi-white-balance-sunny</v-icon>
-              Lunch
+        <div class="mb-4 price-mode-section">
+          <div class="d-flex align-center justify-space-between">
+            <v-btn-toggle
+              v-model="mode"
+              density="comfortable"
+              variant="outlined"
+              mandatory
+              class="price-mode-toggle"
+            >
+              <v-btn value="lunch">
+                <v-icon start size="18">mdi-white-balance-sunny</v-icon>
+                Lunch
+              </v-btn>
+              <v-btn value="dinner">
+                <v-icon start size="18">mdi-weather-night</v-icon>
+                Dinner
+              </v-btn>
+            </v-btn-toggle>
+            <v-btn 
+              variant="outlined" 
+              color="secondary" 
+              @click="clearForm"
+              class="clear-btn"
+            >
+              <v-icon start size="18">mdi-refresh</v-icon>
+              Clear
             </v-btn>
-            <v-btn value="dinner">
-              <v-icon start size="18">mdi-weather-night</v-icon>
-              Dinner
-            </v-btn>
-          </v-btn-toggle>
+          </div>
         </div>
 
         <v-divider class="my-4"></v-divider>
 
         <section>
-          <div class="text-subtitle-2 mb-2">Buffet Guests</div>
           <div
             v-for="option in buffetOptions"
             :key="option.key"
@@ -107,21 +117,13 @@
           </div>
         </section>
       </v-card-text>
-
-      <v-card-actions class="justify-end">
-        <v-btn variant="outlined" color="secondary" @click="clearForm">
-          Clear
-        </v-btn>
-        <v-btn color="accent" @click="printReceipt" :disabled="!hasActivity">
-          <v-icon start>mdi-printer</v-icon>
-          Print Receipt
-        </v-btn>
-      </v-card-actions>
     </v-card>
   </v-container>
 </template>
 
 <script>
+import { DRINK_OPTIONS } from '../utils/drinkOptions.js'
+
 export default {
   name: 'CashierView',
   data: () => ({
@@ -131,37 +133,17 @@ export default {
       bigKid: 0,
       smallKid: 0,
     },
-    drinkCounts: {
-      WTER: 0,
-      COKE: 0,
-      SPRT: 0,
-      STEA: 0,
-      DRPP: 0,
-      DIET: 0,
-      UTEA: 0,
-      LMND: 0,
-      HALF: 0,
-      COFE: 0,
-      HTEA: 0,
-    },
+    drinkCounts: {},
     buffetOptions: [
       { key: 'adult', label: 'Adult Buffet' },
       { key: 'bigKid', label: 'Big Kid Buffet (6-9)' },
       { key: 'smallKid', label: 'Small Kid Buffet (2-5)' },
     ],
-    drinkOptions: [
-      { code: 'WTER', label: 'Water', type: 'water' },
-      { code: 'COKE', label: 'Coke', type: 'drink' },
-      { code: 'SPRT', label: 'Sprite', type: 'drink' },
-      { code: 'STEA', label: 'Sweet Tea', type: 'drink' },
-      { code: 'DRPP', label: 'Dr Pepper', type: 'drink' },
-      { code: 'DIET', label: 'Diet Coke', type: 'drink' },
-      { code: 'UTEA', label: 'Unsweet Tea', type: 'drink' },
-      { code: 'LMND', label: 'Lemonade', type: 'drink' },
-      { code: 'HALF', label: 'Half & Half', type: 'drink' },
-      { code: 'COFE', label: 'Coffee', type: 'drink' },
-      { code: 'HTEA', label: 'Hot Tea', type: 'drink' },
-    ],
+    drinkOptions: DRINK_OPTIONS.map(opt => ({
+      code: opt.code,
+      label: opt.label,
+      type: opt.type
+    })),
   }),
   computed: {
     pricing() {
@@ -214,11 +196,49 @@ export default {
       handler(value) {
         const isDinner = value === 'dinner'
         this.$store.commit('setDinnerMode', isDinner)
+        // Update cashier form mode in store
+        this.$store.commit('setCashierMode', value)
+      },
+    },
+    buffetCounts: {
+      deep: true,
+      handler() {
+        // Update store when buffet counts change
+        Object.entries(this.buffetCounts).forEach(([key, count]) => {
+          this.$store.commit('setCashierBuffetCount', { key, count })
+        })
+      },
+    },
+    drinkCounts: {
+      deep: true,
+      handler() {
+        // Update store when drink counts change
+        Object.entries(this.drinkCounts).forEach(([code, count]) => {
+          this.$store.commit('setCashierDrinkCount', { code, count })
+        })
       },
     },
   },
   mounted() {
+    // Initialize drinkCounts with all drink options
+    const initialDrinkCounts = {}
+    DRINK_OPTIONS.forEach(opt => {
+      initialDrinkCounts[opt.code] = 0
+    })
+    this.drinkCounts = initialDrinkCounts
+    
     this.mode = this.$store.state.isDinner ? 'dinner' : 'lunch'
+    // Sync initial state with store
+    if (this.$store.state.cashierForm) {
+      this.mode = this.$store.state.cashierForm.mode || this.mode
+      if (this.$store.state.cashierForm.buffetCounts) {
+        this.buffetCounts = { ...this.buffetCounts, ...this.$store.state.cashierForm.buffetCounts }
+      }
+      if (this.$store.state.cashierForm.drinkCounts) {
+        // Merge store counts with initialized counts
+        this.drinkCounts = { ...this.drinkCounts, ...this.$store.state.cashierForm.drinkCounts }
+      }
+    }
   },
   methods: {
     stepBuffet(key, delta) {
@@ -236,100 +256,8 @@ export default {
       Object.keys(this.drinkCounts).forEach(code => {
         this.drinkCounts[code] = 0
       })
-    },
-    printReceipt() {
-      if (!this.hasActivity) {
-        return
-      }
-
-      const lines = []
-      const totals = []
-      const addLine = (label, qty, unitPrice) => {
-        if (!qty) return
-        const total = qty * unitPrice
-        lines.push({ label, qty, unitPrice, total })
-        totals.push(total)
-      }
-
-      addLine('Adult Buffet', Number(this.buffetCounts.adult || 0), this.pricing.adult)
-      addLine('Big Kid Buffet', Number(this.buffetCounts.bigKid || 0), this.pricing.bigKid)
-      addLine('Small Kid Buffet', Number(this.buffetCounts.smallKid || 0), this.pricing.smallKid)
-
-      this.drinkOptions.forEach(option => {
-        const qty = Number(this.drinkCounts[option.code] || 0)
-        if (!qty) return
-        const unitPrice = option.type === 'water' ? this.pricing.water : this.pricing.drink
-        addLine(option.label, qty, unitPrice)
-      })
-
-      const subtotal = totals.reduce((sum, value) => sum + value, 0)
-      const totalWithTax = subtotal * this.pricing.taxRate
-      const taxAmount = totalWithTax - subtotal
-
-      const receiptHtml = `
-        <html>
-          <head>
-            <title>Cashier Receipt</title>
-            <style>
-              body { font-family: 'Consolas', 'Courier New', monospace; padding: 24px; color: #333; font-size: 12px; }
-              h1 { text-align: center; margin-bottom: 4px; font-size: 20px; }
-              h2 { text-align: center; margin-top: 0; font-weight: normal; font-size: 16px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-              th, td { padding: 4px 6px; border-bottom: 1px dashed #ccc; text-align: left; }
-              th { font-weight: bold; }
-              td.qty { text-align: center; width: 40px; }
-              td.price { text-align: right; width: 60px; }
-              .totals { margin-top: 16px; border-top: 1px dashed #ccc; padding-top: 8px; }
-              .totals div { display: flex; justify-content: space-between; margin-bottom: 4px; }
-              .totals strong { font-size: 14px; }
-              .footer { margin-top: 24px; text-align: center; font-size: 11px; }
-            </style>
-          </head>
-          <body>
-            <h1>China Buffet</h1>
-            <h2>${this.mode === 'dinner' ? 'Dinner' : 'Lunch'} Receipt</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th class="qty">Qty</th>
-                  <th class="price">Price</th>
-                  <th class="price">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${lines.length ? lines
-                  .map(line => `
-                    <tr>
-                      <td>${line.label}</td>
-                      <td class="qty">${line.qty}</td>
-                      <td class="price">$${line.unitPrice.toFixed(2)}</td>
-                      <td class="price">$${line.total.toFixed(2)}</td>
-                    </tr>
-                  `).join('') : '<tr><td colspan="4" style="text-align:center;">No items</td></tr>'}
-              </tbody>
-            </table>
-            <div class="totals">
-              <div><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>
-              <div><span>Tax</span><span>$${taxAmount.toFixed(2)}</span></div>
-              <div><strong>Total</strong><strong>$${totalWithTax.toFixed(2)}</strong></div>
-            </div>
-            <div class="footer">Thank you for dining with us!</div>
-          </body>
-        </html>
-      `
-
-      const printWindow = window.open('', '_blank', 'width=600,height=800')
-      if (!printWindow) {
-        alert('Please allow pop-ups for printing.')
-        return
-      }
-      printWindow.document.open()
-      printWindow.document.write(receiptHtml)
-      printWindow.document.close()
-      printWindow.focus()
-      printWindow.print()
-      printWindow.close()
+      // Clear store
+      this.$store.commit('clearCashierForm')
     },
   },
 }
@@ -361,5 +289,22 @@ export default {
 
 .totals-preview {
   font-size: 14px;
+}
+
+.price-mode-section {
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.price-mode-toggle {
+  flex-shrink: 0;
+}
+
+.clear-btn {
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-size: 13px;
 }
 </style>

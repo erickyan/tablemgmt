@@ -39,17 +39,17 @@ const vuetify = createVuetify({
         dinnerTheme: {
           dark: false,
           colors: {
-            background: '#191E29',
-            surface: '#F4F6FB',
+            background: '#FDF6EA',
+            surface: '#FFFFFF',
             primary: '#C62828',
             'primary-soft': '#F8D7C5',
             accent: '#00897B',
             toolbar: '#FFE4CC',
             drawer: '#FFF9F0',
-            info: '#82B1FF',
-            success: '#43A047',
+            info: '#1E88E5',
+            success: '#2E7D32',
             warning: '#FB8C00',
-            error: '#EF5350'
+            error: '#D84315'
           }
         }
       }

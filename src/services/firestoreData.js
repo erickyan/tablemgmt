@@ -50,6 +50,7 @@ function normalizeTableDoc(docSnap) {
     totalPrice: data.totalPrice ?? 0,
     goodPpl: !!data.goodPpl,
     togo: data.togo ?? 0,
+    pricingModeDinner: data.pricingModeDinner !== undefined ? !!data.pricingModeDinner : undefined,
     updatedAt: data.updatedAt || null,
   }
 }
@@ -117,8 +118,12 @@ function normalizeTablesSnapshot(snapshot) {
 
 export async function saveTable(tableNumber, data) {
   const ref = doc(assertDb(), 'tables', String(tableNumber))
+  // Filter out undefined values (Firestore doesn't support undefined)
+  const cleanData = Object.fromEntries(
+    Object.entries(data).filter(([_, value]) => value !== undefined)
+  )
   await setDoc(ref, {
-    ...data,
+    ...cleanData,
     number: tableNumber,
     updatedAt: serverTimestamp(),
   }, { merge: true })
@@ -149,6 +154,30 @@ export async function addSalesRecord(record) {
     ...record,
     timestamp: serverTimestamp(),
   })
+}
+
+export async function addTogoSalesRecord(record = {}) {
+  const database = assertDb()
+  const items = Array.isArray(record.items) ? record.items.map(item => ({
+    name: item?.name || '',
+    quantity: Number(item?.quantity ?? 0),
+    price: Number(item?.price ?? 0),
+    basePrice: Number(item?.basePrice ?? item?.price ?? 0),
+    extraCharge: Number(item?.extraCharge ?? item?.extraPrice ?? 0),
+    note: item?.note || ''
+  })) : []
+
+  const payload = {
+    orderType: 'togo',
+    createdAt: Number(record.createdAt || Date.now()),
+    subtotal: Number(record.subtotal ?? 0),
+    total: Number(record.total ?? record.subtotal ?? 0),
+    taxRate: Number(record.taxRate ?? 0),
+    items,
+    timestamp: serverTimestamp()
+  }
+
+  await addDoc(collection(database, 'sales'), payload)
 }
 
 export async function loadAppState() {
