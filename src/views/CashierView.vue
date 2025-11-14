@@ -77,7 +77,7 @@
               cols="6"
               class="py-2"
             >
-              <v-card variant="outlined" class="pa-2 d-flex align-center">
+              <v-card variant="outlined" class="pa-2 d-flex align-center drink-card">
                 <div class="flex-grow-1">{{ getTranslatedLabel(drink.label) }}</div>
                 <div class="count-controls">
                   <v-btn
@@ -313,5 +313,9 @@ export default {
   letter-spacing: 0.5px;
   text-transform: uppercase;
   font-size: 13px;
+}
+
+.drink-card {
+  background: transparent !important;
 }
 </style>
