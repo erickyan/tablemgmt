@@ -1,15 +1,36 @@
 <template>
-  <v-container class="cashier-view pa-4">
-    <v-card class="mx-auto" max-width="520">
-      <v-card-title class="d-flex align-center justify-space-between">
-        {{ getTranslatedLabel('Cashier Receipt') }}
-        <v-chip color="accent" variant="tonal">{{ getTranslatedLabel('Total') }} ${{ totalWithTax }}</v-chip>
-      </v-card-title>
-      <v-card-subtitle>{{ getTranslatedLabel('Quick receipt builder for walk-in customers') }}</v-card-subtitle>
+  <v-container class="cashier-view pa-4 pa-2-mobile">
+    <v-card class="mx-auto cashier-card" max-width="520">
+      <!-- Print button at top for mobile -->
+      <div class="cashier-print-header mobile-only">
+        <v-btn
+          block
+          variant="flat"
+          color="accent"
+          size="large"
+          :disabled="!hasActivity"
+          @click="printReceipt"
+          class="print-btn-top"
+        >
+          <v-icon start>mdi-printer</v-icon>
+          {{ getTranslatedLabel('Print Receipt') }}
+        </v-btn>
+        <div class="mobile-total-display">
+          <span class="mobile-total-label">{{ getTranslatedLabel('Total') }}</span>
+          <span class="mobile-total-value">${{ totalWithTax }}</span>
+        </div>
+      </div>
 
-      <v-card-text>
-        <div class="mb-4 price-mode-section">
-          <div class="d-flex align-center justify-space-between">
+      <v-card-title class="d-flex align-center justify-space-between cashier-title">
+        <span class="desktop-only">{{ getTranslatedLabel('Cashier Receipt') }}</span>
+        <span class="mobile-only">{{ getTranslatedLabel('Cashier') }}</span>
+        <v-chip color="accent" variant="tonal" class="desktop-only">{{ getTranslatedLabel('Total') }} ${{ totalWithTax }}</v-chip>
+      </v-card-title>
+      <v-card-subtitle class="desktop-only">{{ getTranslatedLabel('Quick receipt builder for walk-in customers') }}</v-card-subtitle>
+
+      <v-card-text class="cashier-content">
+        <div class="mb-4 mb-2-mobile price-mode-section">
+          <div class="d-flex align-center justify-space-between price-mode-row">
             <v-btn-toggle
               v-model="mode"
               density="comfortable"
@@ -19,11 +40,13 @@
             >
               <v-btn value="lunch">
                 <v-icon start size="18">mdi-white-balance-sunny</v-icon>
-                {{ getTranslatedLabel('Lunch') }}
+                <span class="desktop-only">{{ getTranslatedLabel('Lunch') }}</span>
+                <span class="mobile-only">L</span>
               </v-btn>
               <v-btn value="dinner">
                 <v-icon start size="18">mdi-weather-night</v-icon>
-                {{ getTranslatedLabel('Dinner') }}
+                <span class="desktop-only">{{ getTranslatedLabel('Dinner') }}</span>
+                <span class="mobile-only">D</span>
               </v-btn>
             </v-btn-toggle>
             <v-btn 
@@ -31,27 +54,29 @@
               color="secondary" 
               @click="clearForm"
               class="clear-btn"
+              size="small"
             >
-              <v-icon start size="18">mdi-refresh</v-icon>
-              {{ getTranslatedLabel('Clear') }}
+              <v-icon start size="16">mdi-refresh</v-icon>
+              <span class="desktop-only">{{ getTranslatedLabel('Clear') }}</span>
             </v-btn>
           </div>
         </div>
 
-        <v-divider class="my-4"></v-divider>
+        <v-divider class="my-4 my-2-mobile"></v-divider>
 
-        <section>
+        <section class="buffet-section">
           <div
             v-for="option in buffetOptions"
             :key="option.key"
             class="count-row"
           >
-            <span>{{ option.label }}</span>
+            <span class="count-label">{{ option.label }}</span>
             <div class="count-controls">
               <v-btn
                 icon="mdi-minus"
                 density="comfortable"
                 variant="text"
+                size="small"
                 @click="stepBuffet(option.key, -1)"
                 :disabled="buffetCounts[option.key] === 0"
               />
@@ -60,30 +85,32 @@
                 icon="mdi-plus"
                 density="comfortable"
                 variant="text"
+                size="small"
                 @click="stepBuffet(option.key, 1)"
               />
             </div>
           </div>
         </section>
 
-        <v-divider class="my-4"></v-divider>
+        <v-divider class="my-4 my-2-mobile"></v-divider>
 
-        <section>
-          <div class="text-subtitle-2 mb-2">{{ getTranslatedLabel('Drinks') }}</div>
-          <v-row dense>
+        <section class="drinks-section">
+          <div class="text-subtitle-2 mb-2 mb-1-mobile drinks-label">{{ getTranslatedLabel('Drinks') }}</div>
+          <v-row dense class="drinks-grid">
             <v-col
               v-for="drink in drinkOptions"
               :key="drink.code"
               cols="6"
-              class="py-2"
+              class="py-2 py-1-mobile"
             >
-              <v-card variant="outlined" class="pa-2 d-flex align-center drink-card">
-                <div class="flex-grow-1">{{ getTranslatedLabel(drink.label) }}</div>
+              <v-card variant="outlined" class="pa-2 pa-1-mobile d-flex align-center drink-card">
+                <div class="flex-grow-1 drink-name">{{ getTranslatedLabel(drink.label) }}</div>
                 <div class="count-controls">
                   <v-btn
                     icon="mdi-minus"
                     density="comfortable"
                     variant="text"
+                    size="small"
                     @click="stepDrink(drink.code, -1)"
                     :disabled="drinkCounts[drink.code] === 0"
                   />
@@ -92,6 +119,7 @@
                     icon="mdi-plus"
                     density="comfortable"
                     variant="text"
+                    size="small"
                     @click="stepDrink(drink.code, 1)"
                   />
                 </div>
@@ -100,9 +128,9 @@
           </v-row>
         </section>
 
-        <v-divider class="my-4"></v-divider>
+        <v-divider class="my-4 my-2-mobile desktop-only"></v-divider>
 
-        <section class="totals-preview">
+        <section class="totals-preview desktop-only">
           <div class="d-flex justify-space-between mb-1">
             <span>Subtotal</span>
             <span>${{ subtotal }}</span>
@@ -122,7 +150,7 @@
 </template>
 
 <script>
-import { DRINK_OPTIONS } from '../utils/drinkOptions.js'
+import { DRINK_OPTIONS, getDrinkLabel, isWater } from '../utils/drinkOptions.js'
 import { translate } from '../utils/translations.js'
 
 export default {
@@ -222,6 +250,29 @@ export default {
         })
       },
     },
+    // Watch store changes and sync back to component (only when store is cleared/reset)
+    '$store.state.cashierForm': {
+      deep: true,
+      handler(newForm, oldForm) {
+        if (!newForm) return
+        
+        // Only sync if all counts are zero (form was reset)
+        const allBuffetZero = newForm.buffetCounts && 
+          Object.values(newForm.buffetCounts).every(count => Number(count || 0) === 0)
+        const allDrinkZero = newForm.drinkCounts && 
+          Object.values(newForm.drinkCounts).every(count => Number(count || 0) === 0)
+        
+        // If form was reset (all zeros), sync to component
+        if (allBuffetZero && allDrinkZero) {
+          Object.keys(this.buffetCounts).forEach(key => {
+            this.buffetCounts[key] = 0
+          })
+          Object.keys(this.drinkCounts).forEach(code => {
+            this.drinkCounts[code] = 0
+          })
+        }
+      },
+    },
   },
   mounted() {
     // Initialize drinkCounts with all drink options
@@ -266,6 +317,113 @@ export default {
       // Clear store
       this.$store.commit('clearCashierForm')
     },
+    printReceipt() {
+      if (!this.hasActivity) {
+        return
+      }
+
+      const lines = []
+      const totals = []
+      const addLine = (label, qty, unitPrice) => {
+        if (!qty) return
+        const total = qty * unitPrice
+        lines.push({ label, qty, unitPrice, total })
+        totals.push(total)
+      }
+
+      addLine('Adult Buffet', Number(this.buffetCounts.adult || 0), this.pricing.adult)
+      addLine('Big Kid Buffet', Number(this.buffetCounts.bigKid || 0), this.pricing.bigKid)
+      addLine('Small Kid Buffet', Number(this.buffetCounts.smallKid || 0), this.pricing.smallKid)
+
+      Object.entries(this.drinkCounts).forEach(([code, qty]) => {
+        const qtyNum = Number(qty || 0)
+        if (!qtyNum) return
+        const label = getDrinkLabel(code)
+        const unitPrice = isWater(code) ? this.pricing.water : this.pricing.drink
+        addLine(label, qtyNum, unitPrice)
+      })
+
+      const subtotal = totals.reduce((sum, value) => sum + value, 0)
+      const totalWithTax = subtotal * this.pricing.taxRate
+      const taxAmount = totalWithTax - subtotal
+
+      const receiptHtml = `
+        <html>
+          <head>
+            <title>Cashier Receipt</title>
+            <style>
+              body { font-family: 'Consolas', 'Courier New', monospace; padding: 24px; color: #333; font-size: 12px; }
+              h1 { text-align: center; margin-bottom: 4px; font-size: 20px; }
+              h2 { text-align: center; margin-top: 0; font-weight: normal; font-size: 16px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+              th, td { padding: 4px 6px; border-bottom: 1px dashed #ccc; text-align: left; }
+              th { font-weight: bold; }
+              td.qty { text-align: center; width: 40px; }
+              td.price { text-align: right; width: 60px; }
+              .totals { margin-top: 16px; border-top: 1px dashed #ccc; padding-top: 8px; }
+              .totals div { display: flex; justify-content: space-between; margin-bottom: 4px; }
+              .totals strong { font-size: 14px; }
+              .footer { margin-top: 24px; text-align: center; font-size: 11px; }
+            </style>
+          </head>
+          <body>
+            <h1>China Buffet</h1>
+            <h2>${this.mode === 'dinner' ? 'Dinner' : 'Lunch'} Receipt</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th class="qty">Qty</th>
+                  <th class="price">Price</th>
+                  <th class="price">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${lines.length ? lines
+                  .map(line => `
+                    <tr>
+                      <td>${line.label}</td>
+                      <td class="qty">${line.qty}</td>
+                      <td class="price">$${line.unitPrice.toFixed(2)}</td>
+                      <td class="price">$${line.total.toFixed(2)}</td>
+                    </tr>
+                  `).join('') : '<tr><td colspan="4" style="text-align:center;">No items</td></tr>'}
+              </tbody>
+            </table>
+            <div class="totals">
+              <div><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>
+              <div><span>Tax</span><span>$${taxAmount.toFixed(2)}</span></div>
+              <div><strong>Total</strong><strong>$${totalWithTax.toFixed(2)}</strong></div>
+            </div>
+            <div class="footer">Thank you for dining with us!</div>
+          </body>
+        </html>
+      `
+
+      const printWindow = window.open('', '_blank', 'width=600,height=800')
+      if (!printWindow) {
+        alert('Please allow pop-ups for printing.')
+        return
+      }
+      printWindow.document.open()
+      printWindow.document.write(receiptHtml)
+      printWindow.document.close()
+      printWindow.focus()
+      printWindow.print()
+      printWindow.close()
+      
+      // Process payment: add sales to revenue and reset form
+      this.$store.commit('processCashierPayment')
+      
+      // Immediately reset local component data to match cleared store
+      // Do this synchronously to ensure UI updates right away
+      this.buffetCounts.adult = 0
+      this.buffetCounts.bigKid = 0
+      this.buffetCounts.smallKid = 0
+      Object.keys(this.drinkCounts).forEach(code => {
+        this.drinkCounts[code] = 0
+      })
+    },
   },
 }
 </script>
@@ -275,11 +433,63 @@ export default {
   max-width: 720px;
 }
 
+.cashier-card {
+  overflow: visible;
+}
+
+/* Mobile-only elements */
+.mobile-only {
+  display: none;
+}
+
+.desktop-only {
+  display: block;
+}
+
+/* Print button header for mobile */
+.cashier-print-header {
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--v-theme-surface) 95%, transparent);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin: -16px -16px 16px -16px;
+  border-radius: 4px 4px 0 0;
+}
+
+.print-btn-top {
+  margin-bottom: 8px;
+}
+
+.mobile-total-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0, 137, 123, 0.08);
+  border-radius: 8px;
+}
+
+.mobile-total-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(31, 39, 51, 0.7);
+}
+
+.mobile-total-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--v-theme-accent);
+}
+
 .count-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 0;
+}
+
+.count-label {
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .count-controls {
@@ -317,5 +527,179 @@ export default {
 
 .drink-card {
   background: transparent !important;
+}
+
+.drink-name {
+  font-size: 13px;
+}
+
+/* iPhone Vertical Responsive Styles */
+@media (max-width: 480px) and (orientation: portrait) {
+  .mobile-only {
+    display: block;
+  }
+
+  .desktop-only {
+    display: none;
+  }
+
+  .cashier-view {
+    padding: 8px !important;
+    max-width: 100%;
+  }
+
+  .cashier-card {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .cashier-title {
+    padding: 12px 16px !important;
+    font-size: 18px !important;
+  }
+
+  .cashier-content {
+    padding: 12px 16px !important;
+  }
+
+  .cashier-print-header {
+    margin: -16px -16px 12px -16px;
+    padding: 10px 12px;
+  }
+
+  .print-btn-top {
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .mobile-total-display {
+    padding: 6px 10px;
+  }
+
+  .mobile-total-label {
+    font-size: 12px;
+  }
+
+  .mobile-total-value {
+    font-size: 18px;
+  }
+
+  .price-mode-section {
+    padding: 12px;
+    margin-bottom: 12px !important;
+  }
+
+  .price-mode-row {
+    gap: 8px;
+  }
+
+  .price-mode-toggle .v-btn {
+    min-width: 60px;
+    padding: 6px 8px;
+  }
+
+  .price-mode-toggle .v-btn .v-icon {
+    margin-right: 4px;
+  }
+
+  .clear-btn {
+    min-width: 40px;
+    padding: 6px 8px;
+  }
+
+  .count-row {
+    padding: 6px 0;
+  }
+
+  .count-label {
+    font-size: 13px;
+  }
+
+  .count-controls {
+    gap: 8px;
+  }
+
+  .count-controls .v-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .count-value {
+    min-width: 20px;
+    font-size: 14px;
+  }
+
+  .drinks-label {
+    font-size: 13px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .drinks-grid {
+    margin: 0 -4px;
+  }
+
+  .drink-card {
+    padding: 8px !important;
+    min-height: 48px;
+  }
+
+  .drink-name {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .drink-card .count-controls {
+    gap: 6px;
+  }
+
+  .drink-card .count-controls .v-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .drink-card .count-value {
+    min-width: 18px;
+    font-size: 13px;
+  }
+
+  /* Ensure everything fits in viewport */
+  .cashier-view {
+    height: calc(100vh - 88px); /* Account for bottom nav */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cashier-card {
+    min-height: fit-content;
+  }
+}
+
+/* Utility classes for responsive spacing */
+@media (max-width: 480px) {
+  .pa-2-mobile {
+    padding: 8px !important;
+  }
+
+  .mb-2-mobile {
+    margin-bottom: 8px !important;
+  }
+
+  .mb-1-mobile {
+    margin-bottom: 4px !important;
+  }
+
+  .my-2-mobile {
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .py-1-mobile {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+
+  .pa-1-mobile {
+    padding: 4px !important;
+  }
 }
 </style>

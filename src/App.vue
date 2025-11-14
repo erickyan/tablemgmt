@@ -140,6 +140,11 @@ import { RouterView } from 'vue-router'
           @click="openLiveSales"
         ></v-list-item>
         <v-list-item
+          prepend-icon="mdi-table-multiple"
+          title="Manage Tables"
+          @click="openTableManager"
+        ></v-list-item>
+        <v-list-item
           prepend-icon="mdi-trash-can-outline"
           title="Reset Sales Data"
           @click="showResetConfirm = true"
@@ -284,6 +289,9 @@ import { RouterView } from 'vue-router'
       <admin-live-sales
         v-model="showLiveSales"
       />
+      <admin-table-manager
+        v-model="showTableManager"
+      />
 
       <v-dialog v-model="showResetConfirm" max-width="420">
         <v-card>
@@ -325,6 +333,7 @@ import { RouterView } from 'vue-router'
 import AdminMenuManager from './components/AdminMenuManager.vue'
 import AdminTogoSales from './components/AdminTogoSales.vue'
 import AdminLiveSales from './components/AdminLiveSales.vue'
+import AdminTableManager from './components/AdminTableManager.vue'
 import TableOrderPanel from './components/panels/TableOrderPanel.vue'
 import TogoOrderPanel from './components/panels/TogoOrderPanel.vue'
 import TogoEditItems from './components/TogoEditItems.vue'
@@ -336,6 +345,7 @@ export default {
     AdminMenuManager,
     AdminTogoSales,
     AdminLiveSales,
+    AdminTableManager,
     TableOrderPanel,
     TogoOrderPanel,
     TogoEditItems,
@@ -366,6 +376,7 @@ export default {
     snackbarColor: 'success',
     showTogoSales: false,
     showLiveSales: false,
+    showTableManager: false,
     togoSalesLoading: false,
     togoSalesHistory: []
   }),
@@ -474,6 +485,13 @@ export default {
       }
       this.drawer = false
       this.showLiveSales = true
+    },
+    openTableManager() {
+      if (!this.isAdmin) {
+        return
+      }
+      this.drawer = false
+      this.showTableManager = true
     },
     async handleMenuSave(menu) {
       this.menuSaving = true
@@ -845,6 +863,17 @@ export default {
      grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
    }
  }
+
+/* Hide side panel on iPhone vertical for cashier view */
+@media (max-width: 480px) and (orientation: portrait) {
+  .pos-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .pos-content__panel {
+    display: none;
+  }
+}
 
 .pos-content__primary {
   min-height: 0;

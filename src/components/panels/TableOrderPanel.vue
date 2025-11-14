@@ -2,7 +2,7 @@
   <div class="panel">
     <div class="panel__header">
       <div>
-        <h3 class="panel__title">Table {{ tableNumber }}</h3>
+        <h3 class="panel__title">{{ getTableDisplayName() }}</h3>
         <p class="panel__subtitle">
           {{ getTranslatedLabel(pricingModeWasDinner ? 'Dinner pricing' : 'Lunch pricing') }}
         </p>
@@ -289,6 +289,12 @@ export default {
       const label = map[code] || code
       // For display, use translated label (English with Chinese appended)
       return this.getTranslatedLabel(label)
+    },
+    getTableDisplayName() {
+      if (this.table && this.table.name && this.table.name.trim()) {
+        return this.table.name.trim()
+      }
+      return `Table ${this.tableNumber}`
     },
     getTranslatedLabel(label) {
       return translate(label, this.isChinese)

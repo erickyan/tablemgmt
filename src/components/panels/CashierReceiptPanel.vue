@@ -47,7 +47,7 @@
       </div>
     </div>
 
-    <div class="panel__actions">
+    <div class="panel__actions desktop-print-btn">
       <v-btn
         block
         variant="flat"
@@ -238,6 +238,9 @@ export default {
       printWindow.focus()
       printWindow.print()
       printWindow.close()
+      
+      // Process payment: add sales to revenue and reset form
+      this.$store.commit('processCashierPayment')
     }
   }
 }
@@ -341,6 +344,13 @@ export default {
 .panel__actions {
   border-top: 1px solid rgba(31, 39, 51, 0.08);
   padding-top: 16px;
+}
+
+/* Hide print button in side panel on mobile - it's moved to top of main view */
+@media (max-width: 480px) and (orientation: portrait) {
+  .desktop-print-btn {
+    display: none;
+  }
 }
 </style>
 

@@ -2,7 +2,7 @@ import { createStore } from 'vuex'
 import * as firestore from '../services/firestoreData'
 import { auth } from '../firebase'
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth'
-import { DRINK_OPTIONS } from '../utils/drinkOptions.js'
+import { DRINK_OPTIONS, isWater } from '../utils/drinkOptions.js'
 
 const ADMIN_EMAILS = (import.meta.env.VITE_FIREBASE_ADMIN_EMAILS || '')
   .split(',')
@@ -119,6 +119,7 @@ const store = createStore({
         tables: [
             {
                 number: 1,
+                name: null,
                 sitDownTime:"",
                 adult: 0,
                 bigKid: 0,
@@ -133,6 +134,7 @@ const store = createStore({
             },
             {
                 number: 2,
+                name: null,
                 adult: 0,
                 bigKid: 0,
                 smlKid: 0,
@@ -146,6 +148,7 @@ const store = createStore({
             },
             {
                 number: 3,
+                name: null,
                 adult: 0,
                 bigKid: 0,
                 smlKid: 0,
@@ -159,6 +162,7 @@ const store = createStore({
             },
             {
                 number: 4,
+                name: null,
                 adult: 0,
                 bigKid: 0,
                 smlKid: 0,
@@ -172,6 +176,7 @@ const store = createStore({
             },
             {
                 number: 5,
+                name: null,
                 adult: 0,
                 bigKid: 0,
                 smlKid: 0,
@@ -185,6 +190,7 @@ const store = createStore({
             },
             {
                 number: 6,
+                name: null,
                 adult: 0,
                 bigKid: 0,
                 smlKid: 0,
@@ -198,6 +204,7 @@ const store = createStore({
             },
             {
                 number: 7,
+                name: null,
                 adult: 0,
                 bigKid: 0,
                 smlKid: 0,
@@ -211,6 +218,7 @@ const store = createStore({
             },
             {
                 number: 8,
+                name: null,
                 adult: 0,
                 bigKid: 0,
                 smlKid: 0,
@@ -224,6 +232,7 @@ const store = createStore({
             },
             {
                 number: 9,
+                name: null,
                 adult: 0,
                 bigKid: 0,
                 smlKid: 0,
@@ -237,6 +246,7 @@ const store = createStore({
             },
             {
                 number: 10,
+                name: null,
                 adult: 0,
                 bigKid: 0,
                 smlKid: 0,
@@ -1302,9 +1312,196 @@ const store = createStore({
                 state.cashierForm.drinkCounts = drinkCounts
             }
         },
+        /**
+         * Process cashier receipt payment
+         * Adds sales to total revenue and resets the cashier form
+         */
+        processCashierPayment(state) {
+            const form = state.cashierForm || {}
+            const buffetCounts = form.buffetCounts || {}
+            const drinkCounts = form.drinkCounts || {}
+            const isDinner = form.mode === 'dinner'
+            
+            // Calculate buffet revenue
+            const adultCount = Number(buffetCounts.adult || 0)
+            const bigKidCount = Number(buffetCounts.bigKid || 0)
+            const smallKidCount = Number(buffetCounts.smallKid || 0)
+            
+            let buffetSubtotal = 0
+            if (isDinner) {
+                buffetSubtotal = (adultCount * state.ADULTDINNERPRICE) + 
+                                (bigKidCount * state.BIGKIDDINNERPRICE) + 
+                                (smallKidCount * state.SMALLKIDDINNERPRICE)
+            } else {
+                buffetSubtotal = (adultCount * state.ADULTPRICE) + 
+                                (bigKidCount * state.BIGKIDPRICE) + 
+                                (smallKidCount * state.SMALLKIDPRICE)
+            }
+            
+            // Calculate drink revenue
+            let drinkSubtotal = 0
+            Object.entries(drinkCounts).forEach(([code, qty]) => {
+                const quantity = Number(qty || 0)
+                if (quantity <= 0) return
+                // Check if it's water using the utility function
+                const unitPrice = isWater(code) ? state.WATERPRICE : state.DRINKPRICE
+                drinkSubtotal += quantity * unitPrice
+            })
+            
+            // Calculate total with tax
+            const subtotal = buffetSubtotal + drinkSubtotal
+            const revenue = parseFloat((subtotal * state.TAX_RATE).toFixed(2))
+            
+            // Only process if there's actual revenue or customers
+            if (revenue > 0 || adultCount > 0 || bigKidCount > 0 || smallKidCount > 0) {
+                // Update sales summary in state
+                const currentRevenue = parseFloat(state.sales.revenue) || 0
+                const currentAdultCount = parseInt(state.sales.adultCount) || 0
+                const currentBigKidCount = parseInt(state.sales.bigKidCount) || 0
+                const currentSmlKidCount = parseInt(state.sales.smlKidCount) || 0
+                
+                state.sales.revenue = (currentRevenue + revenue).toFixed(2)
+                state.sales.adultCount = currentAdultCount + adultCount
+                state.sales.bigKidCount = currentBigKidCount + bigKidCount
+                state.sales.smlKidCount = currentSmlKidCount + smallKidCount
+                state.sales.totalCount = state.sales.adultCount + state.sales.bigKidCount + state.sales.smlKidCount
+                
+                console.log('Cashier sales updated:', {
+                    revenue: state.sales.revenue,
+                    adultCount: state.sales.adultCount,
+                    bigKidCount: state.sales.bigKidCount,
+                    smlKidCount: state.sales.smlKidCount,
+                    totalCount: state.sales.totalCount,
+                    cashierRevenue: revenue
+                })
+                
+                // Add sales record to Firestore if enabled
+                if (state.useFirebase && state.firebaseInitialized) {
+                    Promise.all([
+                        firestore.addSalesRecord({
+                            tableNumber: null, // Cashier/walk-in orders don't have table numbers
+                            orderType: 'cashier',
+                            revenue: revenue,
+                            adultCount: adultCount,
+                            bigKidCount: bigKidCount,
+                            smlKidCount: smallKidCount
+                        }),
+                        firestore.saveSalesSummary(buildSalesSummaryForFirestore(state.sales))
+                    ]).then(() => {
+                        console.log('[Firestore] Cashier sales successfully saved')
+                    }).catch(err => {
+                        console.error('[Firestore] Failed to save cashier sales:', err)
+                    })
+                }
+            }
+            
+            // Clear cashier form after payment
+            if (state.cashierForm) {
+                state.cashierForm.buffetCounts = {
+                    adult: 0,
+                    bigKid: 0,
+                    smallKid: 0,
+                }
+                const drinkCounts = {}
+                DRINK_OPTIONS.forEach(opt => {
+                    drinkCounts[opt.code] = 0
+                })
+                state.cashierForm.drinkCounts = drinkCounts
+            }
+        },
         setTableOrder(state, order = []) {
             const tableCount = Array.isArray(state.tables) ? state.tables.length : 10
             state.tableOrder = normalizeTableOrder(order, tableCount)
+        },
+        /**
+         * Add a new table to the tables array
+         */
+        addTable(state) {
+            const existingNumbers = state.tables.map(t => t.number).filter(Boolean)
+            const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0
+            const newTableNumber = maxNumber + 1
+            
+            const newTable = {
+                number: newTableNumber,
+                name: null,
+                sitDownTime: "",
+                adult: 0,
+                bigKid: 0,
+                smlKid: 0,
+                drinks: [],
+                time: 0,
+                occupied: false,
+                drinkPrice: 0,
+                totalPrice: 0,
+                goodPpl: false,
+                togo: 0
+            }
+            
+            state.tables.push(newTable)
+            
+            // Update tableOrder to include the new table
+            const tableCount = state.tables.length
+            state.tableOrder = normalizeTableOrder(state.tableOrder, tableCount)
+            
+            // Persist to Firestore if enabled
+            if (state.useFirebase && state.firebaseInitialized) {
+                firestore.saveTable(newTableNumber, newTable).catch(err => {
+                    console.error('[Firestore] Failed to save new table:', err)
+                })
+            }
+        },
+        /**
+         * Remove a table from the tables array
+         * Only allows removal if table is not occupied
+         */
+        removeTable(state, tableNumber) {
+            const tableIndex = state.tables.findIndex(t => t.number === tableNumber)
+            if (tableIndex === -1) {
+                return
+            }
+            
+            const table = state.tables[tableIndex]
+            // Prevent removal of occupied tables
+            if (table.occupied) {
+                console.warn('Cannot remove occupied table:', tableNumber)
+                return
+            }
+            
+            // Remove from tables array
+            state.tables.splice(tableIndex, 1)
+            
+            // Update tableOrder to remove the table number
+            state.tableOrder = state.tableOrder.filter(num => num !== tableNumber)
+            const tableCount = state.tables.length
+            state.tableOrder = normalizeTableOrder(state.tableOrder, tableCount)
+            
+            // Delete from Firestore if enabled
+            if (state.useFirebase && state.firebaseInitialized) {
+                firestore.deleteTable(tableNumber).catch(err => {
+                    console.error('[Firestore] Failed to delete table:', err)
+                })
+            }
+        },
+        /**
+         * Update a table's name
+         */
+        updateTableName(state, payload) {
+            const { tableNumber, name } = payload
+            const tableIndex = state.tables.findIndex(t => t.number === tableNumber)
+            if (tableIndex === -1) {
+                return
+            }
+            
+            const table = state.tables[tableIndex]
+            // Set name to null if empty string, otherwise set to trimmed value
+            table.name = name && name.trim() ? name.trim() : null
+            
+            // Persist to Firestore if enabled
+            if (state.useFirebase && state.firebaseInitialized) {
+                firestore.saveTable(tableNumber, table).catch(err => {
+                    console.error('[Firestore] Failed to update table name:', err)
+                })
+            }
         },
         setAppState(state, payload = {}) {
             const usingFirebase = !!state.useFirebase

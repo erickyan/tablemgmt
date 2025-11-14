@@ -1,7 +1,8 @@
 <template>
   <v-dialog
     v-model="internalOpen"
-    max-width="860"
+    :max-width="isMobile ? '100%' : '860'"
+    :fullscreen="isMobile"
     scrollable
     transition="dialog-bottom-transition"
   >
@@ -13,7 +14,7 @@
         <v-btn icon="mdi-close" variant="text" @click="close" />
       </v-toolbar>
 
-      <v-card-text class="pa-6">
+      <v-card-text class="pa-6 pa-4-mobile">
         <section class="metrics-grid">
           <div class="metric-card metric-card--primary">
             <span class="metric-label">Total Revenue</span>
@@ -46,11 +47,11 @@
             <span class="section-note">{{ openTables.length ? 'Monitor seated guests and totals.' : 'All tables are settled.' }}</span>
           </div>
 
-          <v-table
-            v-if="openTables.length"
-            density="compact"
-            class="mt-3"
-          >
+          <div v-if="openTables.length" class="table-wrapper">
+            <v-table
+              density="compact"
+              class="mt-3 open-tables-table"
+            >
             <thead>
               <tr>
                 <th class="text-left">Table</th>
@@ -73,6 +74,7 @@
               </tr>
             </tbody>
           </v-table>
+          </div>
           <v-alert
             v-else
             type="success"
@@ -136,6 +138,13 @@ export default {
     refreshing: false
   }),
   computed: {
+    isMobile() {
+      // Check if Vuetify display service is available, otherwise fallback to window width
+      if (this.$vuetify && this.$vuetify.display) {
+        return this.$vuetify.display.mobile || this.$vuetify.display.width < 768
+      }
+      return window.innerWidth < 768
+    },
     internalOpen: {
       get() {
         return this.modelValue
@@ -315,9 +324,247 @@ export default {
   color: rgba(31, 39, 51, 0.9);
 }
 
-@media (max-width: 600px) {
+/* Mobile and Tablet Responsive Styles */
+@media (max-width: 1024px) {
+  .live-sales {
+    border-radius: 0;
+  }
+
   .metrics-grid {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .metric-card {
+    padding: 14px;
+  }
+
+  .metric-value {
+    font-size: 22px;
+  }
+
+  .snapshot-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+/* iPad Portrait and smaller tablets */
+@media (max-width: 768px) {
+  .live-sales {
+    border-radius: 0;
+  }
+
+  .pa-4-mobile {
+    padding: 16px !important;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .metric-card {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .metric-label {
+    font-size: 11px;
+  }
+
+  .metric-value {
+    font-size: 20px;
+  }
+
+  .metric-caption {
+    font-size: 11px;
+  }
+
+  .section {
+    margin-top: 24px;
+  }
+
+  .section-heading h3 {
+    font-size: 18px;
+  }
+
+  .section-note {
+    font-size: 12px;
+  }
+
+  .snapshot-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .snapshot-card {
+    padding: 12px;
+  }
+
+  .snapshot-label {
+    font-size: 11px;
+  }
+
+  .snapshot-value {
+    font-size: 18px;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 12px;
+  }
+
+  .open-tables-table {
+    min-width: 500px;
+  }
+
+  .open-tables-table th,
+  .open-tables-table td {
+    padding: 8px 12px !important;
+    font-size: 13px;
+  }
+}
+
+/* iPhone and small phones */
+@media (max-width: 480px) {
+  .live-sales {
+    border-radius: 0;
+  }
+
+  .pa-4-mobile {
+    padding: 12px !important;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .metric-card {
+    padding: 14px;
+  }
+
+  .metric-value {
+    font-size: 24px;
+  }
+
+  .section {
+    margin-top: 20px;
+  }
+
+  .section-heading h3 {
+    font-size: 16px;
+  }
+
+  .snapshot-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .snapshot-card {
+    padding: 10px;
+  }
+
+  .snapshot-value {
+    font-size: 16px;
+  }
+
+  .table-wrapper {
+    margin-top: 10px;
+  }
+
+  .open-tables-table {
+    min-width: 450px;
+  }
+
+  .open-tables-table th,
+  .open-tables-table td {
+    padding: 6px 8px !important;
+    font-size: 12px;
+  }
+
+  .open-tables-table th {
+    font-size: 11px;
+    font-weight: 600;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (max-width: 1024px) and (orientation: landscape) {
+  .metrics-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .snapshot-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .metrics-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .snapshot-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .metric-value {
+    font-size: 18px;
+  }
+
+  .snapshot-value {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .snapshot-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .metric-card {
+    padding: 10px;
+  }
+
+  .metric-value {
+    font-size: 18px;
+  }
+
+  .snapshot-card {
+    padding: 8px;
+  }
+
+  .snapshot-value {
+    font-size: 14px;
+  }
+}
+
+/* Ensure dialog actions are accessible on mobile */
+@media (max-width: 768px) {
+  .v-card-actions {
+    padding: 12px 16px !important;
+  }
+
+  .v-card-actions .v-btn {
+    min-width: auto;
+    padding: 8px 16px;
   }
 }
 </style>

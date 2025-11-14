@@ -8,7 +8,7 @@
       <div class="pos-dialog__header">
         <div class="header-info">
           <div class="header-title-row">
-            <h3 class="dialog-title">{{ getTranslatedLabel('Table') }} {{ tableNumber }}</h3>
+            <h3 class="dialog-title">{{ getTableDisplayName() }}</h3>
             <v-chip
               size="small"
               variant="tonal"
@@ -373,6 +373,13 @@ export default {
         }
     },
     methods: {
+        getTableDisplayName() {
+            const table = this.table
+            if (table && table.name && table.name.trim()) {
+                return table.name.trim()
+            }
+            return `${this.getTranslatedLabel('Table')} ${this.tableNumber}`
+        },
         emitFocus(tab = 'check') {
             window.dispatchEvent(new CustomEvent('pos-table-panel-focus', {
                 detail: { tableIndex: this.tableIndex, tab }

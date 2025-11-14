@@ -39,6 +39,7 @@ function normalizeTableDoc(docSnap) {
   const number = Number(docSnap.id)
   return {
     number: Number.isFinite(number) ? number : data.number ?? 0,
+    name: data.name && data.name.trim() ? data.name.trim() : null,
     sitDownTime: data.sitDownTime || '',
     adult: data.adult ?? 0,
     bigKid: data.bigKid ?? 0,
@@ -58,6 +59,7 @@ function normalizeTableDoc(docSnap) {
 function defaultTable(number) {
   return {
     number,
+    name: null,
     sitDownTime: '',
     adult: 0,
     bigKid: 0,
@@ -105,14 +107,18 @@ export function watchTables(callback) {
 }
 
 function normalizeTablesSnapshot(snapshot) {
-  const tables = Array.from({ length: 10 }, (_, i) => defaultTable(i + 1))
+  // Build array of tables from Firestore, sorted by table number
+  const tables = []
   snapshot.docs.forEach(docSnap => {
     const table = normalizeTableDoc(docSnap)
-    const index = table.number - 1
-    if (index >= 0 && index < tables.length) {
-      tables[index] = { ...tables[index], ...table }
+    if (table.number > 0) {
+      tables.push(table)
     }
   })
+  
+  // Sort by table number
+  tables.sort((a, b) => a.number - b.number)
+  
   return tables
 }
 
@@ -127,6 +133,11 @@ export async function saveTable(tableNumber, data) {
     number: tableNumber,
     updatedAt: serverTimestamp(),
   }, { merge: true })
+}
+
+export async function deleteTable(tableNumber) {
+  const ref = doc(assertDb(), 'tables', String(tableNumber))
+  await deleteDoc(ref)
 }
 
 export async function loadSalesSummary() {

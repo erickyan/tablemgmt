@@ -18,7 +18,7 @@
         <div class="floor-plan__tile-header">
           <div class="tile-name">
             <v-icon icon="mdi-drag-variant" size="18" class="tile-drag"></v-icon>
-            Table {{ tableIndex }}
+            {{ getTableName(tableIndex) }}
           </div>
           <div class="tile-timer" :class="{ 'has-time': tableTick(tableIndex) }">
             <v-icon
@@ -105,6 +105,13 @@ export default {
     }
   },
   methods: {
+    getTableName(tableIndex) {
+      const table = this.$store.state.tables[tableIndex - 1]
+      if (table && table.name && table.name.trim()) {
+        return table.name.trim()
+      }
+      return `Table ${tableIndex}`
+    },
     registerPanelListeners() {
       if (this.listenersRegistered) return
       window.addEventListener('pos-open-table-details', this.handlePanelOpen)
