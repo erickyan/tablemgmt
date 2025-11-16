@@ -81,11 +81,12 @@ const store = createStore({
             revenue:0,
             totalTogoRevenue: 0
         },
-        TAX_RATE: 1.07,
-        ADULTPRICE: 9.99,
+        // Pricing + tax settings (editable from admin panel)
+        TAX_RATE: 1.07,            // stored as multiplier, e.g. 1.07 = 7% tax
+        ADULTPRICE: 9.99,          // lunch prices
         BIGKIDPRICE: 5.99,
         SMALLKIDPRICE: 4.99,
-        ADULTDINNERPRICE: 12.25,
+        ADULTDINNERPRICE: 12.25,   // dinner prices
         BIGKIDDINNERPRICE: 6.99,
         SMALLKIDDINNERPRICE: 5.99,
         WATERPRICE: 0.27,
@@ -1503,10 +1504,64 @@ const store = createStore({
                 })
             }
         },
+
+        /**
+         * Update buffet pricing and tax rate (admin panel).
+         * Expects prices in dollars and taxRatePercent as a percentage (e.g. 7 = 7% tax).
+         */
+        updatePricingSettings(state, payload = {}) {
+            const toNumberOr = (value, fallback) => {
+                const num = Number(value)
+                return Number.isFinite(num) ? num : fallback
+            }
+
+            const nextAdultLunch = toNumberOr(payload.adultLunch, state.ADULTPRICE)
+            const nextBigKidLunch = toNumberOr(payload.bigKidLunch, state.BIGKIDPRICE)
+            const nextSmallKidLunch = toNumberOr(payload.smallKidLunch, state.SMALLKIDPRICE)
+            const nextAdultDinner = toNumberOr(payload.adultDinner, state.ADULTDINNERPRICE)
+            const nextBigKidDinner = toNumberOr(payload.bigKidDinner, state.BIGKIDDINNERPRICE)
+            const nextSmallKidDinner = toNumberOr(payload.smallKidDinner, state.SMALLKIDDINNERPRICE)
+
+            state.ADULTPRICE = nextAdultLunch
+            state.BIGKIDPRICE = nextBigKidLunch
+            state.SMALLKIDPRICE = nextSmallKidLunch
+            state.ADULTDINNERPRICE = nextAdultDinner
+            state.BIGKIDDINNERPRICE = nextBigKidDinner
+            state.SMALLKIDDINNERPRICE = nextSmallKidDinner
+
+            if (payload.taxRatePercent !== undefined) {
+                const currentPercent = (state.TAX_RATE - 1) * 100
+                const percent = toNumberOr(payload.taxRatePercent, currentPercent)
+                const multiplier = 1 + Math.max(0, percent) / 100
+                state.TAX_RATE = Number(multiplier.toFixed(4))
+            }
+        },
         setAppState(state, payload = {}) {
             const usingFirebase = !!state.useFirebase
             if (payload.isDinner !== undefined) {
                 state.isDinner = payload.isDinner
+            }
+            // Restore pricing & tax settings from app state snapshot if provided
+            if (typeof payload.TAX_RATE === 'number' && payload.TAX_RATE > 0) {
+                state.TAX_RATE = payload.TAX_RATE
+            }
+            if (typeof payload.ADULTPRICE === 'number') {
+                state.ADULTPRICE = payload.ADULTPRICE
+            }
+            if (typeof payload.BIGKIDPRICE === 'number') {
+                state.BIGKIDPRICE = payload.BIGKIDPRICE
+            }
+            if (typeof payload.SMALLKIDPRICE === 'number') {
+                state.SMALLKIDPRICE = payload.SMALLKIDPRICE
+            }
+            if (typeof payload.ADULTDINNERPRICE === 'number') {
+                state.ADULTDINNERPRICE = payload.ADULTDINNERPRICE
+            }
+            if (typeof payload.BIGKIDDINNERPRICE === 'number') {
+                state.BIGKIDDINNERPRICE = payload.BIGKIDDINNERPRICE
+            }
+            if (typeof payload.SMALLKIDDINNERPRICE === 'number') {
+                state.SMALLKIDDINNERPRICE = payload.SMALLKIDDINNERPRICE
             }
             if (typeof payload.tableNum === 'number') {
                 state.tableNum = payload.tableNum
@@ -1953,6 +2008,14 @@ function getAppStateSnapshot(state) {
         isDinner: state.isDinner,
         tableNum: state.tableNum,
         catID: state.catID,
+        // Persist pricing + tax so admin changes survive reloads
+        TAX_RATE: state.TAX_RATE,
+        ADULTPRICE: state.ADULTPRICE,
+        BIGKIDPRICE: state.BIGKIDPRICE,
+        SMALLKIDPRICE: state.SMALLKIDPRICE,
+        ADULTDINNERPRICE: state.ADULTDINNERPRICE,
+        BIGKIDDINNERPRICE: state.BIGKIDDINNERPRICE,
+        SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
         togoLines: JSON.parse(JSON.stringify(state.togoLines)),
         togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
         totalTogoPrice: state.totalTogoPrice,

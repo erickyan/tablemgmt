@@ -130,6 +130,11 @@ import { RouterView } from 'vue-router'
           @click="openMenuManager"
         ></v-list-item>
         <v-list-item
+          prepend-icon="mdi-cash-multiple"
+          title="Pricing & Tax"
+          @click="openPricingSettings"
+        ></v-list-item>
+        <v-list-item
           prepend-icon="mdi-receipt"
           title="View To-Go Sales"
           @click="openTogoSales"
@@ -293,6 +298,116 @@ import { RouterView } from 'vue-router'
         v-model="showTableManager"
       />
 
+      <!-- Admin: Pricing & Tax Settings -->
+      <v-dialog v-model="showPricingSettings" max-width="480">
+        <v-card>
+          <v-card-title class="text-h6">
+            Buffet Pricing & Tax
+          </v-card-title>
+          <v-card-text>
+            <div class="mb-4">
+              <div class="text-subtitle-2 mb-2">Lunch prices</div>
+              <v-row dense>
+                <v-col cols="12" sm="4">
+                  <v-text-field
+                    v-model.number="pricingForm.adultLunch"
+                    label="Adult"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    prefix="$"
+                    density="comfortable"
+                  />
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <v-text-field
+                    v-model.number="pricingForm.bigKidLunch"
+                    label="Kid (6-9)"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    prefix="$"
+                    density="comfortable"
+                  />
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <v-text-field
+                    v-model.number="pricingForm.smallKidLunch"
+                    label="Kid (2-5)"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    prefix="$"
+                    density="comfortable"
+                  />
+                </v-col>
+              </v-row>
+            </div>
+
+            <div class="mb-4">
+              <div class="text-subtitle-2 mb-2">Dinner prices</div>
+              <v-row dense>
+                <v-col cols="12" sm="4">
+                  <v-text-field
+                    v-model.number="pricingForm.adultDinner"
+                    label="Adult"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    prefix="$"
+                    density="comfortable"
+                  />
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <v-text-field
+                    v-model.number="pricingForm.bigKidDinner"
+                    label="Kid (6-9)"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    prefix="$"
+                    density="comfortable"
+                  />
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <v-text-field
+                    v-model.number="pricingForm.smallKidDinner"
+                    label="Kid (2-5)"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    prefix="$"
+                    density="comfortable"
+                  />
+                </v-col>
+              </v-row>
+            </div>
+
+            <div>
+              <div class="text-subtitle-2 mb-2">Tax rate</div>
+              <v-text-field
+                v-model.number="pricingForm.taxRatePercent"
+                label="Tax (%)"
+                type="number"
+                min="0"
+                step="0.01"
+                suffix="%"
+                density="comfortable"
+              />
+            </div>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn variant="text" @click="showPricingSettings = false">
+              Cancel
+            </v-btn>
+            <v-btn color="accent" variant="flat" @click="savePricingSettings">
+              Save
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <v-dialog v-model="showResetConfirm" max-width="420">
         <v-card>
           <v-card-title class="text-h6">Reset Sales Data</v-card-title>
@@ -377,12 +492,49 @@ export default {
     showTogoSales: false,
     showLiveSales: false,
     showTableManager: false,
+    showPricingSettings: false,
     togoSalesLoading: false,
-    togoSalesHistory: []
+    togoSalesHistory: [],
+    pricingForm: {
+      adultLunch: 0,
+      bigKidLunch: 0,
+      smallKidLunch: 0,
+      adultDinner: 0,
+      bigKidDinner: 0,
+      smallKidDinner: 0,
+      taxRatePercent: 0,
+    }
   }),
   methods: {
     getTranslatedLabel(label) {
       return translate(label, this.isChinese)
+    },
+    openPricingSettings() {
+      // Seed form from current store values
+      const state = this.$store.state
+      this.pricingForm.adultLunch = state.ADULTPRICE
+      this.pricingForm.bigKidLunch = state.BIGKIDPRICE
+      this.pricingForm.smallKidLunch = state.SMALLKIDPRICE
+      this.pricingForm.adultDinner = state.ADULTDINNERPRICE
+      this.pricingForm.bigKidDinner = state.BIGKIDDINNERPRICE
+      this.pricingForm.smallKidDinner = state.SMALLKIDDINNERPRICE
+      this.pricingForm.taxRatePercent = ((state.TAX_RATE - 1) * 100).toFixed(2)
+      this.showPricingSettings = true
+    },
+    savePricingSettings() {
+      this.$store.commit('updatePricingSettings', {
+        adultLunch: this.pricingForm.adultLunch,
+        bigKidLunch: this.pricingForm.bigKidLunch,
+        smallKidLunch: this.pricingForm.smallKidLunch,
+        adultDinner: this.pricingForm.adultDinner,
+        bigKidDinner: this.pricingForm.bigKidDinner,
+        smallKidDinner: this.pricingForm.smallKidDinner,
+        taxRatePercent: this.pricingForm.taxRatePercent,
+      })
+      this.showPricingSettings = false
+      this.snackbarMessage = 'Pricing & tax updated.'
+      this.snackbarColor = 'success'
+      this.snackbar = true
     },
     toggleLanguage() {
       this.$store.commit('toggleLanguage')
