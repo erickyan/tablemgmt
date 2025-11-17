@@ -38,19 +38,21 @@ export default {
         })
       }
       
-      // Add Drinks category as a special category (use -1 as index to differentiate)
-      // Use count from menu if it exists, otherwise use default count
-      const drinksCount = drinksCategory && Array.isArray(drinksCategory.items)
-        ? drinksCategory.items.length
-        : 12 // Default count from DRINK_OPTIONS
-      
-      categories.push({
-        title: 'Drinks',
-        index: -1,
-        count: drinksCount,
-        color: this.categoryPalette[categories.length % this.categoryPalette.length],
-        isDrinks: true
-      })
+      // Add Drinks category as a special category only if it exists in the menu
+      // Use -1 as index to differentiate it from regular categories
+      if (drinksCategory) {
+        const drinksCount = Array.isArray(drinksCategory.items)
+          ? drinksCategory.items.length
+          : 12 // Default count from DRINK_OPTIONS
+        
+        categories.push({
+          title: 'Drinks',
+          index: -1,
+          count: drinksCount,
+          color: this.categoryPalette[categories.length % this.categoryPalette.length],
+          isDrinks: true
+        })
+      }
       
       // Translate category titles for display
       return categories.map(cat => ({

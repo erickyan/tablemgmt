@@ -107,6 +107,11 @@ import { RouterView } from 'vue-router'
           @click="openPricingSettings"
         ></v-list-item>
         <v-list-item
+          prepend-icon="mdi-receipt-text"
+          title="Receipt Settings"
+          @click="openReceiptSettings"
+        ></v-list-item>
+        <v-list-item
           prepend-icon="mdi-receipt"
           title="View To-Go Sales"
           @click="openTogoSales"
@@ -125,11 +130,6 @@ import { RouterView } from 'vue-router'
           prepend-icon="mdi-trash-can-outline"
           title="Reset Sales Data"
           @click="showResetConfirm = true"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-counter"
-          title="Reset Ticket Count"
-          @click="showResetTicketCountConfirm = true"
         ></v-list-item>
         <v-divider></v-divider>
         <v-list-item>
@@ -156,7 +156,6 @@ import { RouterView } from 'vue-router'
                   <v-icon>mdi-menu</v-icon>
                 </v-btn>
                 <span class="pos-brand__title">China Buffet</span>
-                <span class="pos-brand__mode">Staff POS</span>
               </div>
               <v-btn-toggle
                 v-model="priceMode"
@@ -274,6 +273,259 @@ import { RouterView } from 'vue-router'
       <admin-table-manager
         v-model="showTableManager"
       />
+
+      <!-- Admin: Receipt Settings -->
+      <v-dialog v-model="showReceiptSettings" max-width="1200" scrollable>
+        <v-card>
+          <v-card-title class="text-h6 d-flex align-center">
+            <v-icon class="mr-2">mdi-receipt-text</v-icon>
+            Receipt Display Settings
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pt-4">
+            <v-row>
+              <v-col cols="12" md="6">
+                <!-- Ticket Counter Section -->
+                <v-card variant="outlined" class="mb-4">
+                  <v-card-title class="text-subtitle-1 py-3">
+                    <v-icon size="20" class="mr-2">mdi-counter</v-icon>
+                    Ticket Counter
+                  </v-card-title>
+                  <v-divider></v-divider>
+                  <v-card-text>
+                    <div class="mb-3">
+                      <v-switch
+                        v-model="receiptSettingsForm.showTicketCount"
+                        label="Show ticket count on receipts"
+                        color="accent"
+                        hide-details
+                        density="comfortable"
+                      ></v-switch>
+                    </div>
+                    <v-divider class="my-3"></v-divider>
+                    <div class="d-flex align-center justify-space-between">
+                      <div>
+                        <div class="text-body-2 text-medium-emphasis mb-1">Current Count</div>
+                        <div class="text-h6">{{ $store.state.ticketCount || 0 }}</div>
+                      </div>
+                      <v-btn
+                        color="error"
+                        variant="outlined"
+                        prepend-icon="mdi-counter-reset"
+                        @click="showResetTicketCountConfirm = true"
+                      >
+                        Reset
+                      </v-btn>
+                    </div>
+                  </v-card-text>
+                </v-card>
+
+                <!-- Print Time Section -->
+                <v-card variant="outlined" class="mb-4">
+                  <v-card-title class="text-subtitle-1 py-3">
+                    <v-icon size="20" class="mr-2">mdi-clock-outline</v-icon>
+                    Print Time
+                  </v-card-title>
+                  <v-divider></v-divider>
+                  <v-card-text>
+                    <v-switch
+                      v-model="receiptSettingsForm.showPrintTime"
+                      label="Show print time/date on receipts"
+                      color="accent"
+                      hide-details
+                      density="comfortable"
+                    ></v-switch>
+                  </v-card-text>
+                </v-card>
+
+                <!-- Receipt Text Section -->
+                <v-card variant="outlined" class="mb-4">
+                  <v-card-title class="text-subtitle-1 py-3">
+                    <v-icon size="20" class="mr-2">mdi-text</v-icon>
+                    Receipt Text
+                  </v-card-title>
+                  <v-divider></v-divider>
+                  <v-card-text>
+                    <v-text-field
+                      v-model="receiptSettingsForm.headerText"
+                      label="Header Text"
+                      density="comfortable"
+                      class="mb-3"
+                      prepend-inner-icon="mdi-format-header-1"
+                    ></v-text-field>
+                    <v-textarea
+                      v-model="receiptSettingsForm.subHeaderText"
+                      label="Sub-Header Text (Optional)"
+                      density="comfortable"
+                      class="mb-3"
+                      rows="2"
+                      auto-grow
+                      prepend-inner-icon="mdi-format-header-2"
+                      clearable
+                    ></v-textarea>
+                    <v-text-field
+                      v-model="receiptSettingsForm.footerText"
+                      label="Footer Text (Buffet)"
+                      density="comfortable"
+                      class="mb-3"
+                      prepend-inner-icon="mdi-format-footer"
+                    ></v-text-field>
+                    <v-text-field
+                      v-model="receiptSettingsForm.thankYouText"
+                      label="Footer Text (To-Go)"
+                      density="comfortable"
+                      prepend-inner-icon="mdi-format-footer"
+                    ></v-text-field>
+                  </v-card-text>
+                </v-card>
+
+                <!-- Gratuity Section -->
+                <v-card variant="outlined" class="mb-4">
+                  <v-card-title class="text-subtitle-1 py-3">
+                    <v-icon size="20" class="mr-2">mdi-cash-multiple</v-icon>
+                    Gratuity
+                  </v-card-title>
+                  <v-divider></v-divider>
+                  <v-card-text>
+                    <div class="mb-3">
+                      <v-switch
+                        v-model="receiptSettingsForm.showGratuity"
+                        label="Show gratuity section on receipts"
+                        color="accent"
+                        hide-details
+                        density="comfortable"
+                      ></v-switch>
+                    </div>
+                    <v-divider class="my-3" v-if="receiptSettingsForm.showGratuity"></v-divider>
+                    <div v-if="receiptSettingsForm.showGratuity">
+                      <div class="mb-3">
+                        <div class="text-body-2 mb-2">Gratuity Percentages</div>
+                        <div class="d-flex flex-wrap gap-2 align-center">
+                          <v-text-field
+                            v-for="(percent, index) in receiptSettingsForm.gratuityPercentages"
+                            :key="index"
+                            v-model.number="receiptSettingsForm.gratuityPercentages[index]"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.5"
+                            suffix="%"
+                            density="compact"
+                            style="max-width: 100px;"
+                            hide-details
+                          ></v-text-field>
+                          <v-btn
+                            v-if="receiptSettingsForm.gratuityPercentages.length < 5"
+                            icon="mdi-plus"
+                            size="small"
+                            variant="outlined"
+                            @click="receiptSettingsForm.gratuityPercentages.push(15)"
+                          ></v-btn>
+                          <v-btn
+                            v-if="receiptSettingsForm.gratuityPercentages.length > 1"
+                            icon="mdi-minus"
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            @click="receiptSettingsForm.gratuityPercentages.pop()"
+                          ></v-btn>
+                        </div>
+                      </div>
+                      <div class="mb-2">
+                        <v-switch
+                          v-model="receiptSettingsForm.gratuityOnPreTax"
+                          label="Calculate gratuity on pre-tax amount"
+                          color="accent"
+                          hide-details
+                          density="comfortable"
+                        ></v-switch>
+                      </div>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+
+              <!-- Preview Section - Right Side -->
+              <v-col cols="12" md="6">
+                <v-card variant="outlined" class="sticky-preview" style="position: sticky; top: 24px;">
+                  <v-card-title class="text-subtitle-1 py-3">
+                    <v-icon size="20" class="mr-2">mdi-eye</v-icon>
+                    Preview
+                  </v-card-title>
+                  <v-divider></v-divider>
+                  <v-card-text class="pa-4" style="background: #fafafa;">
+                    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; position: relative;">
+                      <div v-if="receiptSettingsForm.showTicketCount" style="position: absolute; top: 0; right: 0; font-size: 18px; font-weight: bold; color: #333;">
+                        一
+                      </div>
+                      <div style="text-align: center; margin-bottom: 4px; font-size: 20px; font-weight: bold; padding-top: 8px;">
+                        {{ receiptSettingsForm.headerText || 'China Buffet' }}
+                      </div>
+                      <div v-if="receiptSettingsForm.subHeaderText" style="text-align: center; margin-top: 4px; margin-bottom: 8px; font-size: 14px; color: #666; font-style: italic; white-space: pre-line;">
+                        {{ receiptSettingsForm.subHeaderText }}
+                      </div>
+                      <div style="text-align: center; margin-top: 0; font-size: 16px; color: #666;">
+                        Table 1
+                      </div>
+                      <div v-if="receiptSettingsForm.showPrintTime" style="text-align: center; margin-top: 8px; font-size: 11px; color: #999;">
+                        {{ new Date().toLocaleString() }}
+                      </div>
+                      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #ddd;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                          <span>Adult (Lunch)</span>
+                          <span>$9.99</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                          <span>Water</span>
+                          <span>$0.00</span>
+                        </div>
+                      </div>
+                      <div style="margin-top: 16px; padding-top: 8px; border-top: 1px dashed #ccc;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                          <span>Subtotal</span>
+                          <span>$9.99</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                          <span>Tax</span>
+                          <span>$0.70</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                          <span>Total</span>
+                          <span>$10.69</span>
+                        </div>
+                      </div>
+                      <div style="margin-top: 24px; text-align: center; font-size: 12px; color: #777;">
+                        {{ receiptSettingsForm.footerText || 'Thank you for dining with us!' }}
+                      </div>
+                      <div v-if="receiptSettingsForm.showGratuity" style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed #ccc;">
+                        <div style="text-align: center; font-size: 12px; color: #666; margin-bottom: 8px;">Gratuity Suggestions</div>
+                        <div style="display: flex; justify-content: space-around; font-size: 11px; flex-wrap: wrap; gap: 8px;">
+                          <div
+                            v-for="(percent, index) in receiptSettingsForm.gratuityPercentages"
+                            :key="index"
+                            style="text-align: center; min-width: 60px;"
+                          >
+                            <div style="font-weight: bold;">{{ percent }}%</div>
+                            <div style="color: #666;">
+                              ${{ (receiptSettingsForm.gratuityOnPreTax ? (9.99 * percent / 100) : (10.69 * percent / 100)).toFixed(2) }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-card-text>
+          <v-divider></v-divider>
+          <v-card-actions class="pa-4">
+            <v-spacer></v-spacer>
+            <v-btn variant="text" @click="showReceiptSettings = false">Cancel</v-btn>
+            <v-btn color="accent" variant="flat" prepend-icon="mdi-content-save" @click="saveReceiptSettings">Save</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
 
       <!-- Admin: Pricing & Tax Settings -->
       <v-dialog v-model="showPricingSettings" max-width="480">
@@ -501,8 +753,20 @@ export default {
     showLiveSales: false,
     showTableManager: false,
     showPricingSettings: false,
+    showReceiptSettings: false,
     togoSalesLoading: false,
     togoSalesHistory: [],
+    receiptSettingsForm: {
+      showTicketCount: true,
+      showPrintTime: true,
+      headerText: 'China Buffet',
+      subHeaderText: '',
+      footerText: 'Thank you for dining with us!',
+      thankYouText: 'Thank you for your order!',
+      showGratuity: true,
+      gratuityPercentages: [10, 15, 20],
+      gratuityOnPreTax: false,
+    },
     pricingForm: {
       adultLunch: 0,
       bigKidLunch: 0,
@@ -518,6 +782,52 @@ export default {
   methods: {
     getTranslatedLabel(label) {
       return translate(label, this.isChinese)
+    },
+    openReceiptSettings() {
+      // Seed form from current store values
+      const state = this.$store.state
+      const receiptSettings = state.receiptSettings || {}
+      this.receiptSettingsForm.showTicketCount = receiptSettings.showTicketCount !== false
+      this.receiptSettingsForm.showPrintTime = receiptSettings.showPrintTime !== false
+      this.receiptSettingsForm.headerText = receiptSettings.headerText || 'China Buffet'
+      this.receiptSettingsForm.subHeaderText = receiptSettings.subHeaderText || ''
+      this.receiptSettingsForm.footerText = receiptSettings.footerText || 'Thank you for dining with us!'
+      this.receiptSettingsForm.thankYouText = receiptSettings.thankYouText || 'Thank you for your order!'
+      this.receiptSettingsForm.showGratuity = receiptSettings.showGratuity !== false
+      this.receiptSettingsForm.gratuityPercentages = Array.isArray(receiptSettings.gratuityPercentages) && receiptSettings.gratuityPercentages.length > 0
+        ? [...receiptSettings.gratuityPercentages]
+        : [10, 15, 20]
+      this.receiptSettingsForm.gratuityOnPreTax = receiptSettings.gratuityOnPreTax === true
+      this.showReceiptSettings = true
+    },
+    async saveReceiptSettings() {
+      this.$store.commit('updateReceiptSettings', {
+        showTicketCount: this.receiptSettingsForm.showTicketCount,
+        showPrintTime: this.receiptSettingsForm.showPrintTime,
+        headerText: this.receiptSettingsForm.headerText || 'China Buffet',
+        subHeaderText: this.receiptSettingsForm.subHeaderText || '',
+        footerText: this.receiptSettingsForm.footerText || 'Thank you for dining with us!',
+        thankYouText: this.receiptSettingsForm.thankYouText || 'Thank you for your order!',
+        showGratuity: this.receiptSettingsForm.showGratuity !== false,
+        gratuityPercentages: this.receiptSettingsForm.gratuityPercentages || [10, 15, 20],
+        gratuityOnPreTax: this.receiptSettingsForm.gratuityOnPreTax === true,
+      })
+      
+      // Immediately save app state to Firestore to ensure persistence
+      if (this.$store.state.useFirebase && this.$store.state.firebaseInitialized) {
+        try {
+          const snapshot = this.getAppStateSnapshot(this.$store.state)
+          snapshot.timestamp = new Date().toISOString()
+          await this.$store.dispatch('saveAppStateImmediately', snapshot)
+        } catch (error) {
+          console.error('[Firestore] Failed to save receipt settings:', error)
+        }
+      }
+      
+      this.showReceiptSettings = false
+      this.snackbarMessage = 'Receipt settings updated.'
+      this.snackbarColor = 'success'
+      this.snackbar = true
     },
     openPricingSettings() {
       // Seed form from current store values
@@ -577,6 +887,17 @@ export default {
         SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
         WATERPRICE: state.WATERPRICE,
         DRINKPRICE: state.DRINKPRICE,
+        ticketCount: state.ticketCount || 0,
+        receiptSettings: JSON.parse(JSON.stringify(state.receiptSettings || { 
+          showTicketCount: true,
+          headerText: 'China Buffet',
+          subHeaderText: '',
+          footerText: 'Thank you for dining with us!',
+          thankYouText: 'Thank you for your order!',
+          showGratuity: true,
+          gratuityPercentages: [10, 15, 20],
+          gratuityOnPreTax: false
+        })),
         togoLines: JSON.parse(JSON.stringify(state.togoLines)),
         togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
         totalTogoPrice: state.totalTogoPrice,

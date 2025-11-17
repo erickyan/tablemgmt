@@ -252,6 +252,7 @@ export default {
       this.$store.commit('incrementTicketCount')
       const ticketCount = this.$store.state.ticketCount
       const ticketCountChinese = toChineseNumeral(ticketCount)
+      const showTicketCount = this.$store.state.receiptSettings?.showTicketCount !== false
       
       // Immediately save app state to ensure ticket count persists
       if (this.$store.state.useFirebase && this.$store.state.firebaseInitialized && this.$store.state.authUser) {
@@ -271,6 +272,7 @@ export default {
             WATERPRICE: state.WATERPRICE,
             DRINKPRICE: state.DRINKPRICE,
             ticketCount: state.ticketCount,
+            receiptSettings: JSON.parse(JSON.stringify(state.receiptSettings || { showTicketCount: true })),
             togoLines: JSON.parse(JSON.stringify(state.togoLines)),
             togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
             totalTogoPrice: state.totalTogoPrice,
@@ -283,13 +285,26 @@ export default {
         }
       }
       
+      const receiptSettings = this.$store.state.receiptSettings || {}
+      const headerText = receiptSettings.headerText || 'China Buffet'
+      const subHeaderText = receiptSettings.subHeaderText || ''
+      const footerText = receiptSettings.footerText || 'Thank you for dining with us!'
+      const showPrintTime = receiptSettings.showPrintTime !== false
+      const showGratuity = receiptSettings.showGratuity !== false
+      const gratuityPercentages = Array.isArray(receiptSettings.gratuityPercentages) && receiptSettings.gratuityPercentages.length > 0
+          ? receiptSettings.gratuityPercentages
+          : [10, 15, 20]
+      const gratuityOnPreTax = receiptSettings.gratuityOnPreTax === true
+      const gratuityBaseAmount = gratuityOnPreTax ? subtotal : (totalWithTax || (subtotal * this.$store.state.TAX_RATE))
+      
       const receiptHtml = '<html>' +
         '<head>' +
           `<title>Receipt - Table ${tableNumber}</title>` +
           '<style>' +
             "body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 24px; color: #333; position: relative; }" +
-            '.ticket-count { position: absolute; top: 24px; right: 24px; font-size: 18px; font-weight: bold; color: #333; }' +
+            (showTicketCount ? '.ticket-count { position: absolute; top: 24px; right: 24px; font-size: 18px; font-weight: bold; color: #333; }' : '') +
             'h1 { text-align: center; margin-bottom: 4px; letter-spacing: 1px; }' +
+            '.sub-header { text-align: center; margin-top: 4px; margin-bottom: 8px; font-size: 14px; color: #666; font-style: italic; white-space: pre-line; }' +
             'h2 { text-align: center; margin-top: 0; font-weight: normal; font-size: 16px; }' +
             'table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 14px; table-layout: fixed; }' +
             'th, td { padding: 8px 6px; border-bottom: 1px solid #ddd; }' +
@@ -301,13 +316,21 @@ export default {
             '.totals div { display: flex; justify-content: space-between; margin-bottom: 4px; }' +
             '.totals div strong { font-size: 16px; }' +
             '.footer { margin-top: 24px; text-align: center; font-size: 12px; color: #777; }' +
+            '.gratuity { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #ccc; }' +
+            '.gratuity-title { text-align: center; font-size: 12px; color: #666; margin-bottom: 8px; }' +
+            '.gratuity-options { display: flex; justify-content: space-around; font-size: 11px; }' +
+            '.gratuity-option { text-align: center; }' +
+            '.gratuity-option .percent { font-weight: bold; }' +
+            '.gratuity-option .amount { color: #666; }' +
           '</style>' +
         '</head>' +
         '<body>' +
-          `<div class="ticket-count">${ticketCountChinese}</div>` +
-          '<h1>China Buffet</h1>' +
+          (showTicketCount ? `<div class="ticket-count">${ticketCountChinese}</div>` : '') +
+          `<h1>${headerText}</h1>` +
+          (subHeaderText ? `<div class="sub-header">${subHeaderText}</div>` : '') +
           `<h2>Table ${tableNumber}</h2>` +
           `<div>Server Mode: ${isDinner ? 'Dinner' : 'Lunch'}</div>` +
+          (showPrintTime ? `<div style="text-align: center; margin-top: 8px; font-size: 11px; color: #999;">${new Date().toLocaleString()}</div>` : '') +
           '<table>' +
             '<thead>' +
               '<tr>' +
@@ -324,9 +347,22 @@ export default {
           '<div class="totals">' +
             `<div><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>` +
             `<div><span>Tax</span><span>$${taxAmount.toFixed(2)}</span></div>` +
-            `<div><strong>Total</strong><strong>$${totalWithTax ? totalWithTax.toFixed(2) : (subtotal * store.TAX_RATE).toFixed(2)}</strong></div>` +
+            `<div><strong>Total</strong><strong>$${totalWithTax ? totalWithTax.toFixed(2) : (subtotal * this.$store.state.TAX_RATE).toFixed(2)}</strong></div>` +
           '</div>' +
-          '<div class="footer">Thank you for dining with us!</div>' +
+          (footerText ? `<div class="footer">${footerText}</div>` : '') +
+          (showGratuity ? `
+            <div class="gratuity">
+              <div class="gratuity-title">Gratuity Suggestions</div>
+              <div class="gratuity-options">
+                ${gratuityPercentages.map(percent => `
+                  <div class="gratuity-option">
+                    <div class="percent">${percent}%</div>
+                    <div class="amount">$${(gratuityBaseAmount * percent / 100).toFixed(2)}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : '') +
         '</body>' +
         '</html>'
       
@@ -491,9 +527,34 @@ export default {
       this.$store.commit('setOrderPanel', { type: 'table', tableIndex: index })
     },
     addDetails(n) {
-      const tableIndex = n - 1
-      this.$store.state.tableNum = tableIndex
-      this.$store.commit('setOrderPanel', { type: 'table', tableIndex })
+      // After setTables alignment fix, tables array should be properly aligned
+      // where tables[index] corresponds to table number (index + 1)
+      // But we'll still find by number to be safe
+      const tables = this.$store.state.tables || []
+      const tableNumber = Number(n)
+      
+      // Find table by number property (more reliable than assuming index alignment)
+      const foundIndex = tables.findIndex(table => {
+        if (!table) return false
+        return Number(table.number) === tableNumber
+      })
+      
+      if (foundIndex >= 0) {
+        // Found by number - use it directly
+        this.$store.state.tableNum = foundIndex
+        this.$store.commit('setOrderPanel', { type: 'table', tableIndex: foundIndex })
+      } else {
+        // Not found by number - try index-based as fallback (should work if aligned)
+        const fallbackIndex = tableNumber - 1
+        if (fallbackIndex >= 0 && fallbackIndex < tables.length) {
+          // Use fallback index (setTables mutation should ensure alignment)
+          this.$store.state.tableNum = fallbackIndex
+          this.$store.commit('setOrderPanel', { type: 'table', tableIndex: fallbackIndex })
+        } else {
+          // Invalid index
+          console.error(`Table ${tableNumber} not found and invalid index ${fallbackIndex}`)
+        }
+      }
 
       const status = this.statusForTable(n)
       if (status && status.label === this.getTranslatedLabel('Empty')) {

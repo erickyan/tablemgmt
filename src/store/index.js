@@ -82,6 +82,18 @@ const store = createStore({
             totalTogoRevenue: 0
         },
         ticketCount: 0,  // Counter for all receipts printed (buffet and cashier)
+        // Receipt display settings (editable from admin panel)
+        receiptSettings: {
+            showTicketCount: true,  // Show ticket counter on receipts
+            showPrintTime: true,  // Show print time/date on receipts
+            headerText: 'China Buffet',  // Header text on receipts
+            subHeaderText: '',  // Sub-header text on receipts (optional)
+            footerText: 'Thank you for dining with us!',  // Footer text on receipts
+            thankYouText: 'Thank you for your order!',  // Thank you text for to-go orders
+            showGratuity: true,  // Show gratuity section on receipts
+            gratuityPercentages: [10, 15, 20],  // Gratuity percentage options
+            gratuityOnPreTax: false,  // Calculate gratuity on pre-tax amount (true) or after-tax (false)
+        },
         // Pricing + tax settings (editable from admin panel)
         TAX_RATE: 1.07,            // stored as multiplier, e.g. 1.07 = 7% tax
         ADULTPRICE: 9.99,          // lunch prices
@@ -1287,7 +1299,78 @@ const store = createStore({
             }
         },
         setTables(state, tables) {
-            state.tables = tables
+            // Ensure tables array is properly aligned with tableOrder
+            // If tableOrder has numbers that don't exist in tables, create empty entries for them
+            const tablesMap = new Map()
+            tables.forEach(table => {
+                if (table && table.number) {
+                    tablesMap.set(Number(table.number), table)
+                }
+            })
+            
+            // Get table numbers from tableOrder
+            const tableOrderNumbers = (state.tableOrder || []).filter(num => num > 0)
+            
+            // Build a properly aligned tables array
+            const alignedTables = []
+            let maxNumber = 0
+            
+            // First, find the maximum table number needed
+            tableOrderNumbers.forEach(num => {
+                maxNumber = Math.max(maxNumber, num)
+            })
+            tables.forEach(table => {
+                if (table && table.number) {
+                    maxNumber = Math.max(maxNumber, Number(table.number))
+                }
+            })
+            
+            // Build array from 1 to maxNumber, ensuring all tableOrder numbers exist
+            for (let i = 1; i <= maxNumber; i++) {
+                if (tablesMap.has(i)) {
+                    // Table exists, use it
+                    alignedTables.push(tablesMap.get(i))
+                } else {
+                    // Table doesn't exist, but might be in tableOrder - create empty entry
+                    if (tableOrderNumbers.includes(i)) {
+                        // Create empty table entry for missing table in tableOrder
+                        alignedTables.push({
+                            number: i,
+                            name: null,
+                            sitDownTime: '',
+                            adult: 0,
+                            bigKid: 0,
+                            smlKid: 0,
+                            drinks: [],
+                            time: 0,
+                            occupied: false,
+                            drinkPrice: 0,
+                            totalPrice: 0,
+                            goodPpl: false,
+                            togo: 0
+                        })
+                    } else {
+                        // Not in tableOrder, create entry anyway to maintain alignment
+                        alignedTables.push({
+                            number: i,
+                            name: null,
+                            sitDownTime: '',
+                            adult: 0,
+                            bigKid: 0,
+                            smlKid: 0,
+                            drinks: [],
+                            time: 0,
+                            occupied: false,
+                            drinkPrice: 0,
+                            totalPrice: 0,
+                            goodPpl: false,
+                            togo: 0
+                        })
+                    }
+                }
+            }
+            
+            state.tables = alignedTables
         },
         setSales(state, sales) {
             state.sales = sales
@@ -1589,6 +1672,41 @@ const store = createStore({
                 state.ticketCount = count
             }
         },
+        updateReceiptSettings(state, payload = {}) {
+            if (typeof payload.showTicketCount === 'boolean') {
+                state.receiptSettings.showTicketCount = payload.showTicketCount
+            }
+            if (typeof payload.showPrintTime === 'boolean') {
+                state.receiptSettings.showPrintTime = payload.showPrintTime
+            }
+            if (typeof payload.headerText === 'string') {
+                state.receiptSettings.headerText = payload.headerText
+            }
+            if (typeof payload.subHeaderText === 'string') {
+                state.receiptSettings.subHeaderText = payload.subHeaderText
+            }
+            if (typeof payload.footerText === 'string') {
+                state.receiptSettings.footerText = payload.footerText
+            }
+            if (typeof payload.thankYouText === 'string') {
+                state.receiptSettings.thankYouText = payload.thankYouText
+            }
+            if (typeof payload.showGratuity === 'boolean') {
+                state.receiptSettings.showGratuity = payload.showGratuity
+            }
+            if (Array.isArray(payload.gratuityPercentages) && payload.gratuityPercentages.length > 0) {
+                // Validate percentages are numbers between 0 and 100
+                const validPercentages = payload.gratuityPercentages
+                    .filter(p => typeof p === 'number' && p >= 0 && p <= 100)
+                    .slice(0, 5) // Limit to 5 percentages max
+                if (validPercentages.length > 0) {
+                    state.receiptSettings.gratuityPercentages = validPercentages
+                }
+            }
+            if (typeof payload.gratuityOnPreTax === 'boolean') {
+                state.receiptSettings.gratuityOnPreTax = payload.gratuityOnPreTax
+            }
+        },
         setAppState(state, payload = {}) {
             const usingFirebase = !!state.useFirebase
             if (payload.isDinner !== undefined) {
@@ -1624,6 +1742,40 @@ const store = createStore({
             }
             if (typeof payload.ticketCount === 'number' && payload.ticketCount >= 0) {
                 state.ticketCount = payload.ticketCount
+            }
+            if (payload.receiptSettings && typeof payload.receiptSettings === 'object') {
+                if (typeof payload.receiptSettings.showTicketCount === 'boolean') {
+                    state.receiptSettings.showTicketCount = payload.receiptSettings.showTicketCount
+                }
+                if (typeof payload.receiptSettings.showPrintTime === 'boolean') {
+                    state.receiptSettings.showPrintTime = payload.receiptSettings.showPrintTime
+                }
+                if (typeof payload.receiptSettings.headerText === 'string') {
+                    state.receiptSettings.headerText = payload.receiptSettings.headerText
+                }
+                if (typeof payload.receiptSettings.subHeaderText === 'string') {
+                    state.receiptSettings.subHeaderText = payload.receiptSettings.subHeaderText
+                }
+                if (typeof payload.receiptSettings.footerText === 'string') {
+                    state.receiptSettings.footerText = payload.receiptSettings.footerText
+                }
+                if (typeof payload.receiptSettings.thankYouText === 'string') {
+                    state.receiptSettings.thankYouText = payload.receiptSettings.thankYouText
+                }
+                if (typeof payload.receiptSettings.showGratuity === 'boolean') {
+                    state.receiptSettings.showGratuity = payload.receiptSettings.showGratuity
+                }
+                if (Array.isArray(payload.receiptSettings.gratuityPercentages) && payload.receiptSettings.gratuityPercentages.length > 0) {
+                    const validPercentages = payload.receiptSettings.gratuityPercentages
+                        .filter(p => typeof p === 'number' && p >= 0 && p <= 100)
+                        .slice(0, 5)
+                    if (validPercentages.length > 0) {
+                        state.receiptSettings.gratuityPercentages = validPercentages
+                    }
+                }
+                if (typeof payload.receiptSettings.gratuityOnPreTax === 'boolean') {
+                    state.receiptSettings.gratuityOnPreTax = payload.receiptSettings.gratuityOnPreTax
+                }
             }
             if (typeof payload.tableNum === 'number') {
                 state.tableNum = payload.tableNum
@@ -2148,6 +2300,17 @@ function getAppStateSnapshot(state) {
         WATERPRICE: state.WATERPRICE,
         DRINKPRICE: state.DRINKPRICE,
         ticketCount: state.ticketCount || 0,
+        receiptSettings: JSON.parse(JSON.stringify(state.receiptSettings || { 
+            showTicketCount: true,
+            showPrintTime: true,
+            headerText: 'China Buffet',
+            subHeaderText: '',
+            footerText: 'Thank you for dining with us!',
+            thankYouText: 'Thank you for your order!',
+            showGratuity: true,
+            gratuityPercentages: [10, 15, 20],
+            gratuityOnPreTax: false
+        })),
         togoLines: JSON.parse(JSON.stringify(state.togoLines)),
         togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
         totalTogoPrice: state.totalTogoPrice,

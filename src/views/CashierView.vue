@@ -363,12 +363,21 @@ export default {
               .totals { margin-top: 16px; border-top: 1px dashed #ccc; padding-top: 8px; }
               .totals div { display: flex; justify-content: space-between; margin-bottom: 4px; }
               .totals strong { font-size: 14px; }
+              .sub-header { text-align: center; margin-top: 4px; margin-bottom: 8px; font-size: 14px; color: #666; font-style: italic; white-space: pre-line; }
               .footer { margin-top: 24px; text-align: center; font-size: 11px; }
+              .gratuity { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #ccc; }
+              .gratuity-title { text-align: center; font-size: 12px; color: #666; margin-bottom: 8px; }
+              .gratuity-options { display: flex; justify-content: space-around; font-size: 11px; }
+              .gratuity-option { text-align: center; }
+              .gratuity-option .percent { font-weight: bold; }
+              .gratuity-option .amount { color: #666; }
             </style>
           </head>
           <body>
-            <h1>China Buffet</h1>
+            <h1>${(this.$store.state.receiptSettings || {}).headerText || 'China Buffet'}</h1>
+            ${(this.$store.state.receiptSettings || {}).subHeaderText ? `<div class="sub-header">${(this.$store.state.receiptSettings || {}).subHeaderText}</div>` : ''}
             <h2>${this.mode === 'dinner' ? 'Dinner' : 'Lunch'} Receipt</h2>
+            ${((this.$store.state.receiptSettings || {}).showPrintTime !== false) ? `<div style="text-align: center; margin-top: 8px; font-size: 11px; color: #999;">${new Date().toLocaleString()}</div>` : ''}
             <table>
               <thead>
                 <tr>
@@ -395,7 +404,28 @@ export default {
               <div><span>Tax</span><span>$${taxAmount.toFixed(2)}</span></div>
               <div><strong>Total</strong><strong>$${totalWithTax.toFixed(2)}</strong></div>
             </div>
-            <div class="footer">Thank you for dining with us!</div>
+            <div class="footer">${(this.$store.state.receiptSettings || {}).footerText || 'Thank you for dining with us!'}</div>
+            ${((this.$store.state.receiptSettings || {}).showGratuity !== false) ? (() => {
+              const receiptSettings = this.$store.state.receiptSettings || {}
+              const gratuityPercentages = Array.isArray(receiptSettings.gratuityPercentages) && receiptSettings.gratuityPercentages.length > 0
+                  ? receiptSettings.gratuityPercentages
+                  : [10, 15, 20]
+              const gratuityOnPreTax = receiptSettings.gratuityOnPreTax === true
+              const gratuityBaseAmount = gratuityOnPreTax ? subtotal : totalWithTax
+              return `
+                <div class="gratuity">
+                  <div class="gratuity-title">Gratuity Suggestions</div>
+                  <div class="gratuity-options">
+                    ${gratuityPercentages.map(percent => `
+                      <div class="gratuity-option">
+                        <div class="percent">${percent}%</div>
+                        <div class="amount">$${(gratuityBaseAmount * percent / 100).toFixed(2)}</div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              `
+            })() : ''}
           </body>
         </html>
       `
