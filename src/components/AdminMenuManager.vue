@@ -75,7 +75,7 @@
                     variant="text"
                     color="error"
                     size="small"
-                    @click.stop="removeCategory(categoryIndex)"
+                    @click.stop="confirmDeleteCategory(categoryIndex)"
                     :title="'Remove category'"
                   ></v-btn>
                 </div>
@@ -158,6 +158,30 @@
         </v-expansion-panels>
       </v-card-text>
     </v-card>
+
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="showDeleteConfirm" max-width="400" persistent>
+      <v-card>
+        <v-card-title class="text-h6">
+          <v-icon color="error" class="mr-2">mdi-alert-circle</v-icon>
+          Delete Category?
+        </v-card-title>
+        <v-card-text>
+          <p class="mb-0">
+            Are you sure you want to delete 
+            <strong>"{{ categoryToDelete !== null ? localMenu[categoryToDelete]?.category : '' }}"</strong>?
+          </p>
+          <p class="mt-2 text-medium-emphasis" style="font-size: 13px;">
+            This will also delete all items in this category. This action cannot be undone.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="cancelDelete">Cancel</v-btn>
+          <v-btn color="error" variant="flat" @click="removeCategory">Delete</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-dialog>
 </template>
 
@@ -184,6 +208,8 @@ export default {
   data() {
     return {
       localMenu: [],
+      showDeleteConfirm: false,
+      categoryToDelete: null,
     }
   },
   computed: {
@@ -241,8 +267,20 @@ export default {
         items: [],
       })
     },
-    removeCategory(index) {
-      this.localMenu.splice(index, 1)
+    confirmDeleteCategory(index) {
+      this.categoryToDelete = index
+      this.showDeleteConfirm = true
+    },
+    removeCategory() {
+      if (this.categoryToDelete !== null) {
+        this.localMenu.splice(this.categoryToDelete, 1)
+        this.categoryToDelete = null
+      }
+      this.showDeleteConfirm = false
+    },
+    cancelDelete() {
+      this.categoryToDelete = null
+      this.showDeleteConfirm = false
     },
     addItem(categoryIndex) {
       if (!this.localMenu[categoryIndex]) return
@@ -326,6 +364,9 @@ export default {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .item-count-chip {
