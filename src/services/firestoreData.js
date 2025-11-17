@@ -95,6 +95,19 @@ export async function saveMenuCategory(categoryId, data) {
   }, { merge: true })
 }
 
+export async function deleteMenuCategory(categoryId) {
+  try {
+    await deleteDoc(doc(assertDb(), 'menu', categoryId))
+  } catch (error) {
+    console.error(`[Firestore] Failed to delete menu category ${categoryId}:`, error)
+  }
+}
+
+export async function getAllMenuCategoryIds() {
+  const snapshot = await getDocs(collection(assertDb(), 'menu'))
+  return snapshot.docs.map(doc => doc.id)
+}
+
 export async function loadTables() {
   const snapshot = await getDocs(collection(assertDb(), 'tables'))
   return normalizeTablesSnapshot(snapshot)

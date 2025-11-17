@@ -67,9 +67,26 @@ export default {
       return translate(label, this.isChinese)
     },
     categoryStyle(category) {
+      // Create a richer gradient with better contrast
+      // Use the category color with darker shades for depth
       return {
-        background: `linear-gradient(135deg, ${category.color} 0%, rgba(255,255,255,0.08) 100%)`
+        background: `linear-gradient(135deg, ${category.color} 0%, ${this.darkenColor(category.color, 15)} 100%)`,
+        color: '#ffffff'
       }
+    },
+    darkenColor(hex, percent) {
+      // Convert hex to RGB
+      const r = parseInt(hex.slice(1, 3), 16)
+      const g = parseInt(hex.slice(3, 5), 16)
+      const b = parseInt(hex.slice(5, 7), 16)
+      
+      // Darken each component
+      const newR = Math.max(0, Math.floor(r * (1 - percent / 100)))
+      const newG = Math.max(0, Math.floor(g * (1 - percent / 100)))
+      const newB = Math.max(0, Math.floor(b * (1 - percent / 100)))
+      
+      // Convert back to hex
+      return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`
     },
     selectCategory(categoryArrayIndex) {
       const targetIndex = Number.isFinite(categoryArrayIndex) ? categoryArrayIndex : 0
@@ -195,12 +212,6 @@ export default {
         @click="handleCategoryTap(arrayIndex)"
         :style="categoryStyle(category)"
       >
-        <div class="category-card__header">
-          <span class="category-icon">
-            <v-icon size="22">{{ category.isDrinks ? 'mdi-cup-outline' : 'mdi-folder-outline' }}</v-icon>
-          </span>
-          <span class="category-count">{{ category.count }} items</span>
-        </div>
         <div class="category-card__title">
           {{ category.title }}
         </div>
@@ -274,25 +285,48 @@ export default {
 .category-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 20px;
   border-radius: 20px;
   border: none;
-  color: #fff;
-  text-align: left;
+  color: #ffffff;
+  text-align: center;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 12px 28px rgba(15, 25, 35, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+}
+
+.category-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.category-card > * {
+  position: relative;
+  z-index: 2;
 }
 
 .category-card.is-active {
-  box-shadow: 0 18px 36px rgba(15, 25, 35, 0.28);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-4px);
+  opacity: 1;
 }
 
 .category-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 18px 32px rgba(15, 25, 35, 0.24);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 0.95;
 }
 
 .category-card__header {
@@ -308,20 +342,28 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .category-count {
   font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .category-card__title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.4;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.3px;
+  text-align: center;
 }
 
 @media (max-width: 600px) {

@@ -262,6 +262,7 @@
 <script>
 import { DRINK_OPTIONS, getDrinkLabel } from '../utils/drinkOptions.js'
 import { translate } from '../utils/translations.js'
+import { toChineseNumeral } from '../utils/chineseNumerals.js'
 
 export default {
     props: {
@@ -657,11 +658,17 @@ export default {
                 </tr>
             `).join('')
 
+            // Increment ticket counter
+            this.$store.commit('incrementTicketCount')
+            const ticketCount = this.$store.state.ticketCount
+            const ticketCountChinese = toChineseNumeral(ticketCount)
+            
             const receiptHtml = '<html>' +
               '<head>' +
                 `<title>Receipt - Table ${tableNumber}</title>` +
                 '<style>' +
-                  "body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 24px; color: #333; }" +
+                  "body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 24px; color: #333; position: relative; }" +
+                  '.ticket-count { position: absolute; top: 24px; right: 24px; font-size: 18px; font-weight: bold; color: #333; }' +
                   'h1 { text-align: center; margin-bottom: 4px; letter-spacing: 1px; }' +
                   'h2 { text-align: center; margin-top: 0; font-weight: normal; font-size: 16px; }' +
                   'table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 14px; table-layout: fixed; }' +
@@ -677,6 +684,7 @@ export default {
                 '</style>' +
               '</head>' +
               '<body>' +
+                `<div class="ticket-count">${ticketCountChinese}</div>` +
                 '<h1>China Buffet</h1>' +
                 `<h2>Table ${tableNumber}</h2>` +
                 `<div>Server Mode: ${isDinner ? 'Dinner' : 'Lunch'}</div>` +

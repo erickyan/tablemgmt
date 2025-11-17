@@ -81,6 +81,7 @@ const store = createStore({
             revenue:0,
             totalTogoRevenue: 0
         },
+        ticketCount: 0,  // Counter for all receipts printed (buffet and cashier)
         // Pricing + tax settings (editable from admin panel)
         TAX_RATE: 1.07,            // stored as multiplier, e.g. 1.07 = 7% tax
         ADULTPRICE: 9.99,          // lunch prices
@@ -1580,6 +1581,9 @@ const store = createStore({
                 state.DRINKPRICE = price
             }
         },
+        incrementTicketCount(state) {
+            state.ticketCount = (state.ticketCount || 0) + 1
+        },
         setAppState(state, payload = {}) {
             const usingFirebase = !!state.useFirebase
             if (payload.isDinner !== undefined) {
@@ -1612,6 +1616,9 @@ const store = createStore({
             }
             if (typeof payload.DRINKPRICE === 'number' && payload.DRINKPRICE >= 0) {
                 state.DRINKPRICE = payload.DRINKPRICE
+            }
+            if (typeof payload.ticketCount === 'number' && payload.ticketCount >= 0) {
+                state.ticketCount = payload.ticketCount
             }
             if (typeof payload.tableNum === 'number') {
                 state.tableNum = payload.tableNum
@@ -1804,6 +1811,7 @@ const store = createStore({
 
         /**
          * Persist entire menu collection to Firestore
+         * Also removes orphaned categories (e.g., when category names are changed)
          */
         async saveMenuToFirestore({ state }) {
             if (!state.useFirebase || !state.firebaseInitialized || !state.authUser) {
@@ -1811,6 +1819,13 @@ const store = createStore({
             }
             const categories = state.menu || []
             try {
+                // Get all current category IDs that should exist after save
+                const newCategoryIds = categories.map(category => {
+                    const categoryId = category.category || category.id || 'category'
+                    return categoryId
+                })
+                
+                // Save all categories
                 await Promise.all(categories.map(category => {
                     const categoryId = category.category || category.id || 'category'
                     return firestore.saveMenuCategory(categoryId, {
@@ -1818,6 +1833,17 @@ const store = createStore({
                         items: Array.isArray(category.items) ? category.items : []
                     })
                 }))
+                
+                // Get all existing menu document IDs from Firestore
+                const existingCategoryIds = await firestore.getAllMenuCategoryIds()
+                
+                // Delete any categories that no longer exist (orphaned due to name changes)
+                const orphanedIds = existingCategoryIds.filter(id => !newCategoryIds.includes(id))
+                if (orphanedIds.length > 0) {
+                    await Promise.all(orphanedIds.map(id => firestore.deleteMenuCategory(id)))
+                    console.log('[Firestore] Deleted', orphanedIds.length, 'orphaned menu category(ies):', orphanedIds)
+                }
+                
                 console.log('[Firestore] Menu saved')
             } catch (error) {
                 console.error('[Firestore] Failed to save menu:', error)
@@ -2116,6 +2142,7 @@ function getAppStateSnapshot(state) {
         SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
         WATERPRICE: state.WATERPRICE,
         DRINKPRICE: state.DRINKPRICE,
+        ticketCount: state.ticketCount || 0,
         togoLines: JSON.parse(JSON.stringify(state.togoLines)),
         togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
         totalTogoPrice: state.totalTogoPrice,
