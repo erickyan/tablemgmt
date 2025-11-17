@@ -126,6 +126,11 @@ import { RouterView } from 'vue-router'
           title="Reset Sales Data"
           @click="showResetConfirm = true"
         ></v-list-item>
+        <v-list-item
+          prepend-icon="mdi-counter"
+          title="Reset Ticket Count"
+          @click="showResetTicketCountConfirm = true"
+        ></v-list-item>
         <v-divider></v-divider>
         <v-list-item>
           <v-btn color="accent" variant="outlined" block @click="logout">
@@ -380,6 +385,35 @@ import { RouterView } from 'vue-router'
         </v-card>
       </v-dialog>
 
+      <!-- Admin: Reset Ticket Count Confirmation -->
+      <v-dialog v-model="showResetTicketCountConfirm" max-width="420">
+        <v-card>
+          <v-card-title class="text-h6">Reset Ticket Count</v-card-title>
+          <v-card-text>
+            <p>Are you sure you want to reset the ticket count to zero?</p>
+            <p class="text-caption text-medium-emphasis mt-2">
+              Current ticket count: <strong>{{ $store.state.ticketCount || 0 }}</strong>
+            </p>
+            <p class="text-caption text-medium-emphasis">
+              This action cannot be undone.
+            </p>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn variant="text" @click="showResetTicketCountConfirm = false">Cancel</v-btn>
+            <v-btn
+              color="error"
+              variant="flat"
+              :loading="resetTicketCountLoading"
+              @click="performResetTicketCount"
+            >
+              Reset
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <!-- Admin: Reset Sales Confirmation -->
       <v-dialog v-model="showResetConfirm" max-width="420">
         <v-card>
           <v-card-title class="text-h6">Reset Sales Data</v-card-title>
@@ -458,6 +492,8 @@ export default {
     showResetConfirm: false,
     menuSaving: false,
     resetLoading: false,
+    showResetTicketCountConfirm: false,
+    resetTicketCountLoading: false,
     snackbar: false,
     snackbarMessage: '',
     snackbarColor: 'success',
@@ -694,6 +730,57 @@ export default {
       } finally {
         this.drawer = false
         this.resetLoading = false
+      }
+    },
+    async performResetTicketCount() {
+      this.resetTicketCountLoading = true
+      try {
+        // Reset ticket count in store
+        this.$store.commit('setTicketCount', 0)
+        
+        // Immediately save app state to Firestore
+        if (this.$store.state.useFirebase && this.$store.state.firebaseInitialized && this.$store.state.authUser) {
+          try {
+            const state = this.$store.state
+            const snapshot = {
+              isDinner: state.isDinner,
+              tableNum: state.tableNum,
+              catID: state.catID,
+              TAX_RATE: state.TAX_RATE,
+              ADULTPRICE: state.ADULTPRICE,
+              BIGKIDPRICE: state.BIGKIDPRICE,
+              SMALLKIDPRICE: state.SMALLKIDPRICE,
+              ADULTDINNERPRICE: state.ADULTDINNERPRICE,
+              BIGKIDDINNERPRICE: state.BIGKIDDINNERPRICE,
+              SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
+              WATERPRICE: state.WATERPRICE,
+              DRINKPRICE: state.DRINKPRICE,
+              ticketCount: 0,
+              togoLines: JSON.parse(JSON.stringify(state.togoLines)),
+              togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
+              totalTogoPrice: state.totalTogoPrice,
+              tableOrder: state.tableOrder,
+            }
+            snapshot.timestamp = new Date().toISOString()
+            await this.$store.dispatch('saveAppStateImmediately', snapshot)
+          } catch (error) {
+            console.error('[Firestore] Failed to save ticket count reset:', error)
+            throw error
+          }
+        }
+        
+        this.snackbarMessage = 'Ticket count reset successfully'
+        this.snackbarColor = 'success'
+        this.snackbar = true
+        this.showResetTicketCountConfirm = false
+      } catch (error) {
+        console.error('Failed to reset ticket count:', error)
+        this.snackbarMessage = 'Failed to reset ticket count'
+        this.snackbarColor = 'error'
+        this.snackbar = true
+      } finally {
+        this.drawer = false
+        this.resetTicketCountLoading = false
       }
     },
     ensureRoute(target) {

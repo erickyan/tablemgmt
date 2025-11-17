@@ -1584,6 +1584,11 @@ const store = createStore({
         incrementTicketCount(state) {
             state.ticketCount = (state.ticketCount || 0) + 1
         },
+        setTicketCount(state, count) {
+            if (typeof count === 'number' && count >= 0) {
+                state.ticketCount = count
+            }
+        },
         setAppState(state, payload = {}) {
             const usingFirebase = !!state.useFirebase
             if (payload.isDinner !== undefined) {

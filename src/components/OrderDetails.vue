@@ -592,7 +592,7 @@ export default {
             }
             this.dialogOpen = false
         },
-        printReceipt() {
+        async printReceipt() {
             this.$store.commit('calculateTotal')
             // Ensure pricingModeDinner is stored when printing, even if table was already occupied
             const table = this.table
@@ -658,10 +658,40 @@ export default {
                 </tr>
             `).join('')
 
-            // Increment ticket counter
+            // Increment ticket counter and save immediately
             this.$store.commit('incrementTicketCount')
             const ticketCount = this.$store.state.ticketCount
             const ticketCountChinese = toChineseNumeral(ticketCount)
+            
+            // Immediately save app state to ensure ticket count persists
+            if (this.$store.state.useFirebase && this.$store.state.firebaseInitialized && this.$store.state.authUser) {
+                try {
+                    const state = this.$store.state
+                    const snapshot = {
+                        isDinner: state.isDinner,
+                        tableNum: state.tableNum,
+                        catID: state.catID,
+                        TAX_RATE: state.TAX_RATE,
+                        ADULTPRICE: state.ADULTPRICE,
+                        BIGKIDPRICE: state.BIGKIDPRICE,
+                        SMALLKIDPRICE: state.SMALLKIDPRICE,
+                        ADULTDINNERPRICE: state.ADULTDINNERPRICE,
+                        BIGKIDDINNERPRICE: state.BIGKIDDINNERPRICE,
+                        SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
+                        WATERPRICE: state.WATERPRICE,
+                        DRINKPRICE: state.DRINKPRICE,
+                        ticketCount: state.ticketCount,
+                        togoLines: JSON.parse(JSON.stringify(state.togoLines)),
+                        togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
+                        totalTogoPrice: state.totalTogoPrice,
+                        tableOrder: state.tableOrder,
+                    }
+                    snapshot.timestamp = new Date().toISOString()
+                    await this.$store.dispatch('saveAppStateImmediately', snapshot)
+                } catch (error) {
+                    console.error('[Firestore] Failed to save ticket count:', error)
+                }
+            }
             
             const receiptHtml = '<html>' +
               '<head>' +
