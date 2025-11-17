@@ -1,8 +1,7 @@
 <template>
   <v-dialog
     v-model="internalOpen"
-    :max-width="isMobile ? '100%' : '860'"
-    :fullscreen="isMobile"
+    max-width="800"
     scrollable
     transition="dialog-bottom-transition"
   >
@@ -29,7 +28,7 @@
         </v-btn>
       </v-toolbar>
 
-      <v-card-text class="manager-content pa-6 pa-4-mobile">
+      <v-card-text class="manager-content pa-6">
         <div class="summary-bar">
           <v-chip color="accent" variant="tonal" size="small">
             <v-icon start size="18">mdi-view-grid-plus</v-icon>
@@ -196,13 +195,6 @@ export default {
         this.$emit('update:modelValue', value)
       },
     },
-    isMobile() {
-      // Check if Vuetify display service is available, otherwise fallback to window width
-      if (this.$vuetify && this.$vuetify.display) {
-        return this.$vuetify.display.mobile || this.$vuetify.display.width < 768
-      }
-      return window.innerWidth < 768
-    },
     categoryCount() {
       return this.localMenu.length
     },
@@ -291,24 +283,8 @@ export default {
   box-shadow: 0 26px 48px rgba(15, 25, 35, 0.26);
 }
 
-@media (max-width: 768px) {
-  .menu-manager {
-    border-radius: 0;
-  }
-}
-
 .manager-content {
   padding-bottom: 32px;
-}
-
-@media (max-width: 768px) {
-  .manager-content {
-    padding: 16px !important;
-  }
-  
-  .pa-4-mobile {
-    padding: 16px !important;
-  }
 }
 
 .summary-bar {
