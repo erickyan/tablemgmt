@@ -67,17 +67,18 @@
                   @click.stop
                 ></v-text-field>
                 <div class="category-actions">
-                  <v-chip size="small" color="accent" variant="tonal" class="item-count-chip">
-                    {{ category.items.length }} {{ category.items.length === 1 ? 'item' : 'items' }}
-                  </v-chip>
                   <v-btn
-                    icon="mdi-delete"
+                    icon="mdi-delete-outline"
                     variant="text"
                     color="error"
                     size="small"
                     @click.stop="confirmDeleteCategory(categoryIndex)"
                     :title="'Remove category'"
+                    class="delete-btn"
                   ></v-btn>
+                  <v-chip size="small" color="accent" variant="tonal" class="item-count-chip">
+                    {{ category.items.length }} {{ category.items.length === 1 ? 'item' : 'items' }}
+                  </v-chip>
                 </div>
               </div>
             </v-expansion-panel-title>
@@ -130,6 +131,7 @@
                           size="small"
                           @click="removeItem(categoryIndex, itemIndex)"
                           :title="'Remove item'"
+                          class="delete-btn"
                         ></v-btn>
                       </td>
                     </tr>
@@ -351,12 +353,12 @@ export default {
   justify-content: space-between;
   gap: 16px;
   width: 100%;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .category-name-field {
   flex: 1;
-  max-width: 400px;
+  min-width: 0;
 }
 
 .category-actions {
@@ -364,13 +366,18 @@ export default {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
-  margin-left: 8px;
-  padding-left: 8px;
-  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  width: 140px;
+  justify-content: flex-start;
 }
 
 .item-count-chip {
   font-weight: 500;
+}
+
+.delete-btn {
+  min-width: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
 }
 
 .category-content {

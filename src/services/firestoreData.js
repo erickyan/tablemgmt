@@ -269,7 +269,7 @@ export async function loadTogoSalesHistory() {
     const notes = record.notes && typeof record.notes === 'object' ? record.notes : {}
     return {
       ...record,
-      revenue: Number(record.revenue ?? 0),
+      revenue: Number(record.revenue ?? record.total ?? 0),
       adultCount: Number(record.adultCount ?? 0),
       bigKidCount: Number(record.bigKidCount ?? 0),
       smlKidCount: Number(record.smlKidCount ?? 0),

@@ -1,8 +1,7 @@
 <template>
   <v-dialog
     v-model="internalOpen"
-    :max-width="isMobile ? '100%' : '860'"
-    :fullscreen="isMobile"
+    max-width="800"
     scrollable
     transition="dialog-bottom-transition"
   >
@@ -14,7 +13,7 @@
         <v-btn icon="mdi-close" variant="text" @click="close" />
       </v-toolbar>
 
-      <v-card-text class="pa-6 pa-4-mobile">
+      <v-card-text class="pa-6">
         <section class="metrics-grid">
           <div class="metric-card metric-card--primary">
             <span class="metric-label">Total Revenue</span>
@@ -138,13 +137,6 @@ export default {
     refreshing: false
   }),
   computed: {
-    isMobile() {
-      // Check if Vuetify display service is available, otherwise fallback to window width
-      if (this.$vuetify && this.$vuetify.display) {
-        return this.$vuetify.display.mobile || this.$vuetify.display.width < 768
-      }
-      return window.innerWidth < 768
-    },
     internalOpen: {
       get() {
         return this.modelValue
@@ -355,10 +347,6 @@ export default {
     border-radius: 0;
   }
 
-  .pa-4-mobile {
-    padding: 16px !important;
-  }
-
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
@@ -433,10 +421,6 @@ export default {
 @media (max-width: 480px) {
   .live-sales {
     border-radius: 0;
-  }
-
-  .pa-4-mobile {
-    padding: 12px !important;
   }
 
   .metrics-grid {

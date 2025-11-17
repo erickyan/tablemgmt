@@ -66,13 +66,13 @@
         </div>
 
         <div class="floor-plan__tile-footer">
-          <span class="tile-total">{{ getTranslatedLabel('Total') }} ${{ Number($store.state.tables[tableIndex - 1].totalPrice || 0).toFixed(2) }}</span>
           <v-icon
             icon="mdi-cards-heart"
             color="pink-darken-1"
             size="16"
             v-if="$store.state.tables[tableIndex - 1].goodPpl"
           ></v-icon>
+          <span class="tile-total">{{ getTranslatedLabel('Total') }} ${{ getTableTotalPrice(tableIndex).toFixed(2) }}</span>
         </div>
       </div>
     </div>
@@ -103,6 +103,10 @@ export default {
     // This computed property ensures Vue tracks language changes
     currentLanguage() {
       return this.$store.state.language
+    },
+    // This computed property ensures Vue tracks price mode changes
+    currentPriceMode() {
+      return this.$store.state.isDinner
     }
   },
   methods: {
@@ -569,6 +573,65 @@ export default {
     drinkCount(tableIndex) {
       const drinks = this.$store.state.tables[tableIndex - 1]?.drinks || []
       return drinks.length
+    },
+    getTableTotalPrice(tableIndex) {
+      // Reference currentPriceMode to ensure reactivity
+      const _priceMode = this.currentPriceMode
+      
+      const table = this.$store.state.tables[tableIndex - 1]
+      if (!table) return 0
+      
+      const store = this.$store.state
+      const adultCount = Number(table.adult || 0)
+      const bigKidCount = Number(table.bigKid || 0)
+      const smlKidCount = Number(table.smlKid || 0)
+      
+      // If table is occupied or has been printed, use stored price
+      const isOccupied = table.occupied
+      const hasPriceSet = table.totalPrice && parseFloat(table.totalPrice) > 0
+      const isPrinted = !isOccupied && hasPriceSet
+      const hasTimeStamp = table.time && table.time > 0
+      
+      if (isOccupied || isPrinted || hasTimeStamp) {
+        // Use stored price for occupied/printed tables
+        return Number(table.totalPrice || 0)
+      }
+      
+      // Calculate drink price dynamically from drinks array
+      let drinkPrice = Number(table.drinkPrice || 0)
+      if (!drinkPrice && table.drinks && Array.isArray(table.drinks) && table.drinks.length > 0) {
+        const drinks = table.drinks
+        let numWater = 0
+        let numDrink = 0
+        drinks.forEach(code => {
+          if (code === 'WTER') {
+            numWater++
+          } else {
+            numDrink++
+          }
+        })
+        drinkPrice = (store.WATERPRICE * numWater) + (store.DRINKPRICE * numDrink)
+      }
+      
+      // For tables without explicit pricing mode, use current global mode
+      // If table has explicit pricingModeDinner, use that; otherwise use global isDinner
+      const useDinnerMode = table.pricingModeDinner !== undefined 
+        ? table.pricingModeDinner 
+        : store.isDinner
+      
+      // Calculate price based on current mode
+      let subtotal = drinkPrice
+      if (useDinnerMode) {
+        subtotal += (adultCount * store.ADULTDINNERPRICE) + 
+                   (bigKidCount * store.BIGKIDDINNERPRICE) + 
+                   (smlKidCount * store.SMALLKIDDINNERPRICE)
+      } else {
+        subtotal += (adultCount * store.ADULTPRICE) + 
+                   (bigKidCount * store.BIGKIDPRICE) + 
+                   (smlKidCount * store.SMALLKIDPRICE)
+      }
+      
+      return Number((subtotal * store.TAX_RATE).toFixed(2))
     },
     isChinese() {
       return this.$store.state.language === 'zh'

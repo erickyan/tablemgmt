@@ -1210,17 +1210,26 @@ const store = createStore({
             }))
             const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
             const togoRevenue = (subtotal * state.TAX_RATE).toFixed(2)
-            if (state.useFirebase && state.firebaseInitialized) {
-                firestore.addTogoSalesRecord({
-                    createdAt: Date.now(),
-                    items: orderItems,
-                    subtotal,
-                    total: parseFloat(togoRevenue),
-                    taxRate: state.TAX_RATE
-                }).catch(err => console.error('Failed to persist to-go sales:', err))
-            }
             state.totalTogoPrice = (subtotal * state.TAX_RATE).toFixed(2)
             state.sales.totalTogoRevenue = Number(state.sales.totalTogoRevenue || 0) + Number(state.totalTogoPrice || 0)
+            
+            if (state.useFirebase && state.firebaseInitialized) {
+                Promise.all([
+                    firestore.addTogoSalesRecord({
+                        createdAt: Date.now(),
+                        items: orderItems,
+                        subtotal,
+                        total: parseFloat(togoRevenue),
+                        taxRate: state.TAX_RATE
+                    }),
+                    firestore.saveSalesSummary(buildSalesSummaryForFirestore(state.sales))
+                ]).then(() => {
+                    console.log('[Firestore] To-go sales successfully saved')
+                }).catch(err => {
+                    console.error('[Firestore] Failed to save to-go sales:', err)
+                })
+            }
+            
             state.togoLines = []
             state.nextTogoLineId = 1
             state.catID = 0

@@ -138,6 +138,11 @@ import { RouterView } from 'vue-router'
             Sign Out
           </v-btn>
         </v-list-item>
+        <template v-slot:append>
+          <div class="pa-4 text-center">
+            <div class="text-caption text-medium-emphasis">v25.11</div>
+          </div>
+        </template>
       </v-navigation-drawer>
 
       <v-main :class="['pos-main', priceMode]">
