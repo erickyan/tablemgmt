@@ -17,14 +17,14 @@
       >
         <div class="floor-plan__tile-header">
           <div class="tile-name">
-            <v-icon icon="mdi-drag-variant" size="18" class="tile-drag"></v-icon>
+            <v-icon icon="mdi-drag-variant" size="16" class="tile-drag"></v-icon>
             {{ getTableName(tableIndex) }}
           </div>
           <div class="tile-timer" :class="{ 'has-time': tableTick(tableIndex) }">
             <v-icon
               v-if="$store.state.tables[tableIndex - 1].sitDownTime"
               icon="mdi-clock-outline"
-              size="16"
+              size="14"
               class="me-1"
               @click.stop="setSitDownTime(tableIndex - 1)"
             ></v-icon>
@@ -35,7 +35,7 @@
         <div class="floor-plan__tile-body">
           <div class="tile-status">
             <span class="status-chip" :class="statusForTable(tableIndex).appearance">
-              <v-icon size="14" :icon="statusForTable(tableIndex).icon" class="me-1"></v-icon>
+              <v-icon size="12" :icon="statusForTable(tableIndex).icon" class="me-1"></v-icon>
               {{ statusForTable(tableIndex).label }}
             </span>
           </div>
@@ -55,11 +55,11 @@
           </div>
           <div class="tile-meta">
             <span class="meta-item">
-              <v-icon size="16" icon="mdi-cup-water" class="me-1"></v-icon>
+              <v-icon size="14" icon="mdi-cup-water" class="me-1"></v-icon>
               {{ drinkCount(tableIndex) }} {{ getTranslatedLabel('drinks') }}
             </span>
             <span class="meta-item">
-              <v-icon size="16" icon="mdi-food-takeout-box" class="me-1"></v-icon>
+              <v-icon size="14" icon="mdi-food-takeout-box" class="me-1"></v-icon>
               {{ $store.state.tables[tableIndex - 1].togo || 0 }} {{ getTranslatedLabel('to-go') }}
             </span>
           </div>
@@ -70,7 +70,7 @@
           <v-icon
             icon="mdi-cards-heart"
             color="pink-darken-1"
-            size="18"
+            size="16"
             v-if="$store.state.tables[tableIndex - 1].goodPpl"
           ></v-icon>
         </div>
@@ -712,7 +712,7 @@ export default {
 .floor-plan__grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 18px;
+  gap: 12px;
 }
 
 @media (min-width: 560px) {
@@ -730,14 +730,14 @@ export default {
 .floor-plan__tile {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px;
-  border-radius: 20px;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
   user-select: none;
   background: rgba(255, 255, 255, 0.42);
-  box-shadow: 0 10px 24px rgba(15, 25, 35, 0.12);
+  box-shadow: 0 8px 20px rgba(15, 25, 35, 0.12);
 }
 
 .floor-plan__tile.status-ready {
@@ -780,8 +780,9 @@ export default {
 .tile-name {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-weight: 600;
+  font-size: 14px;
 }
 
 .tile-drag {
@@ -789,7 +790,7 @@ export default {
 }
 
 .tile-timer {
-  font-size: 13px;
+  font-size: 11px;
   color: rgba(31, 39, 51, 0.6);
   display: inline-flex;
   align-items: center;
@@ -803,16 +804,16 @@ export default {
 .floor-plan__tile-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .status-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 4px;
+  padding: 4px 10px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -834,27 +835,27 @@ export default {
 .tile-counts {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 11px;
   color: rgba(31, 39, 51, 0.72);
 }
 
 .tile-counts .count {
   display: inline-flex;
   flex-direction: column;
-  min-width: 70px;
+  min-width: 55px;
 }
 
 .tile-counts strong {
-  font-size: 16px;
+  font-size: 14px;
   color: rgba(31, 39, 51, 0.92);
 }
 
 .tile-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 11px;
   color: rgba(31, 39, 51, 0.72);
 }
 
@@ -865,7 +866,8 @@ export default {
 
 .tile-total {
   font-weight: 700;
-  letter-spacing: 0.3px;
+  font-size: 13px;
+  letter-spacing: 0.2px;
 }
 
 @media (max-width: 960px) {
