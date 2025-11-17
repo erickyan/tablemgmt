@@ -95,34 +95,6 @@ import { RouterView } from 'vue-router'
           to="cashier"
         ></v-list-item>
         <v-divider></v-divider>
-        <v-list-item prepend-icon="mdi-currency-usd">
-          Total ${{ totalRevenue }}
-        </v-list-item>
-        <v-divider></v-divider>
-        <v-list-item prepend-icon="mdi-silverware-fork-knife">
-          Buffet ${{ buffetRevenue }}
-        </v-list-item>
-        <v-divider></v-divider>
-        <v-list-item prepend-icon="mdi-account-multiple">
-          {{ $store.state.sales.totalCount }}
-        </v-list-item>
-        <v-divider></v-divider>
-        <v-list-item prepend-icon="mdi-account">
-          {{ $store.state.sales.adultCount }}
-        </v-list-item>
-        <v-divider></v-divider>
-        <v-list-item prepend-icon="mdi-nintendo-game-boy">
-          {{ $store.state.sales.bigKidCount }}
-        </v-list-item>
-        <v-divider></v-divider>
-        <v-list-item prepend-icon="mdi-teddy-bear">
-          {{ $store.state.sales.smlKidCount }}
-        </v-list-item>
-        <v-divider></v-divider>
-        <v-list-item prepend-icon="mdi-food-takeout-box-outline">
-          Togo ${{ togoRevenue }}
-        </v-list-item>
-        <v-divider></v-divider>
         <v-list-subheader>Admin Tools</v-list-subheader>
         <v-list-item
           prepend-icon="mdi-lead-pencil"
@@ -885,20 +857,6 @@ export default {
         }
       }
       return {}
-    },
-    totalRevenue() {
-      const revenue = parseFloat(this.$store.state.sales.revenue || 0)
-      return revenue.toFixed(2)
-    },
-    togoRevenue() {
-      const togo = parseFloat(this.$store.state.sales.totalTogoRevenue || 0)
-      return togo.toFixed(2)
-    },
-    buffetRevenue() {
-      const revenue = parseFloat(this.$store.state.sales.revenue || 0)
-      const togo = parseFloat(this.$store.state.sales.totalTogoRevenue || 0)
-      const buffet = Math.max(0, revenue - togo)
-      return buffet.toFixed(2)
     },
     drawerColor() {
       return 'drawer'

@@ -14,24 +14,32 @@ export default {
       const menu = this.$store.state.menu
       const categories = []
       
-      // Add regular menu categories
+      // Find drinks category in menu (if it exists)
+      const drinksCategory = Array.isArray(menu)
+        ? menu.find(cat => cat?.category && cat.category.toLowerCase().trim() === 'drinks')
+        : null
+      
+      // Add regular menu categories (excluding Drinks if it exists, since we'll add it separately)
       if (Array.isArray(menu)) {
         menu.forEach((category, index) => {
+          // Skip the drinks category - we'll add it as a special category below
+          const isDrinks = category?.category && category.category.toLowerCase().trim() === 'drinks'
+          if (isDrinks) {
+            return
+          }
+          
           categories.push({
             title: category?.category || `Category ${index + 1}`,
             index,
             count: Array.isArray(category?.items) ? category.items.length : 0,
-            color: this.categoryPalette[index % this.categoryPalette.length],
+            color: this.categoryPalette[categories.length % this.categoryPalette.length],
             isDrinks: false
           })
         })
       }
       
       // Add Drinks category as a special category (use -1 as index to differentiate)
-      // Check if drinks category exists in menu, otherwise use default count
-      const drinksCategory = Array.isArray(menu)
-        ? menu.find(cat => cat?.category && cat.category.toLowerCase().trim() === 'drinks')
-        : null
+      // Use count from menu if it exists, otherwise use default count
       const drinksCount = drinksCategory && Array.isArray(drinksCategory.items)
         ? drinksCategory.items.length
         : 12 // Default count from DRINK_OPTIONS
