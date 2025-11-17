@@ -129,6 +129,8 @@
 </template>
 
 <script>
+import { DRINK_OPTIONS } from '../utils/drinkOptions.js'
+
 export default {
   name: 'AdminMenuManager',
   props: {
@@ -196,6 +198,29 @@ export default {
               : [],
           }))
         : []
+      
+      // Ensure "Drinks" category exists - if not, initialize it with default drinks
+      const hasDrinksCategory = this.localMenu.some(
+        cat => cat?.category && cat.category.toLowerCase().trim() === 'drinks'
+      )
+      
+      if (!hasDrinksCategory) {
+        // Initialize drinks category with default drinks from DRINK_OPTIONS
+        const store = this.$store || {}
+        const state = store.state || {}
+        const drinksItems = DRINK_OPTIONS.map(drink => ({
+          name: drink.label,
+          listPrice: drink.type === 'water' 
+            ? Number(state.WATERPRICE || 0.27)
+            : Number(state.DRINKPRICE || 1.75),
+          quantity: 0,
+        }))
+        
+        this.localMenu.push({
+          category: 'Drinks',
+          items: drinksItems,
+        })
+      }
     },
     addCategory() {
       this.localMenu.push({

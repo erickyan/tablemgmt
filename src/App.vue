@@ -503,6 +503,8 @@ export default {
       bigKidDinner: 0,
       smallKidDinner: 0,
       taxRatePercent: 0,
+      waterPrice: 0,
+      drinkPrice: 0,
     }
   }),
   methods: {
@@ -519,9 +521,11 @@ export default {
       this.pricingForm.bigKidDinner = state.BIGKIDDINNERPRICE
       this.pricingForm.smallKidDinner = state.SMALLKIDDINNERPRICE
       this.pricingForm.taxRatePercent = ((state.TAX_RATE - 1) * 100).toFixed(2)
+      this.pricingForm.waterPrice = state.WATERPRICE
+      this.pricingForm.drinkPrice = state.DRINKPRICE
       this.showPricingSettings = true
     },
-    savePricingSettings() {
+    async savePricingSettings() {
       this.$store.commit('updatePricingSettings', {
         adultLunch: this.pricingForm.adultLunch,
         bigKidLunch: this.pricingForm.bigKidLunch,
@@ -530,11 +534,46 @@ export default {
         bigKidDinner: this.pricingForm.bigKidDinner,
         smallKidDinner: this.pricingForm.smallKidDinner,
         taxRatePercent: this.pricingForm.taxRatePercent,
+        waterPrice: this.pricingForm.waterPrice,
+        drinkPrice: this.pricingForm.drinkPrice,
       })
+      
+      // Immediately save app state to Firestore to ensure persistence
+      if (this.$store.state.useFirebase && this.$store.state.firebaseInitialized) {
+        try {
+          const snapshot = this.getAppStateSnapshot(this.$store.state)
+          snapshot.timestamp = new Date().toISOString()
+          await this.$store.dispatch('saveAppStateImmediately', snapshot)
+        } catch (error) {
+          console.error('[Firestore] Failed to save pricing settings:', error)
+        }
+      }
+      
       this.showPricingSettings = false
       this.snackbarMessage = 'Pricing & tax updated.'
       this.snackbarColor = 'success'
       this.snackbar = true
+    },
+    getAppStateSnapshot(state) {
+      // Helper to create app state snapshot (same logic as in store)
+      return {
+        isDinner: state.isDinner,
+        tableNum: state.tableNum,
+        catID: state.catID,
+        TAX_RATE: state.TAX_RATE,
+        ADULTPRICE: state.ADULTPRICE,
+        BIGKIDPRICE: state.BIGKIDPRICE,
+        SMALLKIDPRICE: state.SMALLKIDPRICE,
+        ADULTDINNERPRICE: state.ADULTDINNERPRICE,
+        BIGKIDDINNERPRICE: state.BIGKIDDINNERPRICE,
+        SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
+        WATERPRICE: state.WATERPRICE,
+        DRINKPRICE: state.DRINKPRICE,
+        togoLines: JSON.parse(JSON.stringify(state.togoLines)),
+        togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
+        totalTogoPrice: state.totalTogoPrice,
+        tableOrder: state.tableOrder,
+      }
     },
     toggleLanguage() {
       this.$store.commit('toggleLanguage')

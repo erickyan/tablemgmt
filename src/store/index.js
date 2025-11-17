@@ -89,8 +89,8 @@ const store = createStore({
         ADULTDINNERPRICE: 12.25,   // dinner prices
         BIGKIDDINNERPRICE: 6.99,
         SMALLKIDDINNERPRICE: 5.99,
-        WATERPRICE: 0.27,
-        DRINKPRICE:1.75,
+        WATERPRICE: 0.25,
+        DRINKPRICE:1.99,
         tableNum:0,
         orderPanel: {
             type: null,
@@ -1259,6 +1259,31 @@ const store = createStore({
         },
         setMenu(state, menu) {
             state.menu = menu
+            resetMenuQuantities(state.menu)
+            
+            // Extract drink price from menu if "Drinks" category exists
+            const drinksCategory = state.menu.find(cat => 
+                cat?.category && cat.category.toLowerCase().trim() === 'drinks'
+            )
+            if (drinksCategory && Array.isArray(drinksCategory.items)) {
+                // First, try to find a generic "Drink" item
+                let drinkItem = drinksCategory.items.find(item => 
+                    item?.name && item.name.toLowerCase().trim() === 'drink'
+                )
+                // If not found, find the first non-water drink item
+                if (!drinkItem) {
+                    drinkItem = drinksCategory.items.find(item => 
+                        item?.name && 
+                        item.name.toLowerCase().trim() !== 'water' &&
+                        item.name.toLowerCase().trim() !== '水'
+                    )
+                }
+                // If found, update DRINKPRICE
+                if (drinkItem && drinkItem.listPrice > 0) {
+                    state.DRINKPRICE = Number(drinkItem.listPrice)
+                    console.log('[Menu] Updated DRINKPRICE from menu:', state.DRINKPRICE)
+                }
+            }
         },
         setTables(state, tables) {
             state.tables = tables
@@ -1535,6 +1560,25 @@ const store = createStore({
                 const multiplier = 1 + Math.max(0, percent) / 100
                 state.TAX_RATE = Number(multiplier.toFixed(4))
             }
+            
+            // Also update water and drink prices if provided
+            if (payload.waterPrice !== undefined) {
+                const waterPrice = toNumberOr(payload.waterPrice, state.WATERPRICE)
+                if (waterPrice >= 0) {
+                    state.WATERPRICE = waterPrice
+                }
+            }
+            if (payload.drinkPrice !== undefined) {
+                const drinkPrice = toNumberOr(payload.drinkPrice, state.DRINKPRICE)
+                if (drinkPrice >= 0) {
+                    state.DRINKPRICE = drinkPrice
+                }
+            }
+        },
+        setDrinkPrice(state, price) {
+            if (typeof price === 'number' && price >= 0) {
+                state.DRINKPRICE = price
+            }
         },
         setAppState(state, payload = {}) {
             const usingFirebase = !!state.useFirebase
@@ -1562,6 +1606,12 @@ const store = createStore({
             }
             if (typeof payload.SMALLKIDDINNERPRICE === 'number') {
                 state.SMALLKIDDINNERPRICE = payload.SMALLKIDDINNERPRICE
+            }
+            if (typeof payload.WATERPRICE === 'number' && payload.WATERPRICE >= 0) {
+                state.WATERPRICE = payload.WATERPRICE
+            }
+            if (typeof payload.DRINKPRICE === 'number' && payload.DRINKPRICE >= 0) {
+                state.DRINKPRICE = payload.DRINKPRICE
             }
             if (typeof payload.tableNum === 'number') {
                 state.tableNum = payload.tableNum
@@ -1851,6 +1901,31 @@ const store = createStore({
                 })) : []
             })) : []
             commit('setMenu', sanitized)
+            
+            // Extract drink price from menu if "Drinks" category exists
+            const drinksCategory = sanitized.find(cat => 
+                cat?.category && cat.category.toLowerCase().trim() === 'drinks'
+            )
+            if (drinksCategory && Array.isArray(drinksCategory.items)) {
+                // First, try to find a generic "Drink" item
+                let drinkItem = drinksCategory.items.find(item => 
+                    item?.name && item.name.toLowerCase().trim() === 'drink'
+                )
+                // If not found, find the first non-water drink item
+                if (!drinkItem) {
+                    drinkItem = drinksCategory.items.find(item => 
+                        item?.name && 
+                        item.name.toLowerCase().trim() !== 'water' &&
+                        item.name.toLowerCase().trim() !== '水'
+                    )
+                }
+                // If found, update DRINKPRICE
+                if (drinkItem && drinkItem.listPrice > 0) {
+                    commit('setDrinkPrice', drinkItem.listPrice)
+                    console.log('[Menu] Updated DRINKPRICE from menu:', drinkItem.listPrice)
+                }
+            }
+            
             await dispatch('saveMenuToFirestore')
         },
 
@@ -1974,6 +2049,29 @@ const store = createStore({
                 commit('setAuthLoading', false)
                 await dispatch('cleanupFirebase')
             }
+        },
+        
+        /**
+         * Immediately save app state to Firestore (bypasses debounce)
+         * Used when critical settings like pricing need to be persisted immediately
+         */
+        async saveAppStateImmediately({ state, commit }, snapshot) {
+            if (!state.useFirebase || !state.firebaseInitialized || !state.authUser) {
+                return { error: 'Firestore not available' }
+            }
+            try {
+                const response = await firestore.saveAppState(snapshot)
+                if (response && response.success) {
+                    const timestamp = response.updatedAt || snapshot.timestamp
+                    commit('setAppStateSyncTimestamp', timestamp)
+                    console.log('[Firestore] App state saved immediately', timestamp ? `(@ ${timestamp})` : '')
+                    return { success: true, timestamp }
+                }
+                return { error: 'Save failed', response }
+            } catch (error) {
+                console.error('[Firestore] Failed to save app state immediately:', error)
+                return { error: error.toString() }
+            }
         }
     },
     modules: {}
@@ -2016,6 +2114,8 @@ function getAppStateSnapshot(state) {
         ADULTDINNERPRICE: state.ADULTDINNERPRICE,
         BIGKIDDINNERPRICE: state.BIGKIDDINNERPRICE,
         SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
+        WATERPRICE: state.WATERPRICE,
+        DRINKPRICE: state.DRINKPRICE,
         togoLines: JSON.parse(JSON.stringify(state.togoLines)),
         togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
         totalTogoPrice: state.totalTogoPrice,

@@ -190,7 +190,30 @@ export default {
             const store = this.$store.state
             // Check if drinks category is selected (catID === -1)
             if (store.catID === -1) {
-                // Return drinks as menu items
+                // First, check if there's a "Drinks" category in the menu
+                const drinksCategory = Array.isArray(store.menu)
+                    ? store.menu.find(cat => 
+                        cat?.category && cat.category.toLowerCase().trim() === 'drinks'
+                      )
+                    : null
+                
+                // If drinks category exists in menu, use it
+                if (drinksCategory && Array.isArray(drinksCategory.items) && drinksCategory.items.length > 0) {
+                    return drinksCategory.items.map(item => {
+                        // Try to match with DRINK_OPTIONS to preserve code and icon
+                        const drinkOption = DRINK_OPTIONS.find(d => 
+                            d.label.toLowerCase() === item.name?.toLowerCase()
+                        )
+                        return {
+                            name: item.name || '',
+                            listPrice: Number(item.listPrice ?? 0),
+                            code: drinkOption?.code,
+                            icon: drinkOption?.icon
+                        }
+                    })
+                }
+                
+                // Fallback: Return drinks as menu items from DRINK_OPTIONS
                 return DRINK_OPTIONS.map(drink => ({
                     name: drink.label,
                     listPrice: isWater(drink.code) ? store.WATERPRICE : store.DRINKPRICE,

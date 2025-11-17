@@ -28,10 +28,18 @@ export default {
       }
       
       // Add Drinks category as a special category (use -1 as index to differentiate)
+      // Check if drinks category exists in menu, otherwise use default count
+      const drinksCategory = Array.isArray(menu)
+        ? menu.find(cat => cat?.category && cat.category.toLowerCase().trim() === 'drinks')
+        : null
+      const drinksCount = drinksCategory && Array.isArray(drinksCategory.items)
+        ? drinksCategory.items.length
+        : 12 // Default count from DRINK_OPTIONS
+      
       categories.push({
         title: 'Drinks',
         index: -1,
-        count: 12, // Total number of drink options
+        count: drinksCount,
         color: this.categoryPalette[categories.length % this.categoryPalette.length],
         isDrinks: true
       })

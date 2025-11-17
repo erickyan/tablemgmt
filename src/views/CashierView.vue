@@ -526,7 +526,7 @@ export default {
 }
 
 .drink-card {
-  background: transparent !important;
+  background: #ffffff !important;
 }
 
 .drink-name {
