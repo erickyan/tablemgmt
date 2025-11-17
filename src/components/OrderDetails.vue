@@ -788,11 +788,11 @@ export default {
 }
 
 .header-controls {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
   width: 100%;
 }
 
@@ -802,6 +802,8 @@ export default {
   text-transform: uppercase;
   min-height: 42px;
   box-shadow: 0 6px 16px rgba(15, 25, 35, 0.12);
+  flex: 0 1 auto;
+  white-space: nowrap;
 }
 
 .pos-dialog__content {
@@ -991,10 +993,17 @@ export default {
     align-items: stretch;
   }
   .header-controls {
-    justify-content: stretch;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .header-controls .v-btn {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
+    min-width: auto;
+    font-size: 11px;
+    padding: 8px 10px;
   }
   .counter-grid {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

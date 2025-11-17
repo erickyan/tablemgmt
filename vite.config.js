@@ -13,8 +13,20 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
-    server: {
+  server: {
     // host: '127.0.0.1',
     // port: 3000
+  },
+  preview: {
+    // Configure preview server to handle SPA routing
+    port: 4173
+  },
+  build: {
+    // Ensure proper handling of client-side routing
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
   }
 })
