@@ -124,8 +124,18 @@
 </template>
 
 <script>
+import { useTimerManagement } from '../composables/useTimerManagement.js'
+
 export default {
   name: 'AdminLiveSales',
+  setup() {
+    // Use timer management composable for automatic cleanup
+    const { setManagedTimeout, clearManagedTimeout } = useTimerManagement()
+    return {
+      setManagedTimeout,
+      clearManagedTimeout
+    }
+  },
   props: {
     modelValue: {
       type: Boolean,
@@ -134,7 +144,8 @@ export default {
   },
   emits: ['update:modelValue'],
   data: () => ({
-    refreshing: false
+    refreshing: false,
+    refreshTimeoutId: null // Store timeout ID for clearing
   }),
   computed: {
     internalOpen: {
@@ -193,8 +204,10 @@ export default {
     },
     refreshMetrics() {
       this.refreshing = true
-      window.setTimeout(() => {
+      // Use managed timeout for automatic cleanup
+      this.refreshTimeoutId = this.setManagedTimeout(() => {
         this.refreshing = false
+        this.refreshTimeoutId = null
       }, 600)
     },
     formatCurrency(value) {
@@ -206,6 +219,13 @@ export default {
         return `since ${raw}`
       }
       return raw
+    }
+  },
+  beforeUnmount() {
+    // Clear timeout if it exists (composable will also clean up automatically on unmount)
+    if (this.refreshTimeoutId !== null) {
+      this.clearManagedTimeout(this.refreshTimeoutId)
+      this.refreshTimeoutId = null
     }
   }
 }

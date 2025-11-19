@@ -1,16 +1,20 @@
 <template>
   <v-dialog
     v-model="dialogOpen"
-    max-width="760"
+    :max-width="$vuetify.display.xs ? '100%' : ($vuetify.display.tablet ? '900' : '760')"
+    :fullscreen="$vuetify.display.xs"
     transition="dialog-bottom-transition"
+    role="dialog"
+    :aria-labelledby="`table-dialog-title-${tableIndex}`"
+    :aria-describedby="`table-dialog-description-${tableIndex}`"
   >
     <v-card class="pos-dialog">
       <div class="pos-dialog__header">
         <div class="header-info">
           <div class="header-title-row">
-            <h3 class="dialog-title">{{ getTableDisplayName() }}</h3>
+            <h3 class="dialog-title" :id="`table-dialog-title-${tableIndex}`">{{ getTableDisplayName() }}</h3>
             <v-chip
-              size="small"
+              :size="$vuetify.display.tablet && $vuetify.display.mdAndUp ? 'default' : 'small'"
               variant="tonal"
               color="accent"
             >
@@ -27,7 +31,11 @@
             variant="outlined"
             color="accent"
             class="header-btn"
-            @click="clearTable"
+            :aria-label="`${getTranslatedLabel('Clear')} ${getTableDisplayName()}`"
+            :loading="$store.state.loadingStates.clearingTable"
+            :disabled="$store.state.loadingStates.clearingTable"
+            @click="showClearConfirm = true"
+            @keydown.enter.prevent="showClearConfirm = true"
           >
             <v-icon start>mdi-trash-can-outline</v-icon>
             {{ getTranslatedLabel('Clear') }}
@@ -36,7 +44,11 @@
             variant="outlined"
             color="accent"
             class="header-btn"
+            :aria-label="`${getTranslatedLabel('Print')} receipt for ${getTableDisplayName()}`"
+            :loading="$store.state.loadingStates.printingReceipt"
+            :disabled="$store.state.loadingStates.printingReceipt"
             @click="printReceipt"
+            @keydown.enter.prevent="printReceipt"
           >
             <v-icon start>mdi-printer</v-icon>
             {{ getTranslatedLabel('Print') }}
@@ -45,7 +57,9 @@
             variant="outlined"
             color="accent"
             class="header-btn"
-            @click="$store.commit('updateTableGoodPpl', !table.goodPpl)"
+            :aria-label="getTranslatedLabel(table.goodPpl ? 'Remove VIP status' : 'Mark as VIP')"
+            @click="$store.dispatch('updateTableGoodPpl', !table.goodPpl)"
+            @keydown.enter.prevent="$store.dispatch('updateTableGoodPpl', !table.goodPpl)"
           >
             <v-icon start>
               {{ table.goodPpl ? 'mdi-heart-off' : 'mdi-heart' }}
@@ -56,7 +70,11 @@
             variant="outlined"
             color="accent"
             class="header-btn"
+            :aria-label="`${getTranslatedLabel('Mark')} ${getTableDisplayName()} ${getTranslatedLabel('as paid')}`"
+            :loading="$store.state.loadingStates.payingTable"
+            :disabled="$store.state.loadingStates.payingTable"
             @click="payAndClose"
+            @keydown.enter.prevent="payAndClose"
           >
             <v-icon start>mdi-cash-check</v-icon>
             {{ getTranslatedLabel('Paid') }}
@@ -65,7 +83,9 @@
             variant="outlined"
             color="accent"
             class="header-btn"
+            :aria-label="`${getTranslatedLabel('Update')} ${getTableDisplayName()}`"
             @click="updateMenu"
+            @keydown.enter.prevent="updateMenu"
           >
             <v-icon start>mdi-check</v-icon>
             {{ getTranslatedLabel('Update') }}
@@ -73,10 +93,10 @@
         </div>
       </div>
 
-      <div class="pos-dialog__content">
-        <section class="dialog-section dialog-section--guests">
+      <div class="pos-dialog__content" :id="`table-dialog-description-${tableIndex}`">
+        <section class="dialog-section dialog-section--guests" aria-labelledby="guests-section-header">
           <header class="section-header">
-             <h4>{{ getTranslatedLabel('Buffet guests') }}</h4>
+             <h4 id="guests-section-header">{{ getTranslatedLabel('Buffet guests') }}</h4>
              <span class="section-note">{{ getTranslatedLabel('Tap + or − to adjust counts.') }}</span>
           </header>
           <div class="counter-grid">
@@ -84,21 +104,23 @@
               <div class="counter-heading">
                 <span class="counter-label">Adult</span>
                  <v-chip
-                   size="x-small"
+                   :size="$vuetify.display.tablet && $vuetify.display.mdAndUp ? 'small' : 'x-small'"
                    color="accent"
                    variant="outlined"
                  >
                   ${{ pricing.adult.toFixed(2) }}
                 </v-chip>
               </div>
-              <div class="counter-value">
+              <div class="counter-value" :class="{ 'updated': updatedCounter === 'adult' }">
                 <span>{{ table.adult }}</span>
                 <div class="counter-actions">
                   <v-btn
                     icon
                     size="small"
                     variant="text"
+                    :aria-label="`${getTranslatedLabel('Decrease')} ${getTranslatedLabel('Adult')} count`"
                     @click="adjustGuest('adult', -1)"
+                    @keydown.enter.prevent="adjustGuest('adult', -1)"
                     :disabled="table.adult <= 0"
                   >
                     <v-icon>mdi-minus</v-icon>
@@ -107,7 +129,9 @@
                     icon
                     size="small"
                     variant="text"
+                    :aria-label="`${getTranslatedLabel('Increase')} ${getTranslatedLabel('Adult')} count`"
                     @click="adjustGuest('adult', 1)"
+                    @keydown.enter.prevent="adjustGuest('adult', 1)"
                   >
                     <v-icon>mdi-plus</v-icon>
                   </v-btn>
@@ -118,21 +142,23 @@
               <div class="counter-heading">
                 <span class="counter-label">{{ getTranslatedLabel('Kid (6-9)') }}</span>
                  <v-chip
-                   size="x-small"
+                   :size="$vuetify.display.tablet && $vuetify.display.mdAndUp ? 'small' : 'x-small'"
                    color="accent"
                    variant="outlined"
                  >
                   ${{ pricing.bigKid.toFixed(2) }}
                 </v-chip>
               </div>
-              <div class="counter-value">
+              <div class="counter-value" :class="{ 'updated': updatedCounter === 'bigKid' }">
                 <span>{{ table.bigKid }}</span>
                 <div class="counter-actions">
                   <v-btn
                     icon
                     size="small"
                     variant="text"
+                    :aria-label="`${getTranslatedLabel('Decrease')} ${getTranslatedLabel('Kid (6-9)')} count`"
                     @click="adjustGuest('bigKid', -1)"
+                    @keydown.enter.prevent="adjustGuest('bigKid', -1)"
                     :disabled="table.bigKid <= 0"
                   >
                     <v-icon>mdi-minus</v-icon>
@@ -141,7 +167,9 @@
                     icon
                     size="small"
                     variant="text"
+                    :aria-label="`${getTranslatedLabel('Increase')} ${getTranslatedLabel('Kid (6-9)')} count`"
                     @click="adjustGuest('bigKid', 1)"
+                    @keydown.enter.prevent="adjustGuest('bigKid', 1)"
                   >
                     <v-icon>mdi-plus</v-icon>
                   </v-btn>
@@ -152,21 +180,23 @@
               <div class="counter-heading">
                 <span class="counter-label">{{ getTranslatedLabel('Kid (2-5)') }}</span>
                  <v-chip
-                   size="x-small"
+                   :size="$vuetify.display.tablet && $vuetify.display.mdAndUp ? 'small' : 'x-small'"
                    color="accent"
                    variant="outlined"
                  >
                   ${{ pricing.smlKid.toFixed(2) }}
                 </v-chip>
               </div>
-              <div class="counter-value">
+              <div class="counter-value" :class="{ 'updated': updatedCounter === 'smlKid' }">
                 <span>{{ table.smlKid }}</span>
                 <div class="counter-actions">
                   <v-btn
                     icon
                     size="small"
                     variant="text"
+                    :aria-label="`${getTranslatedLabel('Decrease')} ${getTranslatedLabel('Kid (2-5)')} count`"
                     @click="adjustGuest('smlKid', -1)"
+                    @keydown.enter.prevent="adjustGuest('smlKid', -1)"
                     :disabled="table.smlKid <= 0"
                   >
                     <v-icon>mdi-minus</v-icon>
@@ -175,7 +205,9 @@
                     icon
                     size="small"
                     variant="text"
+                    :aria-label="`${getTranslatedLabel('Increase')} ${getTranslatedLabel('Kid (2-5)')} count`"
                     @click="adjustGuest('smlKid', 1)"
+                    @keydown.enter.prevent="adjustGuest('smlKid', 1)"
                   >
                     <v-icon>mdi-plus</v-icon>
                   </v-btn>
@@ -185,9 +217,9 @@
           </div>
         </section>
 
-        <section class="dialog-section dialog-section--drinks">
+        <section class="dialog-section dialog-section--drinks" aria-labelledby="drinks-section-header">
           <header class="section-header">
-            <h4>{{ getTranslatedLabel('Drinks') }}</h4>
+            <h4 id="drinks-section-header">{{ getTranslatedLabel('Drinks') }}</h4>
             <span class="section-note">
               {{ table.drinks.length ? table.drinks.length : getTranslatedLabel('No') }} {{ getTranslatedLabel('drinks') }} {{ getTranslatedLabel('added.') }}
             </span>
@@ -202,6 +234,8 @@
                 variant="tonal"
                 color="accent"
                 size="small"
+                class="drink-chip"
+                :class="{ 'drink-chip--added': recentlyAddedDrink === drink }"
               >
                 {{ drinkLabel(drink) }}
               </v-chip>
@@ -214,7 +248,9 @@
               :key="option.code"
               type="button"
               class="drink-button"
+              :aria-label="`${getTranslatedLabel('Add')} ${option.label}`"
               @click="addDrinks(option.code)"
+              @keydown.enter.prevent="addDrinks(option.code)"
             >
               <v-icon size="18" :icon="option.icon" class="me-2"></v-icon>
               {{ option.label }}
@@ -231,9 +267,9 @@
           </v-alert>
         </section>
 
-        <section class="dialog-section">
+        <section class="dialog-section" aria-labelledby="summary-section-header">
           <header class="section-header">
-            <h4>Summary</h4>
+            <h4 id="summary-section-header">Summary</h4>
             <span class="section-note">Total updates on save or payment.</span>
           </header>
           <div class="summary-grid">
@@ -254,7 +290,59 @@
           </div>
         </section>
       </div>
+      
+      <!-- ARIA live region for dynamic updates -->
+      <div aria-live="polite" aria-atomic="true" class="sr-only">
+        <span>{{ getTranslatedLabel('Table') }} {{ getTableDisplayName() }}: {{ guestCount }} {{ getTranslatedLabel('guests') }}, {{ table.drinks.length || 0 }} {{ getTranslatedLabel('drinks') }}</span>
+      </div>
     </v-card>
+
+    <!-- Clear Table Confirmation Dialog -->
+    <v-dialog 
+      v-model="showClearConfirm" 
+      :max-width="$vuetify.display.xs ? '95%' : '480'"
+      persistent
+      role="alertdialog"
+      :aria-labelledby="`clear-confirm-title-${tableIndex}`"
+      :aria-describedby="`clear-confirm-description-${tableIndex}`"
+    >
+      <v-card>
+        <v-card-title class="text-h6" :id="`clear-confirm-title-${tableIndex}`">
+          <v-icon color="error" class="mr-2" aria-hidden="true">mdi-alert-circle</v-icon>
+          {{ getTranslatedLabel('Clear Table?') }}
+        </v-card-title>
+        <v-card-text :id="`clear-confirm-description-${tableIndex}`">
+          <p class="mb-0">
+            {{ getTranslatedLabel('Are you sure you want to clear') }} <strong>{{ getTableDisplayName() }}</strong>?
+          </p>
+          <p class="mt-2 text-medium-emphasis" style="font-size: 13px;">
+            {{ getTranslatedLabel('This will clear all guest counts, drinks, and reset the table to empty. This action cannot be undone.') }}
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn 
+            variant="text" 
+            @click="showClearConfirm = false"
+            @keydown.enter.prevent="showClearConfirm = false"
+            @keydown.esc="showClearConfirm = false"
+          >
+            {{ getTranslatedLabel('Cancel') }}
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
+            :aria-label="`${getTranslatedLabel('Confirm clear')} ${getTableDisplayName()}`"
+            :loading="$store.state.loadingStates.clearingTable"
+            :disabled="$store.state.loadingStates.clearingTable"
+            @click="confirmClearTable"
+            @keydown.enter.prevent="confirmClearTable"
+          >
+            {{ getTranslatedLabel('Clear') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-dialog>
 </template>
 
@@ -262,7 +350,11 @@
 <script>
 import { DRINK_OPTIONS, getDrinkLabel } from '../utils/drinkOptions.js'
 import { translate } from '../utils/translations.js'
-import { toChineseNumeral } from '../utils/chineseNumerals.js'
+import { usePrinting } from '../composables/usePrinting.js'
+import { DRINK_CODES } from '../constants/drinks.js'
+import { errorHandler } from '../services/errorHandler.js'
+import { showSuccess } from '../utils/successNotifications.js'
+import { isOccupiedOrPrinted } from '../services/tableStatusService.js'
 
 export default {
     props: {
@@ -273,8 +365,17 @@ export default {
     },
     emits: ['update:modelValue'],
     data: () => ({
-        drinkOptions: DRINK_OPTIONS
+        drinkOptions: DRINK_OPTIONS,
+        showClearConfirm: false,
+        updatedCounter: null,
+        counterUpdateTimeout: null,
+        recentlyAddedDrink: null,
+        drinkAddTimeout: null
     }),
+    setup() {
+        const { printTableReceipt: printTableReceiptComposable } = usePrinting()
+        return { printTableReceiptComposable }
+    },
     computed: {
         dialogOpen: {
             get() {
@@ -285,18 +386,40 @@ export default {
             }
         },
         tableIndex() {
+            // tableNum can be either a table number (new format) or index (legacy)
             return this.$store.state.tableNum || 0
         },
         table() {
-            return this.$store.state.tables[this.tableIndex] || {}
+            // Access table by number (not index)
+            // tables is now an object: { [tableNumber]: Table }
+            const tables = this.$store.state.tables || {}
+            const indexOrNumber = this.tableIndex
+            
+            if (Array.isArray(tables)) {
+                // Legacy array format - convert index to table number
+                const table = tables[indexOrNumber] || {}
+                return table
+            }
+            // New object format - direct access by number
+            // If tableNum is still an index (legacy), try to find table by number
+            const table = tables[indexOrNumber]
+            if (table) {
+                return table
+            }
+            // Fallback: try to find table by number if tableNum is actually an index
+            const tableByNumber = Object.values(tables).find(t => t && t.number === indexOrNumber)
+            return tableByNumber || {}
         },
         tableNumber() {
-            // Use table.number if it exists and is valid, otherwise use index + 1
+            // Use table.number if it exists and is valid, otherwise use tableIndex
             const table = this.table
             if (table && typeof table.number === 'number' && table.number > 0) {
                 return table.number
             }
-            return this.tableIndex + 1
+            // If tableIndex is already a table number, return it; otherwise add 1 (legacy index)
+            return typeof this.tableIndex === 'number' && this.tableIndex > 0 
+                ? this.tableIndex 
+                : (this.tableIndex + 1)
         },
         guestCount() {
             return Number(this.table.adult || 0) + Number(this.table.bigKid || 0) + Number(this.table.smlKid || 0)
@@ -308,12 +431,7 @@ export default {
             }
             // For occupied or printed tables without stored mode, infer from stored price
             // This handles tables that were calculated before pricingModeDinner was added
-            // A table is printed if it has a totalPrice > 0 but is not occupied
-            const isOccupied = this.table.occupied
-            const isPrinted = !isOccupied && this.table.totalPrice && parseFloat(this.table.totalPrice) > 0
-            const hasTimeStamp = this.table.time && this.table.time > 0
-            const isOccupiedOrPrinted = isOccupied || isPrinted || hasTimeStamp
-            if (isOccupiedOrPrinted && this.table.totalPrice && parseFloat(this.table.totalPrice) > 0) {
+            if (isOccupiedOrPrinted(this.table) && this.table.totalPrice && parseFloat(this.table.totalPrice) > 0) {
                 const state = this.$store.state
                 const adultCount = parseInt(this.table.adult) || 0
                 const bigKidCount = parseInt(this.table.bigKid) || 0
@@ -401,20 +519,30 @@ export default {
             window.dispatchEvent(new CustomEvent('pos-table-panel-highlight', { detail }))
         },
         adjustGuest(type, delta) {
-            const mutations = {
-                adult: delta > 0 ? 'increaseAdult' : 'decreaseAdult',
-                bigKid: delta > 0 ? 'increaseBigKid' : 'decreaseBidKid',
-                smlKid: delta > 0 ? 'increaseSmlKid' : 'decreaseSmlKid'
+            this.$store.dispatch('adjustGuestCount', { type, delta })
+            this.notifyPanel('check', { tab: 'check' })
+            
+            // Visual feedback animation
+            this.updatedCounter = type
+            if (this.counterUpdateTimeout) {
+                clearTimeout(this.counterUpdateTimeout)
             }
-            const mutation = mutations[type]
-            if (mutation) {
-                this.$store.commit(mutation)
-                this.notifyPanel('check', { tab: 'check' })
-            }
+            this.counterUpdateTimeout = setTimeout(() => {
+                this.updatedCounter = null
+            }, 400)
         },
         addDrinks(code) {
-            this.$store.commit('addDrink', code)
+            this.$store.dispatch('addDrink', code)
             this.notifyPanel('drinks', { tab: 'check' })
+            
+            // Visual feedback for added drink
+            this.recentlyAddedDrink = code
+            if (this.drinkAddTimeout) {
+                clearTimeout(this.drinkAddTimeout)
+            }
+            this.drinkAddTimeout = setTimeout(() => {
+                this.recentlyAddedDrink = null
+            }, 600)
         },
         drinkLabel(code) {
             // For UI display, use translated label (English with Chinese appended)
@@ -433,375 +561,79 @@ export default {
         isChinese() {
             return this.$store.state.language === 'zh'
         },
-        openPrintDocument(html) {
-            // Use the same print method as togo orders - try popup first, then iframe
+        // openPrintDocument and printWithIframe are now provided by usePrinting composable
+        confirmClearTable() {
+            this.showClearConfirm = false
             try {
-                const popup = window.open('', '_blank', 'width=600,height=800')
-                if (popup && popup.document && !popup.closed) {
-                    // Extract body and head content for popup
-                    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-                    const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
-                    
-                    if (bodyMatch && headMatch) {
-                        const cleanHtml = `<!DOCTYPE html><html>${headMatch[0]}${bodyMatch[0]}</html>`
-                        popup.document.open()
-                        popup.document.write(cleanHtml)
-                        popup.document.close()
-                    } else {
-                        popup.document.open()
-                        popup.document.write(html)
-                        popup.document.close()
-                    }
-                    
-                    popup.focus()
-                    const cleanup = () => {
-                        popup.removeEventListener('afterprint', cleanup)
-                        try {
-                            if (popup && !popup.closed) {
-                                popup.close()
-                            }
-                        } catch (closeError) {
-                            console.warn('Print window already closed.', closeError)
-                        }
-                    }
-                    popup.addEventListener('afterprint', cleanup)
-                    // Small delay to ensure content is loaded
-                    setTimeout(() => {
-                        try {
-                            popup.print()
-                        } catch (printError) {
-                            console.warn('Print failed on popup, using iframe fallback', printError)
-                            popup.close()
-                            this.printWithIframe(html)
-                        }
-                    }, 100)
-                    return
-                }
+                this.$store.dispatch('clearTable')
+                this.notifyPanel('summary', { tab: 'check' })
+                showSuccess(`${this.getTableDisplayName()} ${this.getTranslatedLabel('cleared')}`)
             } catch (error) {
-                console.warn('Popup print blocked, falling back to iframe strategy.', error)
+                errorHandler.handle(error, {
+                    context: 'clearTable',
+                    showToUser: true
+                })
             }
-
-            // Fallback to iframe method
-            this.printWithIframe(html)
-        },
-        printWithIframe(html) {
-            const iframe = document.createElement('iframe')
-            iframe.style.position = 'fixed'
-            iframe.style.right = '0'
-            iframe.style.bottom = '0'
-            iframe.style.width = '0'
-            iframe.style.height = '0'
-            iframe.style.border = '0'
-            iframe.style.opacity = '0'
-            iframe.style.pointerEvents = 'none'
-            
-            // Use srcdoc attribute (modern approach, no document.write warning)
-            // Extract body content from full HTML string
-            const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-            const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
-            
-            if (bodyMatch && headMatch) {
-                // Build HTML with just head and body content
-                const cleanHtml = `<!DOCTYPE html><html>${headMatch[0]}${bodyMatch[0]}</html>`
-                iframe.srcdoc = cleanHtml
-            } else {
-                // Fallback: use full HTML
-                iframe.srcdoc = html
-            }
-            
-            document.body.appendChild(iframe)
-
-            const frameWindow = iframe.contentWindow || iframe.contentDocument
-            let printed = false
-            let fallbackTimeout = null
-            
-            const cleanup = () => {
-                if (fallbackTimeout) {
-                    clearTimeout(fallbackTimeout)
-                    fallbackTimeout = null
-                }
-                if (iframe && iframe.parentNode) {
-                    try {
-                        iframe.parentNode.removeChild(iframe)
-                    } catch (e) {
-                        // Iframe may already be removed
-                    }
-                }
-            }
-            
-            const executePrint = () => {
-                if (printed) return
-                printed = true
-                if (fallbackTimeout) {
-                    clearTimeout(fallbackTimeout)
-                    fallbackTimeout = null
-                }
-                
-                try {
-                    frameWindow.focus()
-                    // Use requestAnimationFrame for better performance
-                    requestAnimationFrame(() => {
-                        try {
-                            frameWindow.print()
-                            // Cleanup after print dialog appears (shorter timeout)
-                            setTimeout(cleanup, 300)
-                        } catch (printError) {
-                            console.error('Print failed on iframe:', printError)
-                            cleanup()
-                        }
-                    })
-                } catch (error) {
-                    console.error('Error in print:', error)
-                    cleanup()
-                }
-            }
-            
-            // Wait for iframe to load
-            iframe.onload = executePrint
-            
-            // Fallback timeout in case onload doesn't fire (shorter timeout)
-            fallbackTimeout = setTimeout(() => {
-                if (!printed && iframe && iframe.parentNode) {
-                    const frameDoc = iframe.contentDocument
-                    if (frameDoc && (frameDoc.readyState === 'complete' || frameDoc.readyState === 'interactive')) {
-                        executePrint()
-                    } else {
-                        // If still not ready, cleanup
-                        cleanup()
-                    }
-                } else if (printed) {
-                    // Already printed, just clear the timeout
-                    if (fallbackTimeout) {
-                        clearTimeout(fallbackTimeout)
-                        fallbackTimeout = null
-                    }
-                }
-            }, 200) // Reduced from 500ms to 200ms
-        },
-        clearTable() {
-            this.$store.commit('clearEverything')
-            this.notifyPanel('summary', { tab: 'check' })
         },
         updateMenu() {
-            this.$store.commit('calculateTotal')
+            this.$store.dispatch('calculateTableTotal')
             if (this.tableHasActivity(this.tableIndex)) {
-                this.$store.commit('getTimestamp', this.tableIndex)
+                this.$store.dispatch('getTableTimestamp', this.tableIndex)
                 if (!this.table.occupied) {
-                    this.$store.commit('setTableOccupied', { index: this.tableIndex, value: true })
+                    this.$store.dispatch('setTableOccupied', { index: this.tableIndex, value: true })
                 }
                 this.notifyPanel('check', { tab: 'check' })
+                showSuccess(`${this.getTableDisplayName()} ${this.getTranslatedLabel('updated')}`)
             } else {
-                this.$store.commit('setTableSitDownTime', { index: this.tableIndex, value: '' })
-                this.$store.commit('setTableOccupied', { index: this.tableIndex, value: false })
+                this.$store.dispatch('setTableSitDownTime', { index: this.tableIndex, value: '' })
+                this.$store.dispatch('setTableOccupied', { index: this.tableIndex, value: false })
                 this.notifyPanel('summary', { tab: 'check' })
+                showSuccess(`${this.getTableDisplayName()} ${this.getTranslatedLabel('cleared')}`)
             }
             this.dialogOpen = false
         },
         async printReceipt() {
-            this.$store.commit('calculateTotal')
-            // Ensure pricingModeDinner is stored when printing, even if table was already occupied
-            const table = this.table
-            const isOccupied = table.occupied
-            const isPrinted = !isOccupied && table.totalPrice && parseFloat(table.totalPrice) > 0
-            const hasTimeStamp = table.time && table.time > 0
-            if (table && (isOccupied || isPrinted || hasTimeStamp) && table.pricingModeDinner === undefined) {
-                // If table is occupied/printed but doesn't have pricingModeDinner, store it now
-                // Use the preserved pricing mode (inferred if needed), not current mode
-                table.pricingModeDinner = this.pricingModeWasDinner
-                // Persist the table to save pricingModeDinner
-                this.$store.commit('setTableOccupied', { index: this.tableIndex, value: table.occupied })
+            this.$store.commit('setLoadingState', { key: 'printingReceipt', value: true })
+            try {
+                await this.printTableReceiptComposable({
+                    store: this.$store,
+                    tableIndex: this.tableIndex,
+                    table: this.table
+                })
+                // Don't close dialog immediately after printing - let the print dialog appear first
+                // The dialog will be closed by the caller if needed, or user can close it manually
+                // Note: setTableOccupied(false) is already called inside printTableReceiptComposable
+                this.notifyPanel('summary', { tab: 'check' })
+                showSuccess(`${this.getTranslatedLabel('Receipt printed')} ${this.getTranslatedLabel('for')} ${this.getTableDisplayName()}`)
+                // Removed auto-close: this.dialogOpen = false
+            } catch (error) {
+                errorHandler.handle(error, {
+                    context: 'printReceipt',
+                    showToUser: true
+                })
+            } finally {
+                this.$store.commit('setLoadingState', { key: 'printingReceipt', value: false })
             }
-            const store = this.$store.state
-            const isDinner = this.pricingModeWasDinner // Use preserved mode for pricing
-            const pricing = {
-                adult: isDinner ? store.ADULTDINNERPRICE : store.ADULTPRICE,
-                bigKid: isDinner ? store.BIGKIDDINNERPRICE : store.BIGKIDPRICE,
-                smallKid: isDinner ? store.SMALLKIDDINNERPRICE : store.SMALLKIDPRICE,
-                drink: store.DRINKPRICE,
-                water: store.WATERPRICE
-            }
-
-            const lines = []
-            const totals = []
-            const addLine = (label, qty, unitPrice) => {
-                const quantity = Number(qty || 0)
-                if (quantity <= 0) return
-                const total = quantity * Number(unitPrice || 0)
-                lines.push({ label, qty: quantity, unitPrice: Number(unitPrice || 0), total })
-                totals.push(total)
-            }
-
-            addLine('Adult Buffet', table.adult, pricing.adult)
-            addLine('Kid Buffet (6-9)', table.bigKid, pricing.bigKid)
-            addLine('Kid Buffet (2-5)', table.smlKid, pricing.smallKid)
-
-            const drinkCounts = (Array.isArray(table.drinks) ? table.drinks : []).reduce((acc, code) => {
-                acc[code] = (acc[code] || 0) + 1
-                return acc
-            }, {})
-
-            Object.entries(drinkCounts).forEach(([code, qty]) => {
-                // For receipts, use English-only labels (not translated)
-                const label = this.drinkLabelEnglish(code)
-                const unitPrice = code === 'WTER' ? pricing.water : pricing.drink
-                addLine(label, qty, unitPrice)
-            })
-
-            const tableNumber = table?.number || this.tableNumber
-            const subtotal = totals.reduce((sum, value) => sum + value, 0)
-            const totalWithTax = parseFloat(table.totalPrice || 0)
-            const taxAmount = totalWithTax && subtotal
-                ? parseFloat((totalWithTax - subtotal).toFixed(2))
-                : parseFloat((subtotal * (store.TAX_RATE - 1)).toFixed(2))
-
-            const htmlRows = lines.map(line => `
-                <tr>
-                    <td>${line.label}</td>
-                    <td class="qty">${line.qty}</td>
-                    <td class="price">$${line.unitPrice.toFixed(2)}</td>
-                    <td class="price">$${line.total.toFixed(2)}</td>
-                </tr>
-            `).join('')
-
-            // Increment ticket counter and save immediately
-            this.$store.commit('incrementTicketCount')
-            const ticketCount = this.$store.state.ticketCount
-            const ticketCountChinese = toChineseNumeral(ticketCount)
-            const showTicketCount = this.$store.state.receiptSettings?.showTicketCount !== false
-            
-            // Immediately save app state to ensure ticket count persists
-            if (this.$store.state.useFirebase && this.$store.state.firebaseInitialized && this.$store.state.authUser) {
-                try {
-                    const state = this.$store.state
-                    const snapshot = {
-                        isDinner: state.isDinner,
-                        tableNum: state.tableNum,
-                        catID: state.catID,
-                        TAX_RATE: state.TAX_RATE,
-                        ADULTPRICE: state.ADULTPRICE,
-                        BIGKIDPRICE: state.BIGKIDPRICE,
-                        SMALLKIDPRICE: state.SMALLKIDPRICE,
-                        ADULTDINNERPRICE: state.ADULTDINNERPRICE,
-                        BIGKIDDINNERPRICE: state.BIGKIDDINNERPRICE,
-                        SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
-                        WATERPRICE: state.WATERPRICE,
-                        DRINKPRICE: state.DRINKPRICE,
-                        ticketCount: state.ticketCount,
-                        receiptSettings: JSON.parse(JSON.stringify(state.receiptSettings || { showTicketCount: true })),
-                        togoLines: JSON.parse(JSON.stringify(state.togoLines)),
-                        togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
-                        totalTogoPrice: state.totalTogoPrice,
-                        tableOrder: state.tableOrder,
-                    }
-                    snapshot.timestamp = new Date().toISOString()
-                    await this.$store.dispatch('saveAppStateImmediately', snapshot)
-                } catch (error) {
-                    console.error('[Firestore] Failed to save ticket count:', error)
-                }
-            }
-            
-            const receiptSettings = this.$store.state.receiptSettings || {}
-            const headerText = receiptSettings.headerText || 'China Buffet'
-            const subHeaderText = receiptSettings.subHeaderText || ''
-            const footerText = receiptSettings.footerText || 'Thank you for dining with us!'
-            const showPrintTime = receiptSettings.showPrintTime !== false
-            const showGratuity = receiptSettings.showGratuity !== false
-            const gratuityPercentages = Array.isArray(receiptSettings.gratuityPercentages) && receiptSettings.gratuityPercentages.length > 0
-                ? receiptSettings.gratuityPercentages
-                : [10, 15, 20]
-            const gratuityOnPreTax = receiptSettings.gratuityOnPreTax === true
-            const gratuityBaseAmount = gratuityOnPreTax ? subtotal : (totalWithTax || (subtotal * store.TAX_RATE))
-            
-            const receiptHtml = '<html>' +
-              '<head>' +
-                `<title>Receipt - Table ${tableNumber}</title>` +
-                '<style>' +
-                  "body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 24px; color: #333; position: relative; }" +
-                  (showTicketCount ? '.ticket-count { position: absolute; top: 24px; right: 24px; font-size: 18px; font-weight: bold; color: #333; }' : '') +
-                  'h1 { text-align: center; margin-bottom: 4px; letter-spacing: 1px; }' +
-                  '.sub-header { text-align: center; margin-top: 4px; margin-bottom: 8px; font-size: 14px; color: #666; font-style: italic; white-space: pre-line; }' +
-                  'h2 { text-align: center; margin-top: 0; font-weight: normal; font-size: 16px; }' +
-                  'table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 14px; table-layout: fixed; }' +
-                  'th, td { padding: 8px 6px; border-bottom: 1px solid #ddd; }' +
-                  'th { background: #f5f5f5; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }' +
-                  'th.item, td.item { text-align: left; width: 50%; }' +
-                  'th.qty, td.qty { text-align: center; width: 10%; }' +
-                  'th.price, td.price { text-align: right; width: 20%; }' +
-                  '.totals { margin-top: 16px; font-size: 14px; }' +
-                  '.totals div { display: flex; justify-content: space-between; margin-bottom: 4px; }' +
-                  '.totals div strong { font-size: 16px; }' +
-                  '.footer { margin-top: 24px; text-align: center; font-size: 12px; color: #777; }' +
-                  '.gratuity { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #ccc; }' +
-                  '.gratuity-title { text-align: center; font-size: 12px; color: #666; margin-bottom: 8px; }' +
-                  '.gratuity-options { display: flex; justify-content: space-around; font-size: 11px; }' +
-                  '.gratuity-option { text-align: center; }' +
-                  '.gratuity-option .percent { font-weight: bold; }' +
-                  '.gratuity-option .amount { color: #666; }' +
-                '</style>' +
-              '</head>' +
-              '<body>' +
-                (showTicketCount ? `<div class="ticket-count">${ticketCountChinese}</div>` : '') +
-                `<h1>${headerText}</h1>` +
-                (subHeaderText ? `<div class="sub-header">${subHeaderText}</div>` : '') +
-                `<h2>Table ${tableNumber}</h2>` +
-                `<div>Server Mode: ${isDinner ? 'Dinner' : 'Lunch'}</div>` +
-                (showPrintTime ? `<div style="text-align: center; margin-top: 8px; font-size: 11px; color: #999;">${new Date().toLocaleString()}</div>` : '') +
-                '<table>' +
-                  '<thead>' +
-                    '<tr>' +
-                      '<th class="item">Item</th>' +
-                      '<th class="qty">Qty</th>' +
-                      '<th class="price">Price</th>' +
-                      '<th class="price">Total</th>' +
-                    '</tr>' +
-                  '</thead>' +
-                  '<tbody>' +
-                    (htmlRows || '<tr><td colspan="4">No items</td></tr>') +
-                  '</tbody>' +
-                '</table>' +
-                '<div class="totals">' +
-                  `<div><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>` +
-                  `<div><span>Tax</span><span>$${taxAmount.toFixed(2)}</span></div>` +
-                  `<div><strong>Total</strong><strong>$${totalWithTax ? totalWithTax.toFixed(2) : (subtotal * store.TAX_RATE).toFixed(2)}</strong></div>` +
-                '</div>' +
-                (footerText ? `<div class="footer">${footerText}</div>` : '') +
-                (showGratuity ? `
-                  <div class="gratuity">
-                    <div class="gratuity-title">Gratuity Suggestions</div>
-                    <div class="gratuity-options">
-                      ${gratuityPercentages.map(percent => `
-                        <div class="gratuity-option">
-                          <div class="percent">${percent}%</div>
-                          <div class="amount">$${(gratuityBaseAmount * percent / 100).toFixed(2)}</div>
-                        </div>
-                      `).join('')}
-                    </div>
-                  </div>
-                ` : '') +
-              '</body>' +
-              '</html>'
-
-            // Use the same print method as togo orders
-            this.openPrintDocument(receiptHtml)
-
-            // Don't close dialog immediately after printing - let the print dialog appear first
-            // The dialog will be closed by the caller if needed, or user can close it manually
-            // Only update the table state, don't auto-close
-            this.$store.commit('setTableOccupied', { index: this.tableIndex, value: false })
-            this.notifyPanel('summary', { tab: 'check' })
-            // Removed auto-close: this.dialogOpen = false
         },
         payAndClose() {
-            this.$store.commit('paid')
-            this.notifyPanel('summary', { tab: 'check' })
-            this.dialogOpen = false
-        },
-        clearTable() {
-            this.$store.commit('clearEverything')
-            this.notifyPanel('summary', { tab: 'check' })
+            try {
+                this.$store.dispatch('payTable')
+                this.notifyPanel('summary', { tab: 'check' })
+                this.dialogOpen = false
+                showSuccess(`${this.getTableDisplayName()} ${this.getTranslatedLabel('marked as paid')}`)
+            } catch (error) {
+                errorHandler.handle(error, {
+                    context: 'payTable',
+                    showToUser: true
+                })
+            }
         },
         tableHasActivity(index) {
-            const table = this.$store.state.tables[index] || {}
+            // Access table by number (not index)
+            const tables = this.$store.state.tables || {}
+            const table = Array.isArray(tables)
+                ? tables[index] || {}
+                : tables[index] || {}
             const guestCount = Number(table.adult || 0) + Number(table.bigKid || 0) + Number(table.smlKid || 0)
             const hasDrinks = Array.isArray(table.drinks) && table.drinks.length > 0
             const hasTogo = Number(table.togo || 0) > 0
@@ -818,6 +650,12 @@ export default {
         window.dispatchEvent(new CustomEvent('pos-table-panel-blur', {
             detail: { tableIndex: this.tableIndex }
         }))
+        if (this.counterUpdateTimeout) {
+            clearTimeout(this.counterUpdateTimeout)
+        }
+        if (this.drinkAddTimeout) {
+            clearTimeout(this.drinkAddTimeout)
+        }
     }
 }
 </script>
@@ -836,6 +674,22 @@ export default {
   gap: 16px;
   padding: 20px 24px 20px 24px;
   flex-wrap: wrap;
+}
+
+@media (min-width: 768px) and (max-width: 900px) and (orientation: landscape) {
+  /* iPad Mini - compact header */
+  .pos-dialog__header {
+    padding: 18px 20px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .pos-dialog__header {
+    padding: 24px 28px 24px 28px;
+    gap: 20px;
+  }
 }
 
 .header-info {
@@ -857,6 +711,14 @@ export default {
   font-size: 26px;
   font-weight: 700;
   letter-spacing: 0.4px;
+  line-height: 1.4;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  /* Regular iPad landscape */
+  .dialog-title {
+    font-size: 32px;
+  }
 }
 
 .meta-time {
@@ -864,6 +726,13 @@ export default {
   font-weight: 600;
   display: inline-flex;
   align-items: center;
+  line-height: 1.5;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .meta-time {
+    font-size: 15px;
+  }
 }
 
 .header-controls {
@@ -883,6 +752,36 @@ export default {
   box-shadow: 0 6px 16px rgba(15, 25, 35, 0.12);
   flex: 0 1 auto;
   white-space: nowrap;
+  font-size: 14px;
+  padding: 10px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+@media (min-width: 768px) and (max-width: 900px) and (orientation: landscape) {
+  /* iPad Mini - smaller buttons to fit in one row */
+  .header-controls {
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  
+  .header-btn {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 12px;
+    flex: 0 1 auto;
+    min-width: 0;
+    letter-spacing: 0.3px;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .header-btn {
+    min-height: 52px;
+    padding: 14px 18px;
+    font-size: 15px;
+  }
 }
 
 .pos-dialog__content {
@@ -890,6 +789,13 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .pos-dialog__content {
+    padding: 12px 28px 24px 28px;
+    gap: 28px;
+  }
 }
 
 .dialog-section {
@@ -900,6 +806,13 @@ export default {
   flex-direction: column;
   gap: 16px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .dialog-section {
+    padding: 24px 28px;
+    gap: 20px;
+  }
 }
 
 .dialog-section + .dialog-section {
@@ -927,6 +840,13 @@ export default {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
+  line-height: 1.5;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .section-header h4 {
+    font-size: 22px;
+  }
 }
 
 .section-actions {
@@ -937,6 +857,14 @@ export default {
 .section-note {
   font-size: 13px;
   color: rgba(31, 39, 51, 0.55);
+  line-height: 1.6;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .section-note {
+    font-size: 15px;
+    color: rgba(31, 39, 51, 0.65);
+  }
 }
 
 .counter-grid {
@@ -955,6 +883,13 @@ export default {
   gap: 10px;
 }
 
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .counter-card {
+    padding: 20px 24px;
+    gap: 14px;
+  }
+}
+
 .counter-heading {
   display: flex;
   justify-content: space-between;
@@ -965,8 +900,17 @@ export default {
   font-size: 13px;
   text-transform: uppercase;
   font-weight: 600;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
   color: rgba(31, 39, 51, 0.65);
+  line-height: 1.5;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .counter-label {
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: rgba(31, 39, 51, 0.75);
+  }
 }
 
 .counter-value {
@@ -976,11 +920,52 @@ export default {
   gap: 12px;
   font-size: 24px;
   font-weight: 700;
+  transition: transform 0.2s ease;
+  line-height: 1.5;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .counter-value {
+    font-size: 28px;
+    gap: 16px;
+  }
+}
+
+.counter-value.updated {
+  animation: counterPulse 0.4s ease;
+}
+
+@keyframes counterPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+    color: var(--v-theme-primary);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .counter-actions {
   display: inline-flex;
   gap: 4px;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .counter-actions .v-btn {
+    min-width: 48px;
+    min-height: 48px;
+    width: 48px;
+    height: 48px;
+  }
+  
+  .counter-actions .v-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
 }
 
 .drink-tags {
@@ -995,6 +980,42 @@ export default {
 
 .drink-tags--empty {
   visibility: hidden;
+}
+
+.drink-chip {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .drink-chip {
+    font-size: 14px;
+    height: 32px;
+    padding: 0 12px;
+  }
+  
+  .drink-chip .v-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.drink-chip--added {
+  animation: chipAdded 0.5s ease;
+}
+
+@keyframes chipAdded {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .drink-selector {
@@ -1017,6 +1038,24 @@ export default {
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 8px 16px rgba(15, 25, 35, 0.1);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  line-height: 1.5;
+  min-height: 42px;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .drink-button {
+    height: 48px;
+    min-height: 48px;
+    font-size: 16px;
+    gap: 10px;
+    padding: 0 16px;
+  }
+  
+  .drink-button .v-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
 }
 
 .drink-button:hover {
@@ -1026,6 +1065,20 @@ export default {
 
 .drink-button:focus-visible {
   outline: 2px solid rgba(0, 137, 123, 0.5);
+  outline-offset: 2px;
+}
+
+/* Focus indicators for accessibility */
+.header-btn:focus-visible,
+.counter-actions .v-btn:focus-visible {
+  outline: 2px solid rgba(0, 137, 123, 0.6);
+  outline-offset: 2px;
+}
+
+/* Ensure focus is visible for all interactive elements */
+.v-btn:focus-visible,
+button:focus-visible {
+  outline: 2px solid rgba(0, 137, 123, 0.6);
   outline-offset: 2px;
 }
 
@@ -1045,18 +1098,55 @@ export default {
   gap: 6px;
 }
 
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .summary-card {
+    padding: 20px 24px;
+    gap: 10px;
+  }
+}
+
+/* Screen reader only text */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 .summary-label {
   font-size: 13px;
   text-transform: uppercase;
   font-weight: 600;
-  letter-spacing: 0.6px;
-  color: rgba(31, 39, 51, 0.6);
+  letter-spacing: 0.8px;
+  color: rgba(31, 39, 51, 0.8);
+  line-height: 1.5;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .summary-label {
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: rgba(31, 39, 51, 0.85);
+  }
 }
 
 .summary-value {
   font-size: 20px;
   font-weight: 700;
   color: rgba(31, 39, 51, 0.88);
+  line-height: 1.5;
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .summary-value {
+    font-size: 28px;
+    color: rgba(31, 39, 51, 0.95);
+  }
 }
 
 .summary-value--accent {
@@ -1064,28 +1154,51 @@ export default {
 }
 
 @media (max-width: 600px) {
+  .pos-dialog {
+    border-radius: 0;
+  }
+  
   .dialog-title {
     font-size: 22px;
   }
+  
   .pos-dialog__header {
     flex-direction: column;
     align-items: stretch;
+    padding: 16px 20px;
   }
+  
   .header-controls {
-    justify-content: center;
-    flex-wrap: nowrap;
-    gap: 6px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
   }
+  
   .header-controls .v-btn {
-    flex: 0 1 auto;
-    min-width: auto;
-    font-size: 11px;
-    padding: 8px 10px;
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    font-size: 12px;
+    padding: 10px 12px;
   }
+  
+  .pos-dialog__content {
+    padding: 8px 20px 20px 20px;
+  }
+  
   .counter-grid {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .drink-selector {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
 </style>

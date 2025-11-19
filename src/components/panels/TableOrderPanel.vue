@@ -94,6 +94,9 @@
 
 <script>
 import { translate, getTranslation } from '../../utils/translations.js'
+import { DRINK_CODES } from '../../constants/drinks.js'
+import { useTimerManagement } from '../../composables/useTimerManagement.js'
+import { isOccupiedOrPrinted } from '../../services/tableStatusService.js'
 
 export default {
   name: 'TableOrderPanel',
@@ -104,9 +107,17 @@ export default {
     }
   },
   emits: ['manage-table', 'print-table', 'pay-table'],
+  setup() {
+    // Use timer management composable for automatic cleanup
+    const { setManagedTimeout, clearManagedTimeout } = useTimerManagement()
+    return {
+      setManagedTimeout,
+      clearManagedTimeout
+    }
+  },
   data: () => ({
     highlightSection: null,
-    highlightTimeout: null
+    highlightTimeoutId: null // Store timeout ID for clearing
   }),
   computed: {
     table() {
@@ -129,12 +140,7 @@ export default {
       }
       // For occupied or printed tables without stored mode, infer from stored price
       // This handles tables that were calculated before pricingModeDinner was added
-      // A table is printed if it has a totalPrice > 0 but is not occupied
-      const isOccupied = this.table.occupied
-      const isPrinted = !isOccupied && this.table.totalPrice && parseFloat(this.table.totalPrice) > 0
-      const hasTimeStamp = this.table.time && this.table.time > 0
-      const isOccupiedOrPrinted = isOccupied || isPrinted || hasTimeStamp
-      if (isOccupiedOrPrinted && this.table.totalPrice && parseFloat(this.table.totalPrice) > 0) {
+      if (isOccupiedOrPrinted(this.table) && this.table.totalPrice && parseFloat(this.table.totalPrice) > 0) {
         const state = this.$store.state
         const adultCount = parseInt(this.table.adult) || 0
         const bigKidCount = parseInt(this.table.bigKid) || 0
@@ -206,7 +212,7 @@ export default {
 
       Object.entries(counts).forEach(([code, qty]) => {
         const label = this.drinkLabel(code)
-        const price = code === 'WTER' ? this.pricing.water : this.pricing.drink
+        const price = code === DRINK_CODES.WATER ? this.pricing.water : this.pricing.drink
         addItem(label, qty, price)
       })
 
@@ -238,13 +244,16 @@ export default {
     setHighlight(section, options = {}) {
       const normalized = section === 'drinks' ? 'check' : section
       this.highlightSection = normalized || null
-      if (this.highlightTimeout) {
-        clearTimeout(this.highlightTimeout)
+      // Clear existing timeout if any
+      if (this.highlightTimeoutId !== null) {
+        this.clearManagedTimeout(this.highlightTimeoutId)
+        this.highlightTimeoutId = null
       }
+      // Set new timeout if not persistent
       if (!options.persistent && normalized) {
-        this.highlightTimeout = setTimeout(() => {
+        this.highlightTimeoutId = this.setManagedTimeout(() => {
           this.highlightSection = null
-          this.highlightTimeout = null
+          this.highlightTimeoutId = null
         }, options.duration || 1600)
       }
     },
@@ -324,8 +333,10 @@ export default {
     window.removeEventListener('pos-table-panel-highlight', this.handleExternalHighlight)
     window.removeEventListener('pos-table-panel-focus', this.handleExternalFocus)
     window.removeEventListener('pos-table-panel-blur', this.handleExternalBlur)
-    if (this.highlightTimeout) {
-      clearTimeout(this.highlightTimeout)
+    // Clear timeout if it exists (composable will also clean up automatically on unmount)
+    if (this.highlightTimeoutId !== null) {
+      this.clearManagedTimeout(this.highlightTimeoutId)
+      this.highlightTimeoutId = null
     }
   }
 }

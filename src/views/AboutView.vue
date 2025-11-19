@@ -1,6 +1,6 @@
 <script>
 import { translate } from '../utils/translations.js'
-
+  
 export default {
   data: () => ({
     togoCompose: false,
@@ -108,13 +108,13 @@ export default {
       } else {
         this.$store.state.catID = 0 // Fallback
       }
-      this.$store.commit('setOrderPanel', { type: 'togo' })
+      this.$store.dispatch('setOrderPanel', { type: 'togo' })
     },
     handleCategoryTap(categoryArrayIndex) {
       // categoryArrayIndex is the position in the menuCategories array
       this.selectCategory(categoryArrayIndex)
       this.togoCompose = true
-      this.$store.commit('setOrderPanel', { type: 'togo' })
+      this.$store.dispatch('setOrderPanel', { type: 'togo' })
     },
     registerPanelListeners() {
       if (this.listenersRegistered) return
@@ -135,7 +135,7 @@ export default {
       if (Number.isInteger(detail.categoryIndex)) {
         this.selectCategory(detail.categoryIndex)
       } else {
-        this.$store.commit('setOrderPanel', { type: 'togo' })
+        this.$store.dispatch('setOrderPanel', { type: 'togo' })
       }
       if (Number.isInteger(detail.itemIndex)) {
         this.pendingFocusIndex = detail.itemIndex
@@ -158,12 +158,12 @@ export default {
       this.activeCategoryIndex = categoryIndex >= 0 ? categoryIndex : 0
     }
     this.selectCategory(this.activeCategoryIndex)
-    this.$store.commit('setOrderPanel', { type: 'togo' })
+    this.$store.dispatch('setOrderPanel', { type: 'togo' })
     this.registerPanelListeners()
   },
   beforeUnmount() {
     this.unregisterPanelListeners()
-    this.$store.commit('setOrderPanel', null)
+    this.$store.dispatch('setOrderPanel', null)
   },
   watch: {
     '$store.state.catID'(value) {

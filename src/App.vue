@@ -1,6 +1,5 @@
 <script setup>
 import { RouterView } from 'vue-router'
-
 </script>
 
 <template>
@@ -72,7 +71,7 @@ import { RouterView } from 'vue-router'
         :elevation="0"
       >
         <v-list-item
-          prepend-avatar="https://randomuser.me/api/portraits/men/78.jpg"
+          prepend-icon="mdi-store"
           title="China Buffet"
         />
 
@@ -185,7 +184,16 @@ import { RouterView } from 'vue-router'
 
           <section class="pos-content">
             <div class="pos-content__primary">
-          <RouterView v-if="firebaseReady" />
+              <!-- Show loading skeleton while initializing -->
+              <template v-if="!firebaseReady && $store.state.loadingStates.initializing">
+                <div class="d-flex align-center justify-center" style="min-height: 400px">
+                  <div class="text-center">
+                    <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+                    <p class="text-body-1 mt-4 text-medium-emphasis">Loading tables and menu...</p>
+                  </div>
+                </div>
+              </template>
+              <RouterView v-else-if="firebaseReady" />
             </div>
             <aside v-if="showOrderPanel" class="pos-content__panel">
           <component
@@ -228,7 +236,7 @@ import { RouterView } from 'vue-router'
         class="pos-bottom-nav"
         grow
         :elevation="6"
-        height="68"
+        :height="$vuetify.display.tablet && $vuetify.display.mdAndUp ? 84 : 68"
         active-class="pos-bottom-nav__btn--active"
         v-model="bottomNav"
         @update:modelValue="handleBottomNavChange"
@@ -263,14 +271,13 @@ import { RouterView } from 'vue-router'
       <admin-menu-manager
         v-model="showMenuManager"
         :menu="$store.state.menu"
-        :saving="menuSaving"
         @save="handleMenuSave"
       />
 
       <admin-togo-sales
         v-model="showTogoSales"
         :sales="togoSalesHistory"
-        :loading="togoSalesLoading"
+        :loading="$store.state.loadingStates.loadingTogoSales"
       />
       <admin-live-sales
         v-model="showLiveSales"
@@ -280,7 +287,12 @@ import { RouterView } from 'vue-router'
       />
 
       <!-- Admin: Receipt Settings -->
-      <v-dialog v-model="showReceiptSettings" max-width="1200" scrollable>
+      <v-dialog 
+        v-model="showReceiptSettings" 
+        :max-width="$vuetify.display.xs ? '100%' : ($vuetify.display.tablet ? '1200' : '1200')"
+        :fullscreen="$vuetify.display.xs"
+        scrollable
+      >
         <v-card>
           <v-card-title class="text-h6 d-flex align-center">
             <v-icon class="mr-2">mdi-receipt-text</v-icon>
@@ -533,7 +545,10 @@ import { RouterView } from 'vue-router'
       </v-dialog>
 
       <!-- Admin: Pricing & Tax Settings -->
-      <v-dialog v-model="showPricingSettings" max-width="480">
+      <v-dialog 
+        v-model="showPricingSettings" 
+        :max-width="$vuetify.display.xs ? '95%' : '600'"
+      >
         <v-card>
           <v-card-title class="text-h6">
             Buffet Pricing & Tax
@@ -643,26 +658,46 @@ import { RouterView } from 'vue-router'
       </v-dialog>
 
       <!-- Admin: Reset Ticket Count Confirmation -->
-      <v-dialog v-model="showResetTicketCountConfirm" max-width="420">
+      <v-dialog 
+        v-model="showResetTicketCountConfirm" 
+        :max-width="$vuetify.display.xs ? '95%' : '480'"
+        persistent
+        role="alertdialog"
+        aria-labelledby="reset-ticket-title"
+        aria-describedby="reset-ticket-description"
+      >
         <v-card>
-          <v-card-title class="text-h6">Reset Ticket Count</v-card-title>
-          <v-card-text>
-            <p>Are you sure you want to reset the ticket count to zero?</p>
-            <p class="text-caption text-medium-emphasis mt-2">
+          <v-card-title class="text-h6" id="reset-ticket-title">
+            <v-icon color="error" class="mr-2" aria-hidden="true">mdi-alert-circle</v-icon>
+            Reset Ticket Count?
+          </v-card-title>
+          <v-card-text id="reset-ticket-description">
+            <p class="mb-0">Are you sure you want to reset the ticket count to zero?</p>
+            <p class="mt-2 text-medium-emphasis" style="font-size: 13px;">
               Current ticket count: <strong>{{ $store.state.ticketCount || 0 }}</strong>
             </p>
-            <p class="text-caption text-medium-emphasis">
+            <p class="mt-2 text-medium-emphasis" style="font-size: 13px;">
               This action cannot be undone.
             </p>
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn variant="text" @click="showResetTicketCountConfirm = false">Cancel</v-btn>
+            <v-btn 
+              variant="text" 
+              @click="showResetTicketCountConfirm = false"
+              @keydown.enter.prevent="showResetTicketCountConfirm = false"
+              @keydown.esc="showResetTicketCountConfirm = false"
+            >
+              Cancel
+            </v-btn>
             <v-btn
               color="error"
               variant="flat"
-              :loading="resetTicketCountLoading"
+              :aria-label="'Confirm reset ticket count'"
+              :loading="$store.state.loadingStates.resettingTicketCount"
+              :disabled="$store.state.loadingStates.resettingTicketCount"
               @click="performResetTicketCount"
+              @keydown.enter.prevent="performResetTicketCount"
             >
               Reset
             </v-btn>
@@ -671,21 +706,45 @@ import { RouterView } from 'vue-router'
       </v-dialog>
 
       <!-- Admin: Reset Sales Confirmation -->
-      <v-dialog v-model="showResetConfirm" max-width="420">
+      <v-dialog 
+        v-model="showResetConfirm" 
+        :max-width="$vuetify.display.xs ? '95%' : '480'"
+        persistent
+        role="alertdialog"
+        aria-labelledby="reset-sales-title"
+        aria-describedby="reset-sales-description"
+      >
         <v-card>
-          <v-card-title class="text-h6">Reset Sales Data</v-card-title>
-          <v-card-text>
-            This will clear the sales summary and history. This action cannot be undone.
-            Are you sure you want to continue?
+          <v-card-title class="text-h6" id="reset-sales-title">
+            <v-icon color="error" class="mr-2" aria-hidden="true">mdi-alert-circle</v-icon>
+            Reset Sales Data?
+          </v-card-title>
+          <v-card-text id="reset-sales-description">
+            <p class="mb-0">
+              This will clear the sales summary and history. Are you sure you want to continue?
+            </p>
+            <p class="mt-2 text-medium-emphasis" style="font-size: 13px;">
+              This action cannot be undone.
+            </p>
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn text @click="showResetConfirm = false">Cancel</v-btn>
+            <v-btn 
+              variant="text" 
+              @click="showResetConfirm = false"
+              @keydown.enter.prevent="showResetConfirm = false"
+              @keydown.esc="showResetConfirm = false"
+            >
+              Cancel
+            </v-btn>
             <v-btn
-              color="red"
+              color="error"
               variant="flat"
-              :loading="resetLoading"
+              :aria-label="'Confirm reset sales data'"
+              :loading="$store.state.loadingStates.resettingSales"
+              :disabled="$store.state.loadingStates.resettingSales"
               @click="performResetSales"
+              @keydown.enter.prevent="performResetSales"
             >
               Reset
             </v-btn>
@@ -696,7 +755,7 @@ import { RouterView } from 'vue-router'
       <v-snackbar
         v-model="snackbar"
         :color="snackbarColor"
-        timeout="3000"
+        :timeout="snackbarTimeout"
       >
         {{ snackbarMessage }}
         <template #actions>
@@ -717,6 +776,8 @@ import TogoOrderPanel from './components/panels/TogoOrderPanel.vue'
 import TogoEditItems from './components/TogoEditItems.vue'
 import CashierReceiptPanel from './components/panels/CashierReceiptPanel.vue'
 import { translate } from './utils/translations.js'
+import { errorHandler } from './services/errorHandler.js'
+import { onSuccessNotification, showSuccess } from './utils/successNotifications.js'
 
 export default {
   components: {
@@ -747,19 +808,17 @@ export default {
     ],
     showMenuManager: false,
     showResetConfirm: false,
-    menuSaving: false,
-    resetLoading: false,
     showResetTicketCountConfirm: false,
-    resetTicketCountLoading: false,
     snackbar: false,
     snackbarMessage: '',
     snackbarColor: 'success',
+    snackbarTimeout: 3000,
+    successNotificationUnsubscribe: null,
     showTogoSales: false,
     showLiveSales: false,
     showTableManager: false,
     showPricingSettings: false,
     showReceiptSettings: false,
-    togoSalesLoading: false,
     togoSalesHistory: [],
     receiptSettingsForm: {
       showTicketCount: true,
@@ -806,7 +865,7 @@ export default {
       this.showReceiptSettings = true
     },
     async saveReceiptSettings() {
-      this.$store.commit('updateReceiptSettings', {
+      this.$store.dispatch('updateReceiptSettings', {
         showTicketCount: this.receiptSettingsForm.showTicketCount,
         showPrintTime: this.receiptSettingsForm.showPrintTime,
         headerText: this.receiptSettingsForm.headerText || 'China Buffet',
@@ -825,14 +884,16 @@ export default {
           snapshot.timestamp = new Date().toISOString()
           await this.$store.dispatch('saveAppStateImmediately', snapshot)
         } catch (error) {
-          console.error('[Firestore] Failed to save receipt settings:', error)
+          errorHandler.handleFirestore(error, 'saveReceiptSettings', {
+            context: 'saveReceiptSettings',
+            showToUser: true
+          })
+          return // Don't show success message if save failed
         }
       }
       
       this.showReceiptSettings = false
-      this.snackbarMessage = 'Receipt settings updated.'
-      this.snackbarColor = 'success'
-      this.snackbar = true
+      showSuccess('Receipt settings updated')
     },
     openPricingSettings() {
       // Seed form from current store values
@@ -849,7 +910,7 @@ export default {
       this.showPricingSettings = true
     },
     async savePricingSettings() {
-      this.$store.commit('updatePricingSettings', {
+      this.$store.dispatch('updatePricingSettings', {
         adultLunch: this.pricingForm.adultLunch,
         bigKidLunch: this.pricingForm.bigKidLunch,
         smallKidLunch: this.pricingForm.smallKidLunch,
@@ -868,14 +929,15 @@ export default {
           snapshot.timestamp = new Date().toISOString()
           await this.$store.dispatch('saveAppStateImmediately', snapshot)
         } catch (error) {
-          console.error('[Firestore] Failed to save pricing settings:', error)
+          errorHandler.handleFirestore(error, 'savePricingSettings', {
+            context: 'savePricingSettings',
+            showToUser: true
+          })
         }
       }
       
       this.showPricingSettings = false
-      this.snackbarMessage = 'Pricing & tax updated.'
-      this.snackbarColor = 'success'
-      this.snackbar = true
+      showSuccess('Pricing & tax updated')
     },
     getAppStateSnapshot(state) {
       // Helper to create app state snapshot (same logic as in store)
@@ -910,7 +972,7 @@ export default {
       }
     },
     toggleLanguage() {
-      this.$store.commit('toggleLanguage')
+      this.$store.dispatch('toggleLanguage')
       // Prevent navigation when clicking language button
       this.syncBottomNavWithRoute()
     },
@@ -927,7 +989,9 @@ export default {
         })
         this.loginPassword = ''
       } catch (error) {
-        console.error('Login failed:', error)
+        // Error is already handled by the store action with user-friendly messages
+        // Log for debugging purposes only
+        errorHandler.handle(error, { context: 'login', showToUser: false })
       }
     },
     async logout() {
@@ -991,17 +1055,14 @@ export default {
       }
       this.drawer = false
       this.showTogoSales = true
-      this.togoSalesLoading = true
       try {
         const history = await this.$store.dispatch('loadTogoSalesHistory')
         this.togoSalesHistory = history
       } catch (error) {
-        console.error('Failed to load togo sales history:', error)
-        this.snackbarMessage = 'Failed to load to-go sales history'
-        this.snackbarColor = 'error'
-        this.snackbar = true
-      } finally {
-        this.togoSalesLoading = false
+        errorHandler.handle(error, {
+          context: 'loadTogoSales',
+          showToUser: true
+        })
       }
     },
     openLiveSales() {
@@ -1019,50 +1080,47 @@ export default {
       this.showTableManager = true
     },
     async handleMenuSave(menu) {
-      this.menuSaving = true
       try {
         await this.$store.dispatch('updateMenuFromAdmin', menu)
-        this.snackbarMessage = 'Menu updated successfully'
-        this.snackbarColor = 'success'
-        this.snackbar = true
+        showSuccess('Menu updated successfully')
         this.showMenuManager = false
       } catch (error) {
-        console.error('Failed to update menu:', error)
-        this.snackbarMessage = 'Failed to update menu'
-        this.snackbarColor = 'error'
-        this.snackbar = true
-      } finally {
-        this.menuSaving = false
+        errorHandler.handle(error, {
+          context: 'saveMenu',
+          showToUser: true
+        })
       }
     },
     async performResetSales() {
-      this.resetLoading = true
       try {
         const result = await this.$store.dispatch('resetSalesData')
         if (result?.success) {
-          this.snackbarMessage = 'Sales data reset successfully'
-          this.snackbarColor = 'success'
+          showSuccess('Sales data reset successfully')
+          this.showResetConfirm = false
         } else {
-          this.snackbarMessage = result?.error || 'Failed to reset sales data'
-          this.snackbarColor = 'error'
+          // Handle error from action result
+          const error = new Error(result?.error || 'Failed to reset sales data')
+          errorHandler.handle(error, {
+            context: 'resetSales',
+            showToUser: true
+          })
+          this.showResetConfirm = false
         }
-        this.snackbar = true
-        this.showResetConfirm = false
       } catch (error) {
-        console.error('Failed to reset sales data:', error)
-        this.snackbarMessage = 'Failed to reset sales data'
-        this.snackbarColor = 'error'
-        this.snackbar = true
+        errorHandler.handle(error, {
+          context: 'resetSales',
+          showToUser: true
+        })
+        this.showResetConfirm = false
       } finally {
         this.drawer = false
-        this.resetLoading = false
       }
     },
     async performResetTicketCount() {
-      this.resetTicketCountLoading = true
+      this.$store.commit('setLoadingState', { key: 'resettingTicketCount', value: true })
       try {
         // Reset ticket count in store
-        this.$store.commit('setTicketCount', 0)
+        this.$store.dispatch('setTicketCount', 0)
         
         // Immediately save app state to Firestore
         if (this.$store.state.useFirebase && this.$store.state.firebaseInitialized && this.$store.state.authUser) {
@@ -1090,23 +1148,21 @@ export default {
             snapshot.timestamp = new Date().toISOString()
             await this.$store.dispatch('saveAppStateImmediately', snapshot)
           } catch (error) {
-            console.error('[Firestore] Failed to save ticket count reset:', error)
+            // Error will be handled by outer catch block with user-friendly messages
             throw error
           }
         }
         
-        this.snackbarMessage = 'Ticket count reset successfully'
-        this.snackbarColor = 'success'
-        this.snackbar = true
+        showSuccess('Ticket count reset successfully')
         this.showResetTicketCountConfirm = false
       } catch (error) {
-        console.error('Failed to reset ticket count:', error)
-        this.snackbarMessage = 'Failed to reset ticket count'
-        this.snackbarColor = 'error'
-        this.snackbar = true
+        errorHandler.handle(error, {
+          context: 'resetTicketCount',
+          showToUser: true
+        })
       } finally {
         this.drawer = false
-        this.resetTicketCountLoading = false
+        this.$store.commit('setLoadingState', { key: 'resettingTicketCount', value: false })
       }
     },
     ensureRoute(target) {
@@ -1117,7 +1173,7 @@ export default {
     },
     handlePanelManageTable(index) {
       const tableIndex = typeof index === 'number' ? index : this.$store.state.tableNum || 0
-      this.$store.commit('setOrderPanel', { type: 'table', tableIndex })
+      this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex })
       this.ensureRoute('home').finally(() => {
         window.dispatchEvent(
           new CustomEvent('pos-open-table-details', { detail: { tableIndex } })
@@ -1126,7 +1182,7 @@ export default {
     },
     handlePanelPrintTable(index) {
       const tableIndex = typeof index === 'number' ? index : this.$store.state.tableNum || 0
-      this.$store.commit('setOrderPanel', { type: 'table', tableIndex })
+      this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex })
       this.ensureRoute('home').finally(() => {
         window.dispatchEvent(
           new CustomEvent('pos-print-table', { detail: { tableIndex } })
@@ -1134,9 +1190,20 @@ export default {
       })
     },
     handlePanelPayTable(index) {
-      const tableIndex = typeof index === 'number' ? index : this.$store.state.tableNum || 0
-      this.$store.commit('setOrderPanel', { type: 'table', tableIndex })
-      this.$store.commit('paid')
+      try {
+        const tableIndex = typeof index === 'number' ? index : this.$store.state.tableNum || 0
+        this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex })
+        this.$store.dispatch('payTable')
+        const tables = this.$store.state.tables || {}
+        const table = Array.isArray(tables) ? tables[tableIndex] : tables[tableIndex]
+        const tableName = table?.name || `Table ${table?.number || tableIndex + 1}`
+        showSuccess(`${this.getTranslatedLabel('Table')} ${tableName} ${this.getTranslatedLabel('marked as paid')}`)
+      } catch (error) {
+        errorHandler.handle(error, {
+          context: 'payTable',
+          showToUser: true
+        })
+      }
     },
     handlePanelEditItems() {
       this.togoDialogOpen = false
@@ -1148,10 +1215,18 @@ export default {
         ref.printTogoReceipt()
         return
       }
-      this.$store.commit('calculateTogoTotal')
+      this.$store.dispatch('calculateTogoTotal')
     },
     handlePanelTogoPaid() {
-      this.$store.commit('togoPaid')
+      try {
+        this.$store.dispatch('payTogo')
+        showSuccess('To-go order marked as paid')
+      } catch (error) {
+        errorHandler.handle(error, {
+          context: 'payTogo',
+          showToUser: true
+        })
+      }
     },
     openTogoEditFromCurrent() {
       this.togoDialogOpen = false;
@@ -1164,7 +1239,7 @@ export default {
         return this.$store.state.isDinner ? 'dinner' : 'lunch'
       },
       set(value) {
-        this.$store.commit('setDinnerMode', value === 'dinner')
+        this.$store.dispatch('setDinnerMode', value === 'dinner')
         this.applyTheme(value)
         if (this.$route.name !== 'home') {
           this.$router.push({ name: 'home' })
@@ -1185,7 +1260,12 @@ export default {
       if (!this.requiresAuth) return true
       if (!this.$store.state.firebaseInitialized) return false
       if (!Array.isArray(this.$store.state.menu) || this.$store.state.menu.length === 0) return false
-      if (!Array.isArray(this.$store.state.tables) || this.$store.state.tables.length === 0) return false
+      // Handle both array (legacy) and object (new format) for tables
+      const tables = this.$store.state.tables || {}
+      const hasTables = Array.isArray(tables) 
+        ? tables.length > 0 
+        : Object.keys(tables).length > 0
+      if (!hasTables) return false
       return true
     },
     showLogin() {
@@ -1279,6 +1359,39 @@ export default {
     },
     currentLanguageLabel() {
       return this.isChinese ? '中文' : 'English'
+    }
+  },
+  mounted() {
+    // Set up error handler notification callback
+    errorHandler.setNotificationCallback((errorInfo) => {
+      // Show user-friendly message (not technical error details)
+      this.snackbarMessage = errorInfo.message || errorInfo.title || 'An error occurred'
+      this.snackbarColor = 'error'
+      this.snackbarTimeout = 4000 // Longer timeout for errors
+      this.snackbar = true
+      
+      // Log technical details for debugging (not shown to user)
+      if (errorInfo.error && process.env.NODE_ENV === 'development') {
+        console.error('[Error Handler]', errorInfo.context, errorInfo.error)
+      }
+    })
+    
+    // Set up success notification listener
+    this.successNotificationUnsubscribe = onSuccessNotification((detail) => {
+      this.snackbarMessage = detail.message
+      this.snackbarColor = detail.type || 'success'
+      this.snackbarTimeout = detail.timeout || 3000
+      this.snackbar = true
+    })
+  },
+  beforeUnmount() {
+    // Clear error handler callback
+    errorHandler.setNotificationCallback(null)
+    
+    // Unsubscribe from success notifications
+    if (this.successNotificationUnsubscribe) {
+      this.successNotificationUnsubscribe()
+      this.successNotificationUnsubscribe = null
     }
   },
   watch: {
@@ -1426,6 +1539,22 @@ export default {
    }
  }
 
+@media (min-width: 768px) and (max-width: 900px) and (orientation: landscape) {
+  /* iPad Mini landscape - smaller side panel */
+  .pos-content {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 16px;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  /* Regular iPad landscape */
+  .pos-content {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 20px;
+  }
+}
+
 /* Hide side panel on iPhone vertical for cashier view */
 @media (max-width: 480px) and (orientation: portrait) {
   .pos-content {
@@ -1455,6 +1584,39 @@ export default {
   max-height: calc(100vh - 200px);
   overflow-y: auto;
   overflow-x: hidden;
+  width: 400px;
+}
+
+@media (min-width: 768px) and (max-width: 900px) and (orientation: landscape) {
+  /* iPad Mini landscape - compact panel */
+  .pos-content__panel {
+    width: 340px;
+    padding: 16px;
+    gap: 10px;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  /* Regular iPad landscape */
+  .pos-content__panel {
+    width: 380px;
+    padding: 18px;
+    gap: 12px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1200px) and (orientation: landscape) {
+  /* Larger tablets/small desktops (e.g., 1080x810) */
+  .pos-content {
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 20px;
+  }
+  
+  .pos-content__panel {
+    width: 360px;
+    padding: 20px;
+    gap: 12px;
+  }
 }
 
 .pos-content__panel-placeholder {
@@ -1511,14 +1673,84 @@ export default {
   margin-bottom: 4px;
 }
 
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  .pos-bottom-nav__icon {
+    margin-bottom: 6px;
+  }
+  
+  .pos-bottom-nav__icon .v-icon {
+    font-size: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
 .pos-bottom-nav__label {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.4px;
+  line-height: 1.4;
+}
+
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  .pos-bottom-nav__label {
+    font-size: 16px;
+    letter-spacing: 0.6px;
+  }
 }
 
 .v-navigation-drawer {
   backdrop-filter: blur(18px);
   border-right: 1px solid color-mix(in srgb, var(--v-theme-primary) 12%, transparent) !important;
+}
+
+/* Mobile responsive styles for dialogs */
+@media (max-width: 600px) {
+  /* Confirmation dialogs */
+  .v-dialog .v-card-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .v-dialog .v-card-actions .v-btn {
+    width: 100%;
+    margin: 0;
+  }
+  
+  .v-dialog .v-card-actions .v-spacer {
+    display: none;
+  }
+  
+  /* Settings dialogs */
+  .v-dialog .v-card-title {
+    font-size: 18px;
+    padding: 16px;
+  }
+  
+  .v-dialog .v-card-text {
+    padding: 16px;
+  }
+  
+  /* Receipt settings dialog */
+  .v-dialog .v-row {
+    margin: 0;
+  }
+  
+  .v-dialog .v-col {
+    padding: 8px;
+  }
+  
+  .sticky-preview {
+    position: static !important;
+  }
+  
+  /* Pricing settings dialog */
+  .v-dialog .v-row.dense {
+    margin: 0;
+  }
+  
+  .v-dialog .v-col {
+    padding: 8px;
+  }
 }
 </style>

@@ -1,5 +1,11 @@
 <template>
-  <v-dialog v-model="internalOpen" max-width="760" scrollable transition="dialog-bottom-transition">
+  <v-dialog 
+    v-model="internalOpen" 
+    :max-width="$vuetify.display.xs ? '100%' : ($vuetify.display.tablet ? '900' : '760')"
+    :fullscreen="$vuetify.display.xs"
+    scrollable 
+    transition="dialog-bottom-transition"
+  >
     <v-card class="togo-sales">
       <v-toolbar color="accent" density="comfortable" dark>
         <v-toolbar-title>To-Go Sales</v-toolbar-title>
@@ -250,5 +256,63 @@ export default {
 
 .footer-value {
   font-size: 18px;
+}
+
+@media (max-width: 600px) {
+  .togo-sales {
+    border-radius: 0;
+  }
+  
+  .v-toolbar {
+    padding: 0 8px;
+  }
+  
+  .v-toolbar-title {
+    font-size: 16px;
+  }
+  
+  .v-card-text {
+    padding: 16px;
+  }
+  
+  .summary-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .sales-card {
+    padding: 12px 14px;
+  }
+  
+  .sales-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .sales-card__header h4 {
+    font-size: 16px;
+  }
+  
+  .sales-card__footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .v-card-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .v-card-actions .v-btn {
+    width: 100%;
+  }
+  
+  .v-card-actions .text-caption {
+    margin: 0;
+    text-align: center;
+    width: 100%;
+  }
 }
 </style>

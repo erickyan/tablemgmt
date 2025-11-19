@@ -1,7 +1,8 @@
 <template>
   <v-dialog
     v-model="dialogOpen"
-    max-width="820"
+    :max-width="$vuetify.display.xs ? '100%' : ($vuetify.display.tablet ? '950' : '820')"
+    :fullscreen="$vuetify.display.xs"
     transition="dialog-bottom-transition"
   >
     <v-card class="pos-dialog">
@@ -82,7 +83,7 @@
       </div>
     </v-card>
 
-    <v-dialog v-model="customizationDialog.open" max-width="420">
+    <v-dialog v-model="customizationDialog.open" :max-width="$vuetify.display.xs ? '95%' : '500'">
       <v-card class="custom-dialog">
         <div class="custom-dialog__header">
           <h4>{{ getTranslatedLabel('Special request') }}</h4>
@@ -142,6 +143,8 @@
 <script>
 import { DRINK_OPTIONS, getDrinkLabel, isWater } from '../utils/drinkOptions.js'
 import { translate } from '../utils/translations.js'
+import { usePrinting } from '../composables/usePrinting.js'
+import { showSuccess } from '../utils/successNotifications.js'
 
 export default {
     props: {
@@ -155,6 +158,10 @@ export default {
         }
     },
     emits: ['update:modelValue', 'close'],
+    setup() {
+        const { printTogoReceipt: printTogoReceiptComposable } = usePrinting()
+        return { printTogoReceiptComposable }
+    },
     data: () => ({
         customizationDialog: {
             open: false,
@@ -308,11 +315,14 @@ export default {
                 })
             })
             if (lines.length) {
-                this.$store.commit('appendTogoLines', lines)
+                // Lines now include menuItemId when available for normalized state
+                this.$store.dispatch('appendTogoLines', lines)
+                const itemCount = lines.reduce((sum, line) => sum + (line.quantity || 0), 0)
+                showSuccess(`${itemCount} ${this.getTranslatedLabel('item')}${itemCount !== 1 ? 's' : ''} ${this.getTranslatedLabel('added to order')}`)
             }
             this.resetDraft()
             this.dialogOpen = false
-            this.$store.commit('setOrderPanel', { type: 'togo' })
+            this.$store.dispatch('setOrderPanel', { type: 'togo' })
         },
         getCustomizationForKey(key) {
             return this.draftCustomizations[key] || null
@@ -408,6 +418,13 @@ export default {
                 ...this.draftQuantities,
                 [key]: current + 1
             }
+            // Visual feedback
+            this.highlightIndex = index
+            setTimeout(() => {
+                if (this.highlightIndex === index) {
+                    this.highlightIndex = null
+                }
+            }, 300)
         },
         decrementItem(index) {
             const key = this.dialogKey(index)
@@ -425,145 +442,16 @@ export default {
                     [key]: next
                 }
             }
+            // Visual feedback
+            this.highlightIndex = index
+            setTimeout(() => {
+                if (this.highlightIndex === index) {
+                    this.highlightIndex = null
+                }
+            }, 300)
         },
-        openPrintDocument(html) {
-            // Try popup first (Chrome-friendly approach)
-            try {
-                const popup = window.open('', '_blank', 'width=600,height=800')
-                if (popup && popup.document && !popup.closed) {
-                    // Use srcdoc for popup (modern approach, no document.write warning)
-                    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-                    const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
-                    
-                    if (bodyMatch && headMatch) {
-                        const cleanHtml = `<!DOCTYPE html><html>${headMatch[0]}${bodyMatch[0]}</html>`
-                        // Popup doesn't support srcdoc directly, but we can write to it
-                        popup.document.open()
-                        popup.document.write(cleanHtml)
-                        popup.document.close()
-                    } else {
-                        popup.document.open()
-                        popup.document.write(html)
-                        popup.document.close()
-                    }
-                    
-                    popup.focus()
-                    const cleanup = () => {
-                        popup.removeEventListener('afterprint', cleanup)
-                        try {
-                            if (popup && !popup.closed) {
-                                popup.close()
-                            }
-                        } catch (closeError) {
-                            console.warn('Print window already closed.', closeError)
-                        }
-                    }
-                    popup.addEventListener('afterprint', cleanup)
-                    // Small delay to ensure content is loaded
-                    setTimeout(() => {
-                        try {
-                            popup.print()
-                        } catch (printError) {
-                            console.warn('Print failed on popup, using iframe fallback', printError)
-                            popup.close()
-                            this.printWithIframe(html)
-                        }
-                    }, 100)
-                    return
-                }
-            } catch (error) {
-                console.warn('Popup print blocked, falling back to iframe strategy.', error)
-            }
-
-            // Fallback to iframe method
-            this.printWithIframe(html)
-        },
-        printWithIframe(html) {
-            const iframe = document.createElement('iframe')
-            iframe.style.position = 'fixed'
-            iframe.style.right = '0'
-            iframe.style.bottom = '0'
-            iframe.style.width = '0'
-            iframe.style.height = '0'
-            iframe.style.border = '0'
-            iframe.style.opacity = '0'
-            iframe.style.pointerEvents = 'none'
-            
-            // Use srcdoc attribute (modern approach, no document.write warning)
-            const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-            const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
-            
-            if (bodyMatch && headMatch) {
-                const cleanHtml = `<!DOCTYPE html><html>${headMatch[0]}${bodyMatch[0]}</html>`
-                iframe.srcdoc = cleanHtml
-            } else {
-                iframe.srcdoc = html
-            }
-            
-            document.body.appendChild(iframe)
-
-            const frameWindow = iframe.contentWindow || iframe.contentDocument
-            let printed = false
-            let fallbackTimeout = null
-            
-            const cleanup = () => {
-                if (fallbackTimeout) {
-                    clearTimeout(fallbackTimeout)
-                    fallbackTimeout = null
-                }
-                if (iframe && iframe.parentNode) {
-                    try {
-                        iframe.parentNode.removeChild(iframe)
-                    } catch (e) {
-                        // Iframe may already be removed
-                    }
-                }
-            }
-            
-            const executePrint = () => {
-                if (printed) return
-                printed = true
-                if (fallbackTimeout) {
-                    clearTimeout(fallbackTimeout)
-                    fallbackTimeout = null
-                }
-                
-                try {
-                    frameWindow.focus()
-                    requestAnimationFrame(() => {
-                        try {
-                            frameWindow.print()
-                            setTimeout(cleanup, 300)
-                        } catch (printError) {
-                            console.error('Print failed on iframe:', printError)
-                            cleanup()
-                        }
-                    })
-                } catch (error) {
-                    console.error('Error in print:', error)
-                    cleanup()
-                }
-            }
-            
-            iframe.onload = executePrint
-            
-            fallbackTimeout = setTimeout(() => {
-                if (!printed && iframe && iframe.parentNode) {
-                    const frameDoc = iframe.contentDocument
-                    if (frameDoc && (frameDoc.readyState === 'complete' || frameDoc.readyState === 'interactive')) {
-                        executePrint()
-                    } else {
-                        cleanup()
-                    }
-                } else if (printed && fallbackTimeout) {
-                    clearTimeout(fallbackTimeout)
-                    fallbackTimeout = null
-                }
-            }, 200)
-        },
-        printReceipt() {
-            this.$store.commit('calculateTogoTotal')
-            const store = this.$store.state
+        // openPrintDocument and printWithIframe are now provided by usePrinting composable
+        async printReceipt() {
             const items = this.selectedItems.map(item => ({
                 name: item.name,
                 quantity: Number(item.quantity ?? 0),
@@ -571,108 +459,10 @@ export default {
                 note: item.note ? item.note : ''
             }))
 
-            if (items.length === 0) {
-                console.warn('No items selected for to-go receipt')
-                return
-            }
-
-            const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-            const total = parseFloat(store.totalTogoPrice || (subtotal * store.TAX_RATE).toFixed(2))
-            const taxAmount = parseFloat((total - subtotal).toFixed(2))
-
-            const escapeHtml = (str = '') => String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;')
-
-            const rows = items.map(item => `
-                <tr>
-                    <td>${escapeHtml(item.name)}</td>
-                    <td class="qty">${item.quantity}</td>
-                    <td class="price">$${item.price.toFixed(2)}</td>
-                    <td class="price">$${(item.price * item.quantity).toFixed(2)}</td>
-                </tr>
-                ${item.note ? `<tr class="note-row"><td colspan="4"><strong>Note:</strong> ${escapeHtml(item.note)}</td></tr>` : ''}
-            `).join('')
-
-            const receiptHtml = '<html>' +
-              '<head>' +
-                '<title>Receipt - To-Go Order</title>' +
-                '<style>' +
-                  "body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 24px; color: #333; }" +
-                  'h1 { text-align: center; margin-bottom: 4px; letter-spacing: 1px; }' +
-                  'h2 { text-align: center; margin-top: 0; font-weight: normal; font-size: 16px; }' +
-                  'table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 14px; table-layout: fixed; }' +
-                  'th, td { padding: 8px 6px; border-bottom: 1px solid #ddd; }' +
-                  'th { background: #f5f5f5; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }' +
-                  'th.item, td.item { text-align: left; width: 50%; }' +
-                  'th.qty, td.qty { text-align: center; width: 10%; }' +
-                  'th.price, td.price { text-align: right; width: 20%; }' +
-                  '.totals { margin-top: 16px; font-size: 14px; }' +
-                  '.totals div { display: flex; justify-content: space-between; margin-bottom: 4px; }' +
-                  '.totals div strong { font-size: 16px; }' +
-                  '.sub-header { text-align: center; margin-top: 4px; margin-bottom: 8px; font-size: 14px; color: #666; font-style: italic; white-space: pre-line; }' +
-                  '.footer { margin-top: 24px; text-align: center; font-size: 12px; color: #777; }' +
-                  '.gratuity { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #ccc; }' +
-                  '.gratuity-title { text-align: center; font-size: 12px; color: #666; margin-bottom: 8px; }' +
-                  '.gratuity-options { display: flex; justify-content: space-around; font-size: 11px; }' +
-                  '.gratuity-option { text-align: center; }' +
-                  '.gratuity-option .percent { font-weight: bold; }' +
-                  '.gratuity-option .amount { color: #666; }' +
-                  '.note-row td { padding: 6px 6px 10px; font-style: italic; color: #4a4a4a; background: #f9fbff; border-bottom: 1px solid #ddd; }' +
-                '</style>' +
-              '</head>' +
-              '<body>' +
-                `<h1>${(this.$store.state.receiptSettings || {}).headerText || 'China Buffet'}</h1>` +
-                ((this.$store.state.receiptSettings || {}).subHeaderText ? `<div class="sub-header">${(this.$store.state.receiptSettings || {}).subHeaderText}</div>` : '') +
-                '<h2>To-Go Order</h2>' +
-                (((this.$store.state.receiptSettings || {}).showPrintTime !== false) ? `<div style="text-align: center; margin-top: 8px; font-size: 11px; color: #999;">${new Date().toLocaleString()}</div>` : '') +
-                '<table>' +
-                  '<thead>' +
-                    '<tr>' +
-                      '<th class="item">Item</th>' +
-                      '<th class="qty">Qty</th>' +
-                      '<th class="price">Price</th>' +
-                      '<th class="price">Total</th>' +
-                    '</tr>' +
-                  '</thead>' +
-                  '<tbody>' +
-                    rows +
-                  '</tbody>' +
-                '</table>' +
-                '<div class="totals">' +
-                  `<div><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>` +
-                  `<div><span>Tax</span><span>$${taxAmount.toFixed(2)}</span></div>` +
-                  `<div><strong>Total</strong><strong>$${total.toFixed(2)}</strong></div>` +
-                '</div>' +
-                `<div class="footer">${(this.$store.state.receiptSettings || {}).thankYouText || 'Thank you for your order!'}</div>` +
-                (((this.$store.state.receiptSettings || {}).showGratuity !== false) ? (() => {
-                  const receiptSettings = this.$store.state.receiptSettings || {}
-                  const gratuityPercentages = Array.isArray(receiptSettings.gratuityPercentages) && receiptSettings.gratuityPercentages.length > 0
-                      ? receiptSettings.gratuityPercentages
-                      : [10, 15, 20]
-                  const gratuityOnPreTax = receiptSettings.gratuityOnPreTax === true
-                  const gratuityBaseAmount = gratuityOnPreTax ? subtotal : total
-                  return `
-                    <div class="gratuity">
-                      <div class="gratuity-title">Gratuity Suggestions</div>
-                      <div class="gratuity-options">
-                        ${gratuityPercentages.map(percent => `
-                          <div class="gratuity-option">
-                            <div class="percent">${percent}%</div>
-                            <div class="amount">$${(gratuityBaseAmount * percent / 100).toFixed(2)}</div>
-                          </div>
-                        `).join('')}
-                      </div>
-                    </div>
-                  `
-                })() : '') +
-              '</body>' +
-              '</html>'
-
-            this.openPrintDocument(receiptHtml)
+            await this.printTogoReceiptComposable({
+                store: this.$store,
+                items
+            })
         },
         triggerFocus(index) {
             if (!Number.isInteger(index) || index < 0 || index >= this.menuItems.length) {
@@ -942,31 +732,57 @@ export default {
 }
 
 @media (max-width: 600px) {
-  .custom-entry {
-    grid-template-columns: auto 1fr;
+  .pos-dialog {
+    border-radius: 0;
   }
-  .custom-entry__inputs {
-    flex-wrap: wrap;
-  }
-  .custom-entry__inputs .v-text-field {
-    flex: 1 1 140px;
-  }
+  
   .pos-dialog__header {
     flex-direction: column;
     align-items: stretch;
+    padding: 16px 20px;
   }
+  
   .pos-dialog__header-actions {
     justify-content: stretch;
+    width: 100%;
   }
+  
   .pos-dialog__header-actions .v-btn {
     flex: 1 1 auto;
+    width: 100%;
   }
+  
+  .pos-dialog__content {
+    padding: 8px 0;
+  }
+  
   .item-row {
     grid-template-columns: 1fr;
     padding: 16px 18px;
+    gap: 12px;
   }
+  
   .item-row__actions {
     justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .custom-entry {
+    grid-template-columns: auto 1fr;
+  }
+  
+  .custom-entry__inputs {
+    flex-wrap: wrap;
+  }
+  
+  .custom-entry__inputs .v-text-field {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  
+  .custom-dialog {
+    border-radius: 0;
   }
 }
 </style>

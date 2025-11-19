@@ -3,10 +3,10 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import logger from '../services/logger.js'
 
 
-// TODO: Add SDKs for Firebase products that you want to use
-
+// Firebase SDKs are imported as needed
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 
@@ -30,7 +30,7 @@ if (hasValidConfig) {
   db = getFirestore(firebaseApp);
   auth = getAuth(firebaseApp);
 } else {
-  console.warn('[Firebase] Missing configuration. Firestore/Auth features are disabled until environment variables are set.');
+  logger.firestore.warn('Missing configuration. Firestore/Auth features are disabled until environment variables are set.')
 }
 
 export { db, auth }

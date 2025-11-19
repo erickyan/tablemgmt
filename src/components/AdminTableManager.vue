@@ -1,5 +1,11 @@
 <template>
-  <v-dialog v-model="internalOpen" max-width="800" scrollable transition="dialog-bottom-transition">
+  <v-dialog 
+    v-model="internalOpen" 
+    :max-width="$vuetify.display.xs ? '100%' : ($vuetify.display.tablet ? '950' : '800')"
+    :fullscreen="$vuetify.display.xs"
+    scrollable 
+    transition="dialog-bottom-transition"
+  >
     <v-card class="table-manager">
       <v-toolbar color="accent" density="comfortable" dark>
         <v-toolbar-title>Manage Tables</v-toolbar-title>
@@ -140,23 +146,47 @@
     </v-card>
 
     <!-- Confirmation dialog for removing table -->
-    <v-dialog v-model="showRemoveConfirm" max-width="400">
+    <v-dialog 
+      v-model="showRemoveConfirm" 
+      :max-width="$vuetify.display.xs ? '95%' : '480'"
+      persistent
+      role="alertdialog"
+      aria-labelledby="remove-table-title"
+      aria-describedby="remove-table-description"
+    >
       <v-card>
-        <v-card-title>Remove Table?</v-card-title>
-        <v-card-text>
-          Are you sure you want to remove <strong>Table {{ tableToRemove?.number }}</strong>?
-          <span v-if="tableToRemove?.occupied" class="text-error">
-            <br><br>Warning: This table is currently occupied. You cannot remove it.
+        <v-card-title class="text-h6" id="remove-table-title">
+          <v-icon color="error" class="mr-2" aria-hidden="true">mdi-alert-circle</v-icon>
+          Remove Table?
+        </v-card-title>
+        <v-card-text id="remove-table-description">
+          <p class="mb-0">
+            Are you sure you want to remove <strong>Table {{ tableToRemove?.number }}</strong>?
+          </p>
+          <span v-if="tableToRemove?.occupied" class="text-error d-block mt-2">
+            <strong>Warning:</strong> This table is currently occupied. You cannot remove it.
           </span>
+          <p v-else class="mt-2 text-medium-emphasis" style="font-size: 13px;">
+            This action cannot be undone.
+          </p>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="showRemoveConfirm = false">Cancel</v-btn>
+          <v-btn 
+            variant="text" 
+            @click="showRemoveConfirm = false"
+            @keydown.enter.prevent="showRemoveConfirm = false"
+            @keydown.esc="showRemoveConfirm = false"
+          >
+            Cancel
+          </v-btn>
           <v-btn
             color="error"
             variant="flat"
+            :aria-label="`Confirm remove Table ${tableToRemove?.number || ''}`"
             :disabled="tableToRemove?.occupied"
             @click="removeTable"
+            @keydown.enter.prevent="removeTable"
           >
             Remove
           </v-btn>
@@ -167,6 +197,8 @@
 </template>
 
 <script>
+import { showSuccess } from '../utils/successNotifications.js'
+
 export default {
   name: 'AdminTableManager',
   props: {
@@ -208,7 +240,11 @@ export default {
       this.tableToRemove = null
     },
     addTable() {
-      this.$store.commit('addTable')
+      this.$store.dispatch('addTable')
+      const tables = this.$store.state.tables || []
+      const newTable = Array.isArray(tables) ? tables[tables.length - 1] : Object.values(tables).pop()
+      const tableName = this.getTableDisplayName(newTable)
+      showSuccess(`Table ${tableName} added`)
     },
     confirmRemoveTable(table) {
       if (table.occupied) {
@@ -221,8 +257,10 @@ export default {
       if (!this.tableToRemove || this.tableToRemove.occupied) {
         return
       }
-      this.$store.commit('removeTable', this.tableToRemove.number)
+      const tableName = this.getTableDisplayName(this.tableToRemove)
+      this.$store.dispatch('removeTable', this.tableToRemove.number)
       this.showRemoveConfirm = false
+      showSuccess(`Table ${tableName} removed`)
       this.tableToRemove = null
     },
     getTableDisplayName(table) {
@@ -238,10 +276,12 @@ export default {
     },
     saveTableName(table) {
       const name = (this.editingTableName || '').trim()
-      this.$store.commit('updateTableName', {
+      this.$store.dispatch('updateTableName', {
         tableNumber: table.number,
         name: name || null
       })
+      const displayName = name || `Table ${table.number}`
+      showSuccess(`Table name updated to "${displayName}"`)
       this.cancelEdit()
     },
   },
@@ -293,6 +333,52 @@ export default {
 
 .gap-2 {
   gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .table-manager {
+    border-radius: 0;
+  }
+  
+  .v-toolbar {
+    padding: 0 8px;
+  }
+  
+  .v-toolbar-title {
+    font-size: 16px;
+  }
+  
+  .v-card-text {
+    padding: 16px;
+  }
+  
+  .table-card {
+    margin-bottom: 12px;
+  }
+  
+  .table-card .v-card-text {
+    padding: 12px;
+  }
+  
+  .d-flex.align-center.justify-space-between {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .table-name-input {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .v-card-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .v-card-actions .v-btn {
+    width: 100%;
+  }
 }
 </style>
 

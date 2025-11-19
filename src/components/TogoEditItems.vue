@@ -1,7 +1,8 @@
 <template>
   <v-dialog
     v-model="dialogOpen"
-    max-width="760"
+    :max-width="$vuetify.display.xs ? '100%' : ($vuetify.display.tablet ? '900' : '760')"
+    :fullscreen="$vuetify.display.xs"
     transition="dialog-bottom-transition"
   >
     <v-card class="togo-edit-dialog">
@@ -92,7 +93,7 @@
       </v-card-text>
     </v-card>
 
-    <v-dialog v-model="customizationDialog.open" max-width="420">
+    <v-dialog v-model="customizationDialog.open" :max-width="$vuetify.display.xs ? '95%' : '500'">
       <v-card class="custom-dialog">
         <div class="custom-dialog__header">
           <h4>Special request</h4>
@@ -149,6 +150,8 @@
 </template>
 
 <script>
+import { showSuccess } from '../utils/successNotifications.js'
+
 export default {
   name: 'TogoEditItems',
   props: {
@@ -213,14 +216,14 @@ export default {
     },
     incrementItem(item) {
       const nextQuantity = Number(item.quantity ?? 0) + 1
-      this.$store.commit('updateTogoLine', {
+      this.$store.dispatch('updateTogoLine', {
         lineId: item.lineId,
         quantity: nextQuantity
       })
     },
     decrementItem(item) {
       const nextQuantity = Number(item.quantity ?? 0) - 1
-      this.$store.commit('updateTogoLine', {
+      this.$store.dispatch('updateTogoLine', {
         lineId: item.lineId,
         quantity: nextQuantity
       })
@@ -270,12 +273,17 @@ export default {
         }
       }
       const label = option.label === 'No special request' ? '' : option.label
-      this.$store.commit('updateTogoLine', {
+      this.$store.dispatch('updateTogoLine', {
         lineId: this.customizationDialog.item.lineId,
         note: label,
         extraPrice: Number(option.price || 0)
       })
       this.customizationDialog.open = false
+      if (label) {
+        showSuccess(`Special request added: "${label}"`)
+      } else {
+        showSuccess('Special request removed')
+      }
     },
     optionLabel(option) {
       if (!option) return ''
@@ -531,20 +539,56 @@ export default {
 }
 
 @media (max-width: 600px) {
+  .togo-edit-dialog {
+    border-radius: 0;
+  }
+  
   .togo-edit-dialog__header {
     flex-direction: column;
     align-items: stretch;
+    padding: 16px 20px;
   }
+  
+  .togo-edit-dialog__header .v-btn {
+    width: 100%;
+  }
+  
+  .v-card-text {
+    padding: 16px 20px;
+  }
+  
   .editable-row {
     flex-direction: column;
     align-items: stretch;
+    padding: 14px 16px;
   }
+  
   .editable-row__actions {
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
   }
+  
   .quantity-control {
     width: 100%;
     justify-content: center;
+  }
+  
+  .editable-row__actions .v-btn {
+    width: 100%;
+  }
+  
+  .custom-dialog {
+    border-radius: 0;
+  }
+  
+  .custom-dialog__actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .custom-dialog__actions .v-btn {
+    width: 100%;
   }
 }
 </style>

@@ -2,6 +2,8 @@
  * Shared drink options used across the application
  * This ensures consistency between table orders and cashier view
  */
+import { DRINK_CODES } from '../constants/drinks.js'
+
 export const DRINK_OPTIONS = [
   { code: 'WTER', label: 'Water', icon: 'mdi-cup-water', type: 'water' },
   { code: 'DRNK', label: 'Drink', icon: 'mdi-cup', type: 'drink' },
@@ -29,6 +31,6 @@ export function getDrinkLabel(code) {
  * Check if a drink code is water
  */
 export function isWater(code) {
-  return code === 'WTER'
+  return code === DRINK_CODES.WATER
 }
 

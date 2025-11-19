@@ -6,7 +6,8 @@ import store from './store'
 import orderdetails from './components/OrderDetails.vue'
 import togodetails from './components/TogoDetails.vue'
 import currenttogo from './components/CurrentTogo.vue'
-
+import { errorHandler } from './services/errorHandler.js'
+import logger from './services/logger.js'
 
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
@@ -57,33 +58,40 @@ const vuetify = createVuetify({
   })
 
 async function bootstrap() {
-  const app = createApp(App)
+const app = createApp(App)
 
-  app.use(router)
-  app.use(vuetify)
-  app.use(store)
-  app.component('order-details', orderdetails)
-  app.component('togo-details', togodetails)
-  app.component('currenttogo-details', currenttogo)
+app.use(router)
+app.use(vuetify)
+app.use(store)
+app.component('order-details', orderdetails)
+app.component('togo-details', togodetails)
+app.component('currenttogo-details', currenttogo)
 
+  // Global error handler for Vue errors
+  app.config.errorHandler = (err, instance, info) => {
+    logger.error('[Vue Error Handler]', err, { instance, info })
+    errorHandler.handle(err, {
+      context: `Vue Component: ${instance?.$options?.name || 'Unknown'}`,
+      showToUser: true
+    })
+  }
+
+  // Global warning handler (dev only)
   if (import.meta.env.DEV) {
     app.config.warnHandler = (msg, instance, trace) => {
-      console.warn('[Vue warn]', msg, trace)
-    }
-    app.config.errorHandler = (err, instance, info) => {
-      console.error('[Vue error]', err, info, instance)
+      logger.warn('[Vue warn]', msg, { instance, trace })
     }
   }
 
   try {
     await store.dispatch('initializeAuth')
   } catch (err) {
-    console.error('Failed to initialize Firebase Auth:', err)
+    errorHandler.handleAuth(err, 'Initialization', { showToUser: false })
   }
 
   await router.isReady()
 
-  app.mount('#app')
+app.mount('#app')
 
   if (import.meta.env.DEV) {
     window.store = store

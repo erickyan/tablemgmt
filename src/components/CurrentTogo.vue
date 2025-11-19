@@ -16,7 +16,7 @@
           size="small"
           variant="tonal"
           color="accent"
-          @click="$store.commit('calculateTogoTotal')"
+          @click="$store.dispatch('calculateTogoTotal')"
         >
           <v-icon start>mdi-reload</v-icon>
           Refresh totals
@@ -106,6 +106,9 @@
 
 
 <script>
+import { usePrinting } from '../composables/usePrinting.js'
+import { showSuccess } from '../utils/successNotifications.js'
+
 export default {
   props: {
     modelValue: {
@@ -114,6 +117,10 @@ export default {
     }
   },
   emits: ['update:modelValue', 'edit'],
+  setup() {
+    const { printTogoReceipt: printTogoReceiptComposable } = usePrinting()
+    return { printTogoReceiptComposable }
+  },
   computed: {
     dialogOpen: {
       get() {
@@ -147,13 +154,13 @@ export default {
       return Number(line.basePrice || 0) + Number(line.extraPrice || 0)
     },
     incrementLine(line) {
-      this.$store.commit('updateTogoLine', {
+      this.$store.dispatch('updateTogoLine', {
         lineId: line.lineId,
         quantity: line.quantity + 1
       })
     },
     decrementLine(line) {
-      this.$store.commit('updateTogoLine', {
+      this.$store.dispatch('updateTogoLine', {
         lineId: line.lineId,
         quantity: line.quantity - 1
       })
@@ -163,12 +170,10 @@ export default {
       this.$emit('edit')
     },
     markPaid() {
-      this.$store.commit('togoPaid')
+      this.$store.dispatch('payTogo')
       this.dialogOpen = false
     },
-    printTogoReceipt() {
-      this.$store.commit('calculateTogoTotal')
-      const store = this.$store.state
+    async printTogoReceipt() {
       const items = this.editableLines.map(line => ({
         name: line.name,
         quantity: Number(line.quantity ?? 0),
@@ -176,117 +181,16 @@ export default {
         note: line.note
       }))
 
-      if (!items.length) {
-        console.warn('No items selected for to-go receipt')
-        return
-      }
-
-      const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-      const total = parseFloat(store.totalTogoPrice || (subtotal * store.TAX_RATE).toFixed(2))
-      const taxAmount = parseFloat((total - subtotal).toFixed(2))
-
-      const escapeHtml = (str = '') => String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;')
-
-      const rows = items.map(item => `
-        <tr>
-          <td>${escapeHtml(item.name)}</td>
-          <td class="qty">${item.quantity}</td>
-          <td class="price">$${item.price.toFixed(2)}</td>
-          <td class="price">$${(item.price * item.quantity).toFixed(2)}</td>
-        </tr>
-        ${item.note ? `<tr class="note-row"><td colspan="4"><strong>Note:</strong> ${escapeHtml(item.note)}</td></tr>` : ''}
-      `).join('')
-
-      const receiptHtml = '<html>' +
-        '<head>' +
-          '<title>Receipt - To-Go Order</title>' +
-          '<style>' +
-            "body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 24px; color: #333; }" +
-            'h1 { text-align: center; margin-bottom: 4px; letter-spacing: 1px; }' +
-            'h2 { text-align: center; margin-top: 0; font-weight: normal; font-size: 16px; }' +
-            'table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 14px; table-layout: fixed; }' +
-            'th, td { padding: 8px 6px; border-bottom: 1px solid #ddd; }' +
-            'th { background: #f5f5f5; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }' +
-            'th.item, td.item { text-align: left; width: 50%; }' +
-            'th.qty, td.qty { text-align: center; width: 10%; }' +
-            'th.price, td.price { text-align: right; width: 20%; }' +
-            '.totals { margin-top: 16px; font-size: 14px; }' +
-            '.totals div { display: flex; justify-content: space-between; margin-bottom: 4px; }' +
-            '.totals div strong { font-size: 16px; }' +
-            '.sub-header { text-align: center; margin-top: 4px; margin-bottom: 8px; font-size: 14px; color: #666; font-style: italic; white-space: pre-line; }' +
-            '.footer { margin-top: 24px; text-align: center; font-size: 12px; color: #777; }' +
-            '.gratuity { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #ccc; }' +
-            '.gratuity-title { text-align: center; font-size: 12px; color: #666; margin-bottom: 8px; }' +
-            '.gratuity-options { display: flex; justify-content: space-around; font-size: 11px; }' +
-            '.gratuity-option { text-align: center; }' +
-            '.gratuity-option .percent { font-weight: bold; }' +
-            '.gratuity-option .amount { color: #666; }' +
-            '.note-row td { padding: 6px 6px 10px; font-style: italic; color: #4a4a4a; background: #f9fbff; border-bottom: 1px solid #ddd; }' +
-          '</style>' +
-        '</head>' +
-        '<body>' +
-          `<h1>${(this.$store.state.receiptSettings || {}).headerText || 'China Buffet'}</h1>` +
-          ((this.$store.state.receiptSettings || {}).subHeaderText ? `<div class="sub-header">${(this.$store.state.receiptSettings || {}).subHeaderText}</div>` : '') +
-          '<h2>To-Go Order</h2>' +
-          (((this.$store.state.receiptSettings || {}).showPrintTime !== false) ? `<div style="text-align: center; margin-top: 8px; font-size: 11px; color: #999;">${new Date().toLocaleString()}</div>` : '') +
-          '<table>' +
-            '<thead>' +
-              '<tr>' +
-                '<th class="item">Item</th>' +
-                '<th class="qty">Qty</th>' +
-                '<th class="price">Price</th>' +
-                '<th class="price">Total</th>' +
-              '</tr>' +
-            '</thead>' +
-            '<tbody>' +
-              rows +
-            '</tbody>' +
-          '</table>' +
-          '<div class="totals">' +
-            `<div><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>` +
-            `<div><span>Tax</span><span>$${taxAmount.toFixed(2)}</span></div>` +
-            `<div><strong>Total</strong><strong>$${total.toFixed(2)}</strong></div>` +
-          '</div>' +
-          `<div class="footer">${(this.$store.state.receiptSettings || {}).thankYouText || 'Thank you for your order!'}</div>` +
-          (((this.$store.state.receiptSettings || {}).showGratuity !== false) ? (() => {
-            const receiptSettings = this.$store.state.receiptSettings || {}
-            const gratuityPercentages = Array.isArray(receiptSettings.gratuityPercentages) && receiptSettings.gratuityPercentages.length > 0
-                ? receiptSettings.gratuityPercentages
-                : [10, 15, 20]
-            const gratuityOnPreTax = receiptSettings.gratuityOnPreTax === true
-            const gratuityBaseAmount = gratuityOnPreTax ? subtotal : total
-            return `
-              <div class="gratuity">
-                <div class="gratuity-title">Gratuity Suggestions</div>
-                <div class="gratuity-options">
-                  ${gratuityPercentages.map(percent => `
-                    <div class="gratuity-option">
-                      <div class="percent">${percent}%</div>
-                      <div class="amount">$${(gratuityBaseAmount * percent / 100).toFixed(2)}</div>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            `
-          })() : '') +
-        '</body>' +
-        '</html>'
-
-      const printWindow = window.open('', '_blank', 'width=600,height=800')
-      if (!printWindow) {
-        console.error('Failed to open print window')
-        return
-      }
-      printWindow.document.write(receiptHtml)
-      printWindow.document.close()
-      printWindow.focus()
-      printWindow.print()
-      printWindow.close()
+      await this.printTogoReceiptComposable({
+        store: this.$store,
+        items
+      })
+      showSuccess('To-go receipt printed')
+    },
+    markPaid() {
+      this.$store.dispatch('payTogo')
+      this.dialogOpen = false
+      showSuccess('To-go order marked as paid')
     }
   }
 }

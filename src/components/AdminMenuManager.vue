@@ -1,34 +1,45 @@
 <template>
   <v-dialog
     v-model="internalOpen"
-    max-width="800"
+    :max-width="$vuetify.display.xs ? '100%' : ($vuetify.display.tablet ? '950' : '800')"
+    :fullscreen="$vuetify.display.xs"
     scrollable
     transition="dialog-bottom-transition"
   >
     <v-card class="menu-manager">
       <v-toolbar color="accent" density="comfortable" dark>
-        <v-btn icon="mdi-close" @click="close" />
-        <v-toolbar-title>Manage Menu</v-toolbar-title>
+        <v-btn 
+          icon="mdi-close" 
+          @click="close"
+          aria-label="Close menu manager"
+          @keydown.enter.prevent="close"
+          @keydown.esc="close"
+        />
+        <v-toolbar-title id="menu-manager-title">Manage Menu</v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn
           variant="text"
           icon="mdi-plus"
           class="mr-2"
           @click="addCategory"
-          :title="'Add Category'"
+          aria-label="Add category"
+          @keydown.enter.prevent="addCategory"
         ></v-btn>
         <v-btn
           color="white"
           variant="text"
-          :disabled="saving"
+          :loading="$store.state.loadingStates.savingMenu"
+          :disabled="$store.state.loadingStates.savingMenu"
           @click="save"
+          aria-label="Save menu"
+          @keydown.enter.prevent="save"
         >
           <v-icon start>mdi-content-save</v-icon>
           Save
         </v-btn>
       </v-toolbar>
 
-      <v-card-text class="manager-content pa-6">
+      <v-card-text class="manager-content pa-6" id="menu-manager-description">
         <div class="summary-bar">
           <v-chip color="accent" variant="tonal" size="small">
             <v-icon start size="18">mdi-view-grid-plus</v-icon>
@@ -61,7 +72,7 @@
                   v-model="category.category"
                   label="Category Name"
                   variant="underlined"
-                  density="compact"
+                  :density="$vuetify.display.tablet && $vuetify.display.mdAndUp ? 'comfortable' : 'compact'"
                   hide-details
                   class="category-name-field"
                   @click.stop
@@ -73,7 +84,8 @@
                     color="error"
                     size="small"
                     @click.stop="confirmDeleteCategory(categoryIndex)"
-                    :title="'Remove category'"
+                    :aria-label="`Delete category ${localMenu[categoryIndex]?.category || categoryIndex + 1}`"
+                    @keydown.enter.prevent="confirmDeleteCategory(categoryIndex)"
                     class="delete-btn"
                   ></v-btn>
                   <v-chip size="small" color="accent" variant="tonal" class="item-count-chip">
@@ -85,7 +97,7 @@
             
             <v-expansion-panel-text>
               <div class="category-content">
-                <v-table density="compact" class="items-table">
+                <v-table :density="$vuetify.display.tablet && $vuetify.display.mdAndUp ? 'comfortable' : 'compact'" class="items-table">
                   <thead>
                     <tr>
                       <th class="text-left" style="width: 60%">Item Name</th>
@@ -103,7 +115,7 @@
                         <v-text-field
                           v-model="item.name"
                           variant="plain"
-                          density="compact"
+                          :density="$vuetify.display.tablet && $vuetify.display.mdAndUp ? 'comfortable' : 'compact'"
                           hide-details
                           class="item-name-input"
                           placeholder="Item name"
@@ -117,7 +129,7 @@
                           step="0.01"
                           prefix="$"
                           variant="plain"
-                          density="compact"
+                          :density="$vuetify.display.tablet && $vuetify.display.mdAndUp ? 'comfortable' : 'compact'"
                           hide-details
                           class="item-price-input"
                           placeholder="0.00"
@@ -129,8 +141,9 @@
                           variant="text"
                           color="error"
                           size="small"
-                          @click="removeItem(categoryIndex, itemIndex)"
-                          :title="'Remove item'"
+                          @click="confirmDeleteItem(categoryIndex, itemIndex)"
+                          :aria-label="`Delete menu item ${localMenu[categoryIndex]?.items[itemIndex]?.name || itemIndex + 1}`"
+                          @keydown.enter.prevent="confirmDeleteItem(categoryIndex, itemIndex)"
                           class="delete-btn"
                         ></v-btn>
                       </td>
@@ -161,14 +174,21 @@
       </v-card-text>
     </v-card>
 
-    <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="showDeleteConfirm" max-width="400" persistent>
+    <!-- Delete Category Confirmation Dialog -->
+    <v-dialog 
+      v-model="showDeleteConfirm" 
+      :max-width="$vuetify.display.xs ? '95%' : '480'"
+      persistent
+      role="alertdialog"
+      aria-labelledby="delete-category-title"
+      aria-describedby="delete-category-description"
+    >
       <v-card>
-        <v-card-title class="text-h6">
-          <v-icon color="error" class="mr-2">mdi-alert-circle</v-icon>
+        <v-card-title class="text-h6" id="delete-category-title">
+          <v-icon color="error" class="mr-2" aria-hidden="true">mdi-alert-circle</v-icon>
           Delete Category?
         </v-card-title>
-        <v-card-text>
+        <v-card-text id="delete-category-description">
           <p class="mb-0">
             Are you sure you want to delete 
             <strong>"{{ categoryToDelete !== null ? localMenu[categoryToDelete]?.category : '' }}"</strong>?
@@ -179,8 +199,67 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="cancelDelete">Cancel</v-btn>
-          <v-btn color="error" variant="flat" @click="removeCategory">Delete</v-btn>
+          <v-btn 
+            variant="text" 
+            @click="cancelDelete"
+            @keydown.enter.prevent="cancelDelete"
+            @keydown.esc="cancelDelete"
+          >
+            Cancel
+          </v-btn>
+          <v-btn 
+            color="error" 
+            variant="flat" 
+            @click="removeCategory"
+            @keydown.enter.prevent="removeCategory"
+          >
+            Delete
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Delete Item Confirmation Dialog -->
+    <v-dialog 
+      v-model="showDeleteItemConfirm" 
+      :max-width="$vuetify.display.xs ? '95%' : '480'"
+      persistent
+      role="alertdialog"
+      aria-labelledby="delete-item-title"
+      aria-describedby="delete-item-description"
+    >
+      <v-card>
+        <v-card-title class="text-h6" id="delete-item-title">
+          <v-icon color="error" class="mr-2" aria-hidden="true">mdi-alert-circle</v-icon>
+          Delete Menu Item?
+        </v-card-title>
+        <v-card-text id="delete-item-description">
+          <p class="mb-0">
+            Are you sure you want to delete 
+            <strong>"{{ itemToDelete !== null ? (localMenu[itemToDelete.categoryIndex]?.items[itemToDelete.itemIndex]?.name || 'this item') : '' }}"</strong>?
+          </p>
+          <p class="mt-2 text-medium-emphasis" style="font-size: 13px;">
+            This action cannot be undone.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn 
+            variant="text" 
+            @click="cancelDeleteItem"
+            @keydown.enter.prevent="cancelDeleteItem"
+            @keydown.esc="cancelDeleteItem"
+          >
+            Cancel
+          </v-btn>
+          <v-btn 
+            color="error" 
+            variant="flat" 
+            @click="removeItem"
+            @keydown.enter.prevent="removeItem"
+          >
+            Delete
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -212,6 +291,8 @@ export default {
       localMenu: [],
       showDeleteConfirm: false,
       categoryToDelete: null,
+      showDeleteItemConfirm: false,
+      itemToDelete: null,
     }
   },
   computed: {
@@ -292,9 +373,23 @@ export default {
         quantity: 0,
       })
     },
-    removeItem(categoryIndex, itemIndex) {
-      if (!this.localMenu[categoryIndex]) return
-      this.localMenu[categoryIndex].items.splice(itemIndex, 1)
+    confirmDeleteItem(categoryIndex, itemIndex) {
+      this.itemToDelete = { categoryIndex, itemIndex }
+      this.showDeleteItemConfirm = true
+    },
+    removeItem() {
+      if (this.itemToDelete !== null) {
+        const { categoryIndex, itemIndex } = this.itemToDelete
+        if (this.localMenu[categoryIndex]) {
+          this.localMenu[categoryIndex].items.splice(itemIndex, 1)
+        }
+        this.itemToDelete = null
+      }
+      this.showDeleteItemConfirm = false
+    },
+    cancelDeleteItem() {
+      this.itemToDelete = null
+      this.showDeleteItemConfirm = false
     },
     close() {
       this.$emit('update:modelValue', false)
@@ -456,6 +551,18 @@ export default {
   font-size: 14px;
 }
 
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  .item-name-input {
+    font-size: 16px;
+  }
+  
+  .item-name-input :deep(.v-field__input) {
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+}
+
 .item-price-input {
   font-size: 14px;
   width: 100%;
@@ -473,9 +580,39 @@ export default {
   font-weight: 500;
 }
 
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  .item-price-input {
+    font-size: 16px;
+  }
+  
+  .item-price-input :deep(.v-field__input) {
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+}
+
+.category-name-field {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  .category-name-field {
+    font-size: 16px;
+  }
+}
+
 .empty-row td {
   padding: 24px;
   font-style: italic;
+}
+
+/* Focus indicators for accessibility */
+.delete-btn:focus-visible,
+.v-btn:focus-visible,
+button:focus-visible {
+  outline: 2px solid rgba(0, 137, 123, 0.6);
+  outline-offset: 2px;
 }
 
 .add-item-section {
@@ -509,6 +646,33 @@ export default {
 }
 
 @media (max-width: 600px) {
+  .menu-manager {
+    border-radius: 0;
+  }
+  
+  .manager-content {
+    padding: 16px;
+  }
+  
+  .v-toolbar {
+    padding: 0 8px;
+  }
+  
+  .v-toolbar-title {
+    font-size: 16px;
+  }
+  
+  .panel-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .category-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
   .items-table thead {
     display: none;
   }
@@ -550,6 +714,15 @@ export default {
   
   .item-table-row td.text-center:before {
     display: none;
+  }
+  
+  .v-dialog > .v-card > .v-card-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .v-dialog > .v-card > .v-card-actions .v-btn {
+    width: 100%;
   }
 }
 </style>

@@ -152,6 +152,7 @@
 <script>
 import { DRINK_OPTIONS, getDrinkLabel, isWater } from '../utils/drinkOptions.js'
 import { translate } from '../utils/translations.js'
+import { usePrinting } from '../composables/usePrinting.js'
 
 export default {
   name: 'CashierView',
@@ -227,9 +228,9 @@ export default {
       immediate: true,
       handler(value) {
         const isDinner = value === 'dinner'
-        this.$store.commit('setDinnerMode', isDinner)
+        this.$store.dispatch('setDinnerMode', isDinner)
         // Update cashier form mode in store
-        this.$store.commit('setCashierMode', value)
+        this.$store.dispatch('setCashierMode', value)
       },
     },
     buffetCounts: {
@@ -237,7 +238,7 @@ export default {
       handler() {
         // Update store when buffet counts change
         Object.entries(this.buffetCounts).forEach(([key, count]) => {
-          this.$store.commit('setCashierBuffetCount', { key, count })
+          this.$store.dispatch('setCashierBuffetCount', { key, count })
         })
       },
     },
@@ -246,7 +247,7 @@ export default {
       handler() {
         // Update store when drink counts change
         Object.entries(this.drinkCounts).forEach(([code, count]) => {
-          this.$store.commit('setCashierDrinkCount', { code, count })
+          this.$store.dispatch('setCashierDrinkCount', { code, count })
         })
       },
     },
@@ -315,143 +316,23 @@ export default {
         this.drinkCounts[code] = 0
       })
       // Clear store
-      this.$store.commit('clearCashierForm')
+      this.$store.dispatch('clearCashierForm')
     },
-    printReceipt() {
+    async printReceipt() {
       if (!this.hasActivity) {
         return
       }
 
-      const lines = []
-      const totals = []
-      const addLine = (label, qty, unitPrice) => {
-        if (!qty) return
-        const total = qty * unitPrice
-        lines.push({ label, qty, unitPrice, total })
-        totals.push(total)
-      }
-
-      addLine('Adult Buffet', Number(this.buffetCounts.adult || 0), this.pricing.adult)
-      addLine('Big Kid Buffet', Number(this.buffetCounts.bigKid || 0), this.pricing.bigKid)
-      addLine('Small Kid Buffet', Number(this.buffetCounts.smallKid || 0), this.pricing.smallKid)
-
-      Object.entries(this.drinkCounts).forEach(([code, qty]) => {
-        const qtyNum = Number(qty || 0)
-        if (!qtyNum) return
-        const label = getDrinkLabel(code)
-        const unitPrice = isWater(code) ? this.pricing.water : this.pricing.drink
-        addLine(label, qtyNum, unitPrice)
-      })
-
-      const subtotal = totals.reduce((sum, value) => sum + value, 0)
-      const totalWithTax = subtotal * this.pricing.taxRate
-      const taxAmount = totalWithTax - subtotal
-
-      const receiptHtml = `
-        <html>
-          <head>
-            <title>Cashier Receipt</title>
-            <style>
-              body { font-family: 'Consolas', 'Courier New', monospace; padding: 24px; color: #333; font-size: 12px; }
-              h1 { text-align: center; margin-bottom: 4px; font-size: 20px; }
-              h2 { text-align: center; margin-top: 0; font-weight: normal; font-size: 16px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-              th, td { padding: 4px 6px; border-bottom: 1px dashed #ccc; text-align: left; }
-              th { font-weight: bold; }
-              td.qty { text-align: center; width: 40px; }
-              td.price { text-align: right; width: 60px; }
-              .totals { margin-top: 16px; border-top: 1px dashed #ccc; padding-top: 8px; }
-              .totals div { display: flex; justify-content: space-between; margin-bottom: 4px; }
-              .totals strong { font-size: 14px; }
-              .sub-header { text-align: center; margin-top: 4px; margin-bottom: 8px; font-size: 14px; color: #666; font-style: italic; white-space: pre-line; }
-              .footer { margin-top: 24px; text-align: center; font-size: 11px; }
-              .gratuity { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #ccc; }
-              .gratuity-title { text-align: center; font-size: 12px; color: #666; margin-bottom: 8px; }
-              .gratuity-options { display: flex; justify-content: space-around; font-size: 11px; }
-              .gratuity-option { text-align: center; }
-              .gratuity-option .percent { font-weight: bold; }
-              .gratuity-option .amount { color: #666; }
-            </style>
-          </head>
-          <body>
-            <h1>${(this.$store.state.receiptSettings || {}).headerText || 'China Buffet'}</h1>
-            ${(this.$store.state.receiptSettings || {}).subHeaderText ? `<div class="sub-header">${(this.$store.state.receiptSettings || {}).subHeaderText}</div>` : ''}
-            <h2>${this.mode === 'dinner' ? 'Dinner' : 'Lunch'} Receipt</h2>
-            ${((this.$store.state.receiptSettings || {}).showPrintTime !== false) ? `<div style="text-align: center; margin-top: 8px; font-size: 11px; color: #999;">${new Date().toLocaleString()}</div>` : ''}
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th class="qty">Qty</th>
-                  <th class="price">Price</th>
-                  <th class="price">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${lines.length ? lines
-                  .map(line => `
-                    <tr>
-                      <td>${line.label}</td>
-                      <td class="qty">${line.qty}</td>
-                      <td class="price">$${line.unitPrice.toFixed(2)}</td>
-                      <td class="price">$${line.total.toFixed(2)}</td>
-                    </tr>
-                  `).join('') : '<tr><td colspan="4" style="text-align:center;">No items</td></tr>'}
-              </tbody>
-            </table>
-            <div class="totals">
-              <div><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>
-              <div><span>Tax</span><span>$${taxAmount.toFixed(2)}</span></div>
-              <div><strong>Total</strong><strong>$${totalWithTax.toFixed(2)}</strong></div>
-            </div>
-            <div class="footer">${(this.$store.state.receiptSettings || {}).footerText || 'Thank you for dining with us!'}</div>
-            ${((this.$store.state.receiptSettings || {}).showGratuity !== false) ? (() => {
-              const receiptSettings = this.$store.state.receiptSettings || {}
-              const gratuityPercentages = Array.isArray(receiptSettings.gratuityPercentages) && receiptSettings.gratuityPercentages.length > 0
-                  ? receiptSettings.gratuityPercentages
-                  : [10, 15, 20]
-              const gratuityOnPreTax = receiptSettings.gratuityOnPreTax === true
-              const gratuityBaseAmount = gratuityOnPreTax ? subtotal : totalWithTax
-              return `
-                <div class="gratuity">
-                  <div class="gratuity-title">Gratuity Suggestions</div>
-                  <div class="gratuity-options">
-                    ${gratuityPercentages.map(percent => `
-                      <div class="gratuity-option">
-                        <div class="percent">${percent}%</div>
-                        <div class="amount">$${(gratuityBaseAmount * percent / 100).toFixed(2)}</div>
-                      </div>
-                    `).join('')}
-                  </div>
-                </div>
-              `
-            })() : ''}
-          </body>
-        </html>
-      `
-
-      const printWindow = window.open('', '_blank', 'width=600,height=800')
-      if (!printWindow) {
-        alert('Please allow pop-ups for printing.')
-        return
-      }
-      printWindow.document.open()
-      printWindow.document.write(receiptHtml)
-      printWindow.document.close()
-      printWindow.focus()
-      printWindow.print()
-      printWindow.close()
+      // Get print function from composable
+      const { printCashierReceipt } = usePrinting()
       
-      // Process payment: add sales to revenue and reset form
-      this.$store.commit('processCashierPayment')
-      
-      // Immediately reset local component data to match cleared store
-      // Do this synchronously to ensure UI updates right away
-      this.buffetCounts.adult = 0
-      this.buffetCounts.bigKid = 0
-      this.buffetCounts.smallKid = 0
-      Object.keys(this.drinkCounts).forEach(code => {
-        this.drinkCounts[code] = 0
+      await printCashierReceipt({
+        store: this.$store,
+        buffetCounts: this.buffetCounts,
+        drinkCounts: this.drinkCounts,
+        isDinner: this.mode === 'dinner',
+        getDrinkLabelFn: getDrinkLabel,
+        isWaterFn: isWater
       })
     },
   },
