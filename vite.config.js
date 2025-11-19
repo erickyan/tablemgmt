@@ -2,11 +2,15 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import vuetify from 'vite-plugin-vuetify'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
+    vuetify({
+      autoImport: true, // Auto-import Vuetify components and styles
+    }),
   ],
   resolve: {
     alias: {
@@ -22,11 +26,29 @@ export default defineConfig({
     port: 4173
   },
   build: {
-    // Ensure proper handling of client-side routing
+    // Code splitting configuration
     rollupOptions: {
       output: {
-        manualChunks: undefined
+        // Manual chunk splitting for better caching
+        manualChunks: (id) => {
+          // Separate vendor chunks
+          if (id.includes('node_modules')) {
+            if (id.includes('vue') || id.includes('vue-router') || id.includes('vuex')) {
+              return 'vue-vendor'
+            }
+            if (id.includes('vuetify')) {
+              return 'vuetify-vendor'
+            }
+            if (id.includes('firebase')) {
+              return 'firebase-vendor'
+            }
+            // Other node_modules
+            return 'vendor'
+          }
+        }
       }
-    }
+    },
+    // Chunk size warnings
+    chunkSizeWarningLimit: 1000,
   }
 })

@@ -17,7 +17,7 @@
         <div class="summary-row">
           <v-chip color="accent" variant="tonal" size="small">
             <v-icon start size="18">mdi-receipt</v-icon>
-            {{ sales.length }} Orders
+            {{ normalizedSales.length }} Orders
           </v-chip>
           <v-chip color="accent" variant="tonal" size="small">
             <v-icon start size="18">mdi-currency-usd</v-icon>
@@ -26,7 +26,7 @@
         </div>
 
         <v-alert
-          v-if="!loading && sales.length === 0"
+          v-if="!loading && normalizedSales.length === 0"
           type="info"
           variant="tonal"
           class="mb-4"
@@ -79,7 +79,7 @@
 
       <v-card-actions class="pa-4 justify-end">
         <div class="text-caption mr-auto">
-          Total Orders: <strong>{{ sales.length }}</strong>
+          Total Orders: <strong>{{ normalizedSales.length }}</strong>
           &nbsp;|&nbsp; Total Revenue: <strong>${{ totalRevenue }}</strong>
         </div>
         <v-btn variant="tonal" color="accent" @click="close">Close</v-btn>
@@ -115,12 +115,24 @@ export default {
         this.$emit('update:modelValue', value)
       }
     },
+    normalizedSales() {
+      // Ensure sales is always an array
+      if (Array.isArray(this.sales)) {
+        return this.sales
+      }
+      // If it's an object, convert to array
+      if (this.sales && typeof this.sales === 'object') {
+        return Object.values(this.sales)
+      }
+      // Default to empty array
+      return []
+    },
     totalRevenue() {
-      const total = this.sales.reduce((sum, entry) => sum + Number(entry.revenue ?? 0), 0)
+      const total = this.normalizedSales.reduce((sum, entry) => sum + Number(entry.revenue ?? 0), 0)
       return total.toFixed(2)
     },
     enrichedSales() {
-      return this.sales.map(entry => {
+      return this.normalizedSales.map(entry => {
         const itemsList = this.formatItems(entry.items)
         return {
           ...entry,

@@ -2727,7 +2727,8 @@ const store = createStore({
                 return result
             } catch (error) {
                 logger.firestore.error('Failed to load togo sales history:', error)
-                return Object.keys(options).length === 0 ? [] : { records: [], lastDoc: null, hasMore: false }
+                // Re-throw error so it can be handled by the caller
+                throw error
             } finally {
                 commit('setLoadingState', { key: 'loadingTogoSales', value: false })
             }

@@ -230,7 +230,16 @@ export default {
       },
     },
     tables() {
-      return Array.isArray(this.$store.state.tables) ? this.$store.state.tables : []
+      const tables = this.$store.state.tables || {}
+      if (Array.isArray(tables)) {
+        return tables
+      }
+      // Convert object format to array, sorted by table number
+      return Object.values(tables).sort((a, b) => {
+        const numA = Number(a?.number || 0)
+        const numB = Number(b?.number || 0)
+        return numA - numB
+      })
     },
   },
   methods: {

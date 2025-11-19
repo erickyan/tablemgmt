@@ -756,9 +756,21 @@ import { RouterView } from 'vue-router'
         v-model="snackbar"
         :color="snackbarColor"
         :timeout="snackbarTimeout"
+        multi-line
       >
-        {{ snackbarMessage }}
+        <div style="white-space: pre-wrap; word-break: break-all;">{{ snackbarMessage }}</div>
         <template #actions>
+          <v-btn 
+            v-if="snackbarIndexUrl" 
+            variant="text" 
+            color="white"
+            :href="snackbarIndexUrl" 
+            target="_blank"
+            rel="noopener noreferrer"
+            @click.stop
+          >
+            Create Index
+          </v-btn>
           <v-btn variant="text" @click="snackbar = false">Dismiss</v-btn>
         </template>
       </v-snackbar>
@@ -767,17 +779,22 @@ import { RouterView } from 'vue-router'
 </template>
 
 <script>
-import AdminMenuManager from './components/AdminMenuManager.vue'
-import AdminTogoSales from './components/AdminTogoSales.vue'
-import AdminLiveSales from './components/AdminLiveSales.vue'
-import AdminTableManager from './components/AdminTableManager.vue'
-import TableOrderPanel from './components/panels/TableOrderPanel.vue'
-import TogoOrderPanel from './components/panels/TogoOrderPanel.vue'
-import TogoEditItems from './components/TogoEditItems.vue'
-import CashierReceiptPanel from './components/panels/CashierReceiptPanel.vue'
+import { defineAsyncComponent } from 'vue'
 import { translate } from './utils/translations.js'
 import { errorHandler } from './services/errorHandler.js'
 import { onSuccessNotification, showSuccess } from './utils/successNotifications.js'
+
+// Lazy load admin components (only loaded when admin is logged in)
+const AdminMenuManager = defineAsyncComponent(() => import('./components/AdminMenuManager.vue'))
+const AdminTogoSales = defineAsyncComponent(() => import('./components/AdminTogoSales.vue'))
+const AdminLiveSales = defineAsyncComponent(() => import('./components/AdminLiveSales.vue'))
+const AdminTableManager = defineAsyncComponent(() => import('./components/AdminTableManager.vue'))
+
+// Lazy load panel components (only loaded when needed)
+const TableOrderPanel = defineAsyncComponent(() => import('./components/panels/TableOrderPanel.vue'))
+const TogoOrderPanel = defineAsyncComponent(() => import('./components/panels/TogoOrderPanel.vue'))
+const TogoEditItems = defineAsyncComponent(() => import('./components/TogoEditItems.vue'))
+const CashierReceiptPanel = defineAsyncComponent(() => import('./components/panels/CashierReceiptPanel.vue'))
 
 export default {
   components: {
@@ -813,6 +830,7 @@ export default {
     snackbarMessage: '',
     snackbarColor: 'success',
     snackbarTimeout: 3000,
+    snackbarIndexUrl: null,
     successNotificationUnsubscribe: null,
     showTogoSales: false,
     showLiveSales: false,
@@ -1054,16 +1072,8 @@ export default {
         return
       }
       this.drawer = false
+      // Setting showTogoSales to true will trigger the watcher to refresh sales
       this.showTogoSales = true
-      try {
-        const history = await this.$store.dispatch('loadTogoSalesHistory')
-        this.togoSalesHistory = history
-      } catch (error) {
-        errorHandler.handle(error, {
-          context: 'loadTogoSales',
-          showToUser: true
-        })
-      }
     },
     openLiveSales() {
       if (!this.isAdmin) {
@@ -1217,15 +1227,32 @@ export default {
       }
       this.$store.dispatch('calculateTogoTotal')
     },
-    handlePanelTogoPaid() {
+    async handlePanelTogoPaid() {
       try {
-        this.$store.dispatch('payTogo')
+        await this.$store.dispatch('payTogo')
         showSuccess('To-go order marked as paid')
+        // Refresh to-go sales history if the dialog is open
+        if (this.showTogoSales) {
+          await this.refreshTogoSales()
+        }
       } catch (error) {
         errorHandler.handle(error, {
           context: 'payTogo',
           showToUser: true
         })
+      }
+    },
+    async refreshTogoSales() {
+      try {
+        const history = await this.$store.dispatch('loadTogoSalesHistory')
+        this.togoSalesHistory = history
+      } catch (error) {
+        errorHandler.handle(error, {
+          context: 'loadTogoSalesHistory',
+          showToUser: true
+        })
+        // Set empty array on error to prevent showing stale data
+        this.togoSalesHistory = []
       }
     },
     openTogoEditFromCurrent() {
@@ -1365,10 +1392,31 @@ export default {
     // Set up error handler notification callback
     errorHandler.setNotificationCallback((errorInfo) => {
       // Show user-friendly message (not technical error details)
-      this.snackbarMessage = errorInfo.message || errorInfo.title || 'An error occurred'
+      let message = errorInfo.message || errorInfo.title || 'An error occurred'
+      
+      // If there's an index URL, store it separately and update message
+      if (errorInfo.indexUrl) {
+        const url = errorInfo.indexUrl.trim()
+        this.snackbarIndexUrl = url
+        message = `${message}\n\nClick "Create Index" button below to create the required database index automatically.`
+      } else {
+        this.snackbarIndexUrl = null
+      }
+      
+      this.snackbarMessage = message
       this.snackbarColor = 'error'
-      this.snackbarTimeout = 4000 // Longer timeout for errors
+      this.snackbarTimeout = errorInfo.indexUrl ? 15000 : 4000 // Longer timeout for index errors
       this.snackbar = true
+      
+      // If index URL exists, log it with the full error
+      if (errorInfo.indexUrl) {
+        console.error('[Firestore Index Error]', {
+          context: errorInfo.context,
+          indexUrl: errorInfo.indexUrl,
+          error: errorInfo.error
+        })
+        console.log('[Firestore Index] Click this link to create the index:', errorInfo.indexUrl)
+      }
       
       // Log technical details for debugging (not shown to user)
       if (errorInfo.error && process.env.NODE_ENV === 'development') {
@@ -1426,6 +1474,12 @@ export default {
         this.showResetConfirm = false
         this.showTogoSales = false
         this.showLiveSales = false
+      }
+    },
+    async showTogoSales(value) {
+      // Refresh sales history when dialog opens
+      if (value) {
+        await this.refreshTogoSales()
       }
     },
     '$route.name'() {

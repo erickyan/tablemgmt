@@ -271,6 +271,91 @@ function getUserMessage(error, errorType, context = null) {
   // For specific Firestore errors, provide more context
   if (errorType === ErrorTypes.FIRESTORE) {
     const code = error.code || ''
+    const message = error.message || ''
+    
+    // Check for index error
+    if (code.includes('failed-precondition') || message.includes('requires an index') || message.includes('index')) {
+      // Extract URL from multiple possible locations
+      let indexUrl = null
+      
+      // Check error.message for URL (improved regex to catch URLs with query parameters)
+      // Match http:// or https:// followed by domain and path, including query strings
+      const urlMatch = message.match(/https?:\/\/[^\s\n\)\]]+/gi)
+      if (urlMatch && urlMatch.length > 0) {
+        // Take the first (and typically only) URL match
+        indexUrl = urlMatch[0].trim()
+        // Remove any trailing punctuation that might have been captured
+        indexUrl = indexUrl.replace(/[.,;!?]+$/, '')
+      }
+      
+      // If still no match, try a more permissive pattern that includes query params
+      if (!indexUrl) {
+        const urlMatch2 = message.match(/https?:\/\/[^\s\n]+/gi)
+        if (urlMatch2 && urlMatch2.length > 0) {
+          indexUrl = urlMatch2[0].trim()
+          indexUrl = indexUrl.replace(/[.,;!?]+$/, '')
+        }
+      }
+      
+      // Check if error has a direct url property
+      if (!indexUrl && error.url) {
+        indexUrl = error.url
+      }
+      
+      // Check if error has a nested url property
+      if (!indexUrl && error.errorInfo && error.errorInfo.url) {
+        indexUrl = error.errorInfo.url
+      }
+      
+      // Check for customData or metadata that might contain URL
+      if (!indexUrl && error.customData && error.customData.url) {
+        indexUrl = error.customData.url
+      }
+      
+      // Try to extract from toString() if message didn't have it
+      if (!indexUrl) {
+        const errorString = error.toString()
+        const urlMatch3 = errorString.match(/https?:\/\/[^\s\n]+/gi)
+        if (urlMatch3 && urlMatch3.length > 0) {
+          indexUrl = urlMatch3[0].trim()
+          indexUrl = indexUrl.replace(/[.,;!?]+$/, '')
+        }
+      }
+      
+      // Log extracted URL for debugging
+      if (process.env.NODE_ENV === 'development') {
+        if (indexUrl) {
+          console.log('[Firestore Index] Extracted URL:', indexUrl)
+        } else {
+          console.error('[Firestore Index Error] Full error object for URL extraction:', {
+            message: error.message,
+            code: error.code,
+            errorString: error.toString(),
+            errorKeys: Object.keys(error),
+            fullError: error
+          })
+        }
+      }
+      
+      return {
+        title: 'Firestore Index Required',
+        message: indexUrl 
+          ? 'A database index is required for this query. Click the link below to create it automatically, or contact an administrator.'
+          : 'A database index is required for this query. Please contact an administrator to create the index.',
+        action: 'OK',
+        recovery: indexUrl ? [
+          `Click this link to create the index: ${indexUrl}`,
+          'Wait a few minutes for the index to be created',
+          'Refresh the page after the index is ready'
+        ] : [
+          'Contact an administrator to create the required index',
+          'The index will need to be created in Firebase Console',
+          'Wait a few minutes for the index to be created after setup'
+        ],
+        indexUrl: indexUrl || null
+      }
+    }
+    
     if (code.includes('permission-denied')) {
       return {
         title: 'Permission Denied',
