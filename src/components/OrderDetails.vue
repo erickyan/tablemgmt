@@ -22,7 +22,7 @@
             </v-chip>
             <span class="meta-time" v-if="table.sitDownTime">
               <v-icon size="16" icon="mdi-clock-outline" class="me-1"></v-icon>
-              {{ getTranslatedLabel('Sat') }} {{ formattedSitDownTime }}
+              {{ formattedSitDownTime }}
             </span>
           </div>
         </div>

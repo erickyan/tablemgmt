@@ -14,7 +14,7 @@
         variant="tonal"
       >
         <v-icon start size="16">mdi-clock-outline</v-icon>
-        Sat {{ formattedSitDownTime }}
+        {{ formattedSitDownTime }}
       </v-chip>
     </div>
 
