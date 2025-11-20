@@ -6,12 +6,25 @@
 
 import logger from './logger.js'
 
+// Expose test function globally for debugging (dev only)
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  window.testPassPRNT = testPassPRNT
+  window.isIOSDevice = isIOS
+}
+
 /**
  * Check if running on iOS device
  * @returns {boolean}
  */
 export function isIOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+  // Check user agent
+  const ua = navigator.userAgent || navigator.vendor || window.opera
+  const isIOSDevice = /iPad|iPhone|iPod/.test(ua) && !window.MSStream
+  
+  // Also check for touch support and platform (iPadOS 13+ reports as Mac)
+  const isIPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+  
+  return isIOSDevice || isIPad
 }
 
 /**
@@ -241,35 +254,109 @@ function formatTotalLine(label, value, width, isFinal = false) {
 }
 
 /**
+ * Check if PassPRNT app is installed by attempting to detect it
+ * @returns {Promise<boolean>}
+ */
+async function checkPassPRNTInstalled() {
+  return new Promise((resolve) => {
+    if (!isIOS()) {
+      resolve(false)
+      return
+    }
+
+    // Try to detect PassPRNT by attempting to open a simple URL
+    // The correct URL scheme is starpassprnt://
+    const testUrl = 'starpassprnt://'
+    let detected = false
+    
+    // Create a hidden iframe to test
+    const iframe = document.createElement('iframe')
+    iframe.style.display = 'none'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    
+    const timeout = setTimeout(() => {
+      if (!detected) {
+        try {
+          document.body.removeChild(iframe)
+        } catch (e) {
+          // Already removed
+        }
+        // We can't reliably detect, so assume it might be available
+        resolve(true)
+      }
+    }, 500)
+    
+    iframe.onload = () => {
+      detected = true
+      clearTimeout(timeout)
+      try {
+        document.body.removeChild(iframe)
+      } catch (e) {
+        // Already removed
+      }
+      resolve(true)
+    }
+    
+    iframe.src = testUrl
+    document.body.appendChild(iframe)
+  })
+}
+
+/**
  * Print using PassPRNT app
- * @param {string} text - Plain text content to print
+ * PassPRNT uses the URL scheme: starpassprnt://v1/print/nopreview?back=<url>&html=<html>
+ * @param {string} html - HTML content to print (PassPRNT expects HTML, not plain text)
  * @param {Object} options - Print options
  * @returns {Promise<void>}
  */
-export async function printWithPassPRNT(text, options = {}) {
+export async function printWithPassPRNT(html, options = {}) {
   return new Promise((resolve, reject) => {
     try {
-      // PassPRNT URL scheme format:
-      // passprnt://print?text=<encoded_text>&portName=<printer_name>&portSettings=<settings>
+      // PassPRNT URL scheme format (from Star Micronics documentation):
+      // starpassprnt://v1/print/nopreview?back=<encoded_back_url>&html=<encoded_html_content>
       
-      // Encode text for URL
-      const encodedText = encodeURIComponent(text)
+      // Encode the current page URL for the 'back' parameter (where to return after printing)
+      const backUrl = encodeURIComponent(window.location.href)
       
-      // Build URL - PassPRNT will show printer selection if not specified
-      const url = `passprnt://print?text=${encodedText}`
+      // Encode HTML content for the 'html' parameter
+      // PassPRNT expects full HTML, so we'll use the HTML directly
+      const encodedHtml = encodeURIComponent(html)
       
-      // Try to open PassPRNT
-      const link = document.createElement('a')
-      link.href = url
-      link.style.display = 'none'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-
-      // Give PassPRNT time to open
-      setTimeout(() => {
-        resolve()
-      }, 500)
+      // Build the PassPRNT URL
+      const passprntUrl = `starpassprnt://v1/print/nopreview?back=${backUrl}&html=${encodedHtml}`
+      
+      logger.info('Attempting to open PassPRNT with URL:', passprntUrl.substring(0, 100) + '...')
+      
+      // Try to open PassPRNT using window.location
+      // This must be triggered from a user action (which it is - button click)
+      try {
+        // Store current location
+        const currentLocation = window.location.href
+        
+        // Attempt to open PassPRNT
+        window.location.href = passprntUrl
+        
+        // Give PassPRNT time to open
+        // If PassPRNT opens, it will handle the URL
+        // If it doesn't open, we'll still be on the current page
+        setTimeout(() => {
+          // Check if we're still on the same page (PassPRNT didn't open)
+          if (window.location.href === currentLocation || !window.location.href.includes('starpassprnt://')) {
+            logger.warn('PassPRNT may not have opened. URL scheme might be blocked.')
+            // Still resolve - user might need to install PassPRNT or use a different browser
+            resolve()
+          } else {
+            // PassPRNT opened successfully
+            logger.info('PassPRNT opened successfully')
+            resolve()
+          }
+        }, 1000)
+        
+      } catch (error) {
+        logger.error('Failed to open PassPRNT:', error)
+        reject(new Error('Failed to open PassPRNT: ' + error.message))
+      }
 
     } catch (error) {
       logger.error('PassPRNT print failed:', error)
@@ -290,20 +377,62 @@ export async function printToThermalPrinter(html, options = {}) {
 
   if (useThermal) {
     try {
-      // Convert HTML to plain text
-      const plainText = htmlToPlainText(html)
+      logger.info('Attempting to print via PassPRNT (starpassprnt://)')
       
-      // Try PassPRNT first
-      await printWithPassPRNT(plainText, options)
-      logger.info('Print sent to PassPRNT')
+      // PassPRNT expects HTML content, not plain text
+      // The URL scheme format is: starpassprnt://v1/print/nopreview?back=<url>&html=<html>
+      await printWithPassPRNT(html, options)
+      logger.info('PassPRNT URL opened - check if PassPRNT app opened')
+      
+      // Return successfully - don't trigger standard print
       return
     } catch (error) {
-      logger.warn('Thermal printer print failed, falling back to standard print:', error)
+      logger.error('Thermal printer print failed:', error)
+      
+      // Provide helpful error message
+      const errorMsg = error.message || 'Unknown error'
+      if (errorMsg.includes('not detected') || errorMsg.includes('not installed')) {
+        throw new Error('PassPRNT app not found. Please install PassPRNT from the App Store.')
+      }
+      
       // Fall through to standard printing
+      throw error
     }
   }
 
   // Fallback to standard printing (will be handled by printService)
   throw new Error('Use standard printing')
+}
+
+/**
+ * Test PassPRNT connection (for debugging)
+ * Sends a simple test HTML to PassPRNT
+ * @returns {Promise<boolean>} True if PassPRNT appears to be available
+ */
+export async function testPassPRNT() {
+  if (!isIOS()) {
+    logger.warn('Not on iOS device, PassPRNT not available')
+    return false
+  }
+
+  const testHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head><title>PassPRNT Test</title></head>
+      <body>
+        <h1>PassPRNT Test</h1>
+        <p>If you see this printed, PassPRNT is working!</p>
+      </body>
+    </html>
+  `
+  
+  try {
+    await printWithPassPRNT(testHtml)
+    logger.info('PassPRNT test sent - check if PassPRNT app opened')
+    return true
+  } catch (error) {
+    logger.error('PassPRNT test failed:', error)
+    return false
+  }
 }
 

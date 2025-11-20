@@ -19,15 +19,19 @@ export async function printHTML(html, options = {}) {
   // Try thermal printer on iOS first
   if (isIOS() && options.useThermal !== false) {
     try {
+      logger.info('iOS detected, attempting thermal printer via PassPRNT')
       await printToThermalPrinter(html, options)
-      return // Successfully printed to thermal printer
+      logger.info('Thermal printer print initiated successfully')
+      return // Successfully sent to thermal printer
     } catch (error) {
       // If thermal printing fails, fall through to standard printing
-      logger.info('Thermal printing not available, using standard print')
+      logger.warn('Thermal printing failed, falling back to standard print:', error.message)
+      // Don't return here - continue to standard printing
     }
   }
 
   // Standard browser printing (for non-iOS or when thermal printing fails)
+  logger.info('Using standard browser printing')
   try {
     await printWithWindow(html)
   } catch (error) {
