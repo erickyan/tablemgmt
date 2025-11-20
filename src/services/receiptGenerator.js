@@ -8,6 +8,8 @@ import { toChineseNumeral } from '../utils/chineseNumerals.js'
 import { calculateGratuityOptions, calculateTaxAmount } from './pricingService.js'
 import { DRINK_CODES } from '../constants/drinks.js'
 import { renderReceiptHTML } from '../utils/receiptTemplateRenderer.js'
+import { addMoney, applyTax, decimalToNumber, roundMoney } from '../utils/decimalMoney.js'
+import Decimal from 'decimal.js'
 
 /**
  * Generate receipt HTML for a table
@@ -75,9 +77,17 @@ export function generateTableReceipt({ table, tableIndex, store, isDinner, ticke
     addLine(label, qty, unitPrice)
   })
 
-  const subtotal = totals.reduce((sum, value) => sum + value, 0)
+  // Calculate subtotal using decimal arithmetic to avoid floating point errors
+  const subtotal = totals.reduce((sum, value) => {
+    return addMoney(sum, new Decimal(value || 0))
+  }, new Decimal(0))
+  const subtotalNum = decimalToNumber(roundMoney(subtotal))
+  
   const totalWithTax = parseFloat(table.totalPrice || 0)
-  const taxAmount = calculateTaxAmount(subtotal, totalWithTax, store.TAX_RATE)
+  // Only use totalWithTax if it's valid (> 0), otherwise calculate from subtotal and tax rate
+  const taxAmount = totalWithTax > 0 
+    ? calculateTaxAmount(subtotalNum, totalWithTax) 
+    : calculateTaxAmount(subtotalNum, null, store.TAX_RATE)
 
   // Prepare items for template
   const receiptItems = lines.map(line => ({
@@ -88,7 +98,8 @@ export function generateTableReceipt({ table, tableIndex, store, isDinner, ticke
   }))
 
   const ticketCountChinese = toChineseNumeral(ticketCount)
-  const gratuityBaseAmount = gratuityOnPreTax ? subtotal : (totalWithTax || (subtotal * store.TAX_RATE))
+  const finalTotal = totalWithTax > 0 ? totalWithTax : decimalToNumber(roundMoney(applyTax(subtotal, store.TAX_RATE || 1)))
+  const gratuityBaseAmount = gratuityOnPreTax ? subtotalNum : finalTotal
   const gratuityOptions = showGratuity 
     ? calculateGratuityOptions({ baseAmount: gratuityBaseAmount, percentages: gratuityPercentages })
     : []
@@ -103,9 +114,9 @@ export function generateTableReceipt({ table, tableIndex, store, isDinner, ticke
     showTicketCount,
     ticketCountChinese,
     items: receiptItems,
-    subtotal,
+    subtotal: subtotalNum,
     taxAmount,
-    total: totalWithTax || (subtotal * store.TAX_RATE),
+    total: finalTotal,
     footerText,
     showGratuity,
     gratuityOptions
@@ -135,7 +146,10 @@ export function generateTogoReceipt({ items, subtotal, total, store, ticketCount
   const gratuityOnPreTax = receiptSettings.gratuityOnPreTax === true
   const showTicketCount = receiptSettings.showTicketCount !== false
 
-  const taxAmount = calculateTaxAmount(subtotal, total)
+  // Calculate tax - use TAX_RATE if total is invalid or 0
+  const taxAmount = total > 0 && total >= subtotal
+    ? calculateTaxAmount(subtotal, total)
+    : calculateTaxAmount(subtotal, null, store.TAX_RATE || 1.07)
   const ticketCountChinese = toChineseNumeral(ticketCount)
   const gratuityBaseAmount = gratuityOnPreTax ? subtotal : total
   const gratuityOptions = showGratuity 

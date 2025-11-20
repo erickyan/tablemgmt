@@ -127,7 +127,13 @@ export default {
     },
     printTime: {
       type: String,
-      default: () => new Date().toLocaleString()
+      default: () => {
+        const now = new Date()
+        if (isFinite(now.getTime())) {
+          return now.toLocaleString('en-US', { timeZone: 'America/New_York' })
+        }
+        return now.toISOString()
+      }
     },
     // Ticket Count
     showTicketCount: {

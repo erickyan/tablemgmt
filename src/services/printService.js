@@ -4,6 +4,8 @@
  * Provides a clean interface for printing HTML content
  */
 
+import logger from './logger.js'
+
 /**
  * Print HTML content using the best available method
  * @param {string} html - HTML content to print
@@ -13,11 +15,11 @@ export async function printHTML(html) {
   try {
     await printWithWindow(html)
   } catch (error) {
-    console.warn('Window print failed, using iframe fallback:', error)
+    logger.warn('Window print failed, using iframe fallback:', error)
     try {
       await printWithIframe(html)
     } catch (iframeError) {
-      console.error('Print failed with both methods:', iframeError)
+      logger.error('Print failed with both methods:', iframeError)
       throw new Error('Unable to print: ' + iframeError.message)
     }
   }

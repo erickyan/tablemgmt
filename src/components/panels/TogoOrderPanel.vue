@@ -96,7 +96,7 @@ export default {
   emits: ['edit', 'print', 'paid'],
   computed: {
     selections() {
-      return this.$store.state.togoLines || []
+      return this.$store.state.togo.togoLines || []
     },
     lineItems() {
       return this.selections
@@ -118,9 +118,9 @@ export default {
       return this.lineItems.reduce((sum, item) => sum + item.total, 0)
     },
     totalWithTax() {
-      const explicit = Number(this.$store.state.totalTogoPrice || 0)
+      const explicit = Number(this.$store.state.togo.totalTogoPrice || 0)
       if (explicit > 0) return explicit
-      return this.subtotal * this.$store.state.TAX_RATE
+      return this.subtotal * (this.$store.state.settings.TAX_RATE || 1.07)
     }
   },
   methods: {

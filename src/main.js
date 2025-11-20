@@ -84,7 +84,7 @@ app.component('currenttogo-details', currenttogo)
   }
 
   try {
-    await store.dispatch('initializeAuth')
+    await store.dispatch('auth/initializeAuth')
   } catch (err) {
     errorHandler.handleAuth(err, 'Initialization', { showToUser: false })
   }

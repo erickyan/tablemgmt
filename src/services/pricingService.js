@@ -3,8 +3,20 @@
  * Handles all pricing calculations including totals, taxes, and gratuity
  * 
  * This service centralizes pricing logic to avoid duplication and improve testability
+ * Uses decimalMoney.js for precision-safe money calculations
  */
 import { DRINK_CODES } from '../constants/drinks.js'
+import Decimal from 'decimal.js'
+import {
+  addMoney,
+  multiplyMoney,
+  applyTax,
+  calculateTax,
+  calculateTaxFromTotal,
+  calculatePercent,
+  roundMoney,
+  decimalToNumber
+} from '../utils/decimalMoney.js'
 
 /**
  * Calculate subtotal for a table order
@@ -17,17 +29,18 @@ import { DRINK_CODES } from '../constants/drinks.js'
  * @returns {number} Subtotal amount
  */
 export function calculateTableSubtotal({ adultCount, bigKidCount, smlKidCount, drinkPrice, pricing }) {
-  const adult = Number(adultCount || 0)
-  const bigKid = Number(bigKidCount || 0)
-  const smlKid = Number(smlKidCount || 0)
-  const drinks = Number(drinkPrice || 0)
+  const adult = adultCount || 0
+  const bigKid = bigKidCount || 0
+  const smlKid = smlKidCount || 0
+  const drinks = drinkPrice || 0
   
-  const subtotal = drinks +
-    (adult * Number(pricing.adult || 0)) +
-    (bigKid * Number(pricing.bigKid || 0)) +
-    (smlKid * Number(pricing.smallKid || 0))
+  // Calculate using decimal arithmetic
+  let subtotal = new Decimal(drinks)
+  subtotal = addMoney(subtotal, multiplyMoney(pricing.adult || 0, adult))
+  subtotal = addMoney(subtotal, multiplyMoney(pricing.bigKid || 0, bigKid))
+  subtotal = addMoney(subtotal, multiplyMoney(pricing.smallKid || 0, smlKid))
   
-  return Number(subtotal.toFixed(2))
+  return decimalToNumber(roundMoney(subtotal))
 }
 
 /**
@@ -37,9 +50,8 @@ export function calculateTableSubtotal({ adultCount, bigKidCount, smlKidCount, d
  * @returns {number} Total with tax
  */
 export function calculateTotalWithTax(subtotal, taxRate) {
-  const subtotalNum = Number(subtotal || 0)
-  const rate = Number(taxRate || 1)
-  return Number((subtotalNum * rate).toFixed(2))
+  const total = applyTax(subtotal || 0, taxRate || 1)
+  return decimalToNumber(roundMoney(total))
 }
 
 /**
@@ -50,16 +62,16 @@ export function calculateTotalWithTax(subtotal, taxRate) {
  * @returns {number} Tax amount
  */
 export function calculateTaxAmount(subtotal, totalWithTax = null, taxRate = null) {
-  const subtotalNum = Number(subtotal || 0)
-  
-  if (totalWithTax !== null) {
-    const total = Number(totalWithTax || 0)
-    return Number((total - subtotalNum).toFixed(2))
+  // Only use totalWithTax if it's valid and greater than subtotal
+  if (totalWithTax !== null && totalWithTax > 0 && totalWithTax >= subtotal) {
+    const tax = calculateTaxFromTotal(subtotal || 0, totalWithTax || 0)
+    return decimalToNumber(roundMoney(tax))
   }
   
+  // Fall back to tax rate calculation if totalWithTax is invalid
   if (taxRate !== null) {
-    const rate = Number(taxRate || 1)
-    return Number((subtotalNum * (rate - 1)).toFixed(2))
+    const tax = calculateTax(subtotal || 0, taxRate || 1)
+    return decimalToNumber(roundMoney(tax))
   }
   
   return 0
@@ -73,15 +85,18 @@ export function calculateTaxAmount(subtotal, totalWithTax = null, taxRate = null
  * @returns {Array<Object>} Array of gratuity options with percent and amount
  */
 export function calculateGratuityOptions({ baseAmount, percentages = [10, 15, 20] }) {
-  const base = Number(baseAmount || 0)
+  const base = baseAmount || 0
   const validPercentages = Array.isArray(percentages) 
     ? percentages.filter(p => typeof p === 'number' && p >= 0 && p <= 100)
     : [10, 15, 20]
   
-  return validPercentages.map(percent => ({
-    percent,
-    amount: Number((base * percent / 100).toFixed(2))
-  }))
+  return validPercentages.map(percent => {
+    const amount = calculatePercent(base, percent)
+    return {
+      percent,
+      amount: decimalToNumber(roundMoney(amount))
+    }
+  })
 }
 
 /**
@@ -95,12 +110,13 @@ export function calculateTogoSubtotal(items) {
   }
   
   const subtotal = items.reduce((sum, item) => {
-    const unitPrice = Number(item.price || 0)
-    const quantity = Number(item.quantity || 0)
-    return sum + (unitPrice * quantity)
-  }, 0)
+    const unitPrice = item.price || 0
+    const quantity = item.quantity || 0
+    const itemTotal = multiplyMoney(unitPrice, quantity)
+    return addMoney(sum, itemTotal)
+  }, new Decimal(0))
   
-  return Number(subtotal.toFixed(2))
+  return decimalToNumber(roundMoney(subtotal))
 }
 
 /**
@@ -126,8 +142,11 @@ export function calculateDrinkPrice(drinks, waterPrice, drinkPrice) {
     }
   })
   
-  const total = (Number(waterPrice || 0) * numWater) + (Number(drinkPrice || 0) * numDrink)
-  return Number(total.toFixed(2))
+  const waterTotal = multiplyMoney(waterPrice || 0, numWater)
+  const drinkTotal = multiplyMoney(drinkPrice || 0, numDrink)
+  const total = addMoney(waterTotal, drinkTotal)
+  
+  return decimalToNumber(roundMoney(total))
 }
 
 /**

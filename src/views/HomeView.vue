@@ -11,6 +11,7 @@ import TableGrid from '../components/tables/TableGrid.vue'
 import OrderDetails from '../components/OrderDetails.vue'
 import { usePrinting } from '../composables/usePrinting.js'
 import { translate } from '../utils/translations.js'
+import logger from '../services/logger.js'
 
 export default {
   name: 'HomeView',
@@ -25,18 +26,18 @@ export default {
   computed: {
     // Only compute tableOrder when it actually changes
     tableOrder() {
-      return this.$store.state.tableOrder || []
+      return this.$store.state.ui.tableOrder || []
     },
     // Memoize language checks - only recalculate when language changes
     isChinese() {
-      return this.$store.state.language === 'zh'
+      return this.$store.state.settings.language === 'zh'
     },
     currentLanguage() {
-      return this.$store.state.language
+      return this.$store.state.settings.language
     },
     // Memoize price mode - only recalculate when isDinner changes
     currentPriceMode() {
-      return this.$store.state.isDinner
+      return this.$store.state.settings.isDinner
     }
   },
   setup() {
@@ -63,23 +64,23 @@ export default {
     handlePanelOpen(event) {
       const index = typeof event.detail?.tableIndex === 'number'
         ? event.detail.tableIndex
-        : this.$store.state.tableNum || 0
-      this.$store.state.tableNum = index
-      this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex: index })
+        : this.$store.state.ui.tableNum || 0
+      this.$store.commit('ui/setTableNum', index)
+      this.$store.dispatch('ui/setOrderPanel', { type: 'table', tableIndex: index })
       this.showDetails = true
     },
     async handlePanelPrint(event) {
       const index = typeof event.detail?.tableIndex === 'number'
         ? event.detail.tableIndex
-        : this.$store.state.tableNum || 0
-      this.$store.state.tableNum = index
-      this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex: index })
+        : this.$store.state.ui.tableNum || 0
+      this.$store.commit('ui/setTableNum', index)
+      this.$store.dispatch('ui/setOrderPanel', { type: 'table', tableIndex: index })
       // Print directly without opening the dialog
       await this.printTableReceipt(index)
     },
     async printTableReceipt(tableIndex) {
       // tableIndex is the actual table number (not array index)
-      const tables = this.$store.state.tables || {}
+      const tables = this.$store.state.tables.tables || {}
       const table = Array.isArray(tables)
         ? tables[tableIndex] || null  // Legacy array format
         : tables[tableIndex] || null  // New object format
@@ -93,31 +94,31 @@ export default {
     handlePanelPay(event) {
       const index = typeof event.detail?.tableIndex === 'number'
         ? event.detail.tableIndex
-        : this.$store.state.tableNum || 0
-      this.$store.state.tableNum = index
-      this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex: index })
-      this.$store.dispatch('payTable')
+        : this.$store.state.ui.tableNum || 0
+      this.$store.commit('ui/setTableNum', index)
+      this.$store.dispatch('ui/setOrderPanel', { type: 'table', tableIndex: index })
+      this.$store.dispatch('tables/payTable')
     },
     handlePanelFocus(event) {
       const index = typeof event.detail?.tableIndex === 'number'
         ? event.detail.tableIndex
-        : this.$store.state.tableNum || 0
-      this.$store.state.tableNum = index
-      this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex: index })
+        : this.$store.state.ui.tableNum || 0
+      this.$store.commit('ui/setTableNum', index)
+      this.$store.dispatch('ui/setOrderPanel', { type: 'table', tableIndex: index })
     },
     addDetails(n) {
       // Validate input
       if (n === undefined || n === null || n === '') {
-        console.warn('addDetails called with invalid table number:', n)
+        logger.component.warn('HomeView', 'addDetails called with invalid table number:', n)
         return
       }
       
-      const tables = this.$store.state.tables || {}
+      const tables = this.$store.state.tables.tables || {}
       const tableNumber = Number(n)
       
       // Validate that tableNumber is a valid number
       if (isNaN(tableNumber) || tableNumber <= 0) {
-        console.warn('addDetails called with invalid table number:', n, 'converted to:', tableNumber)
+        logger.component.warn('HomeView', 'addDetails called with invalid table number:', n, 'converted to:', tableNumber)
         return
       }
       
@@ -131,20 +132,20 @@ export default {
         
         if (foundIndex >= 0) {
           // Found by number - use it directly
-          this.$store.state.tableNum = foundIndex
-          this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex: foundIndex })
+          this.$store.commit('ui/setTableNum', foundIndex)
+          this.$store.dispatch('ui/setOrderPanel', { type: 'table', tableIndex: foundIndex })
           // Open the dialog
           this.showDetails = true
         } else {
           // Not found by number - try index-based as fallback
           const fallbackIndex = tableNumber - 1
           if (fallbackIndex >= 0 && fallbackIndex < tables.length) {
-            this.$store.state.tableNum = fallbackIndex
-            this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex: fallbackIndex })
+            this.$store.commit('ui/setTableNum', fallbackIndex)
+            this.$store.dispatch('ui/setOrderPanel', { type: 'table', tableIndex: fallbackIndex })
             // Open the dialog
             this.showDetails = true
           } else {
-            console.warn(`Table ${tableNumber} not found and invalid index ${fallbackIndex}`)
+            logger.component.warn('HomeView', `Table ${tableNumber} not found and invalid index ${fallbackIndex}`)
           }
         }
       } else {
@@ -152,12 +153,12 @@ export default {
         // Check if table exists
         if (tables[tableNumber]) {
           // Table exists - use table number directly (not index)
-          this.$store.state.tableNum = tableNumber
-          this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex: tableNumber })
+          this.$store.commit('ui/setTableNum', tableNumber)
+          this.$store.dispatch('ui/setOrderPanel', { type: 'table', tableIndex: tableNumber })
           // Open the dialog
           this.showDetails = true
         } else {
-          console.warn('Table', tableNumber, 'not found')
+          logger.component.warn('HomeView', 'Table', tableNumber, 'not found')
         }
       }
     },
@@ -166,12 +167,12 @@ export default {
     }
   },
   mounted() {
-    this.$store.dispatch('setOrderPanel', null)
+    this.$store.dispatch('ui/setOrderPanel', null)
     this.registerPanelListeners()
   },
   beforeUnmount() {
     this.unregisterPanelListeners()
-    this.$store.dispatch('setOrderPanel', null)
+    this.$store.dispatch('ui/setOrderPanel', null)
   }
 }
 </script>

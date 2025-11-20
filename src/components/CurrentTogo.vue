@@ -16,7 +16,7 @@
           size="small"
           variant="tonal"
           color="accent"
-          @click="$store.dispatch('calculateTogoTotal')"
+          @click="$store.dispatch('togo/calculateTogoTotal')"
         >
           <v-icon start>mdi-reload</v-icon>
           Refresh totals
@@ -53,7 +53,7 @@
                 color="accent"
                 @click="decrementLine(line)"
               >
-                <v-icon>mdi-minus</v-icon>
+                <v-icon size="32">mdi-minus</v-icon>
               </v-btn>
               <span class="quantity">{{ line.quantity }}</span>
               <v-btn
@@ -63,7 +63,7 @@
                 color="accent"
                 @click="incrementLine(line)"
               >
-                <v-icon>mdi-plus</v-icon>
+                <v-icon size="32">mdi-plus</v-icon>
               </v-btn>
               <v-btn
                 icon
@@ -131,7 +131,7 @@ export default {
       }
     },
     editableLines() {
-      return (this.$store.state.togoLines || []).map(line => ({
+      return (this.$store.state.togo.togoLines || []).map(line => ({
         lineId: line.lineId,
         name: line.itemName,
         quantity: Number(line.quantity ?? 0),
@@ -144,9 +144,9 @@ export default {
       return this.editableLines.reduce((sum, line) => sum + this.displayPrice(line) * line.quantity, 0)
     },
     totalWithTax() {
-      const explicit = Number(this.$store.state.totalTogoPrice || 0)
+      const explicit = Number(this.$store.state.togo.totalTogoPrice || 0)
       if (explicit > 0) return explicit
-      return this.subtotal * this.$store.state.TAX_RATE
+      return this.subtotal * (this.$store.state.settings.TAX_RATE || 1.07)
     }
   },
   methods: {
@@ -154,13 +154,13 @@ export default {
       return Number(line.basePrice || 0) + Number(line.extraPrice || 0)
     },
     incrementLine(line) {
-      this.$store.dispatch('updateTogoLine', {
+      this.$store.dispatch('togo/updateTogoLine', {
         lineId: line.lineId,
         quantity: line.quantity + 1
       })
     },
     decrementLine(line) {
-      this.$store.dispatch('updateTogoLine', {
+      this.$store.dispatch('togo/updateTogoLine', {
         lineId: line.lineId,
         quantity: line.quantity - 1
       })
@@ -170,7 +170,7 @@ export default {
       this.$emit('edit')
     },
     markPaid() {
-      this.$store.dispatch('payTogo')
+      this.$store.dispatch('togo/payTogo')
       this.dialogOpen = false
     },
     async printTogoReceipt() {
@@ -188,7 +188,7 @@ export default {
       showSuccess('To-go receipt printed')
     },
     markPaid() {
-      this.$store.dispatch('payTogo')
+      this.$store.dispatch('togo/payTogo')
       this.dialogOpen = false
       showSuccess('To-go order marked as paid')
     }

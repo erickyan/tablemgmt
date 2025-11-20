@@ -185,7 +185,7 @@ import { RouterView } from 'vue-router'
           <section class="pos-content">
             <div class="pos-content__primary">
               <!-- Show loading skeleton while initializing -->
-              <template v-if="!firebaseReady && $store.state.loadingStates.initializing">
+              <template v-if="!firebaseReady && $store.state.ui.loadingStates.initializing">
                 <div class="d-flex align-center justify-center" style="min-height: 400px">
                   <div class="text-center">
                     <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
@@ -195,7 +195,7 @@ import { RouterView } from 'vue-router'
               </template>
               <RouterView v-else-if="firebaseReady" />
             </div>
-            <aside v-if="showOrderPanel" class="pos-content__panel">
+            <aside v-if="showOrderPanel" class="pos-content__panel" :class="{ 'panel-mobile-hidden': isCashierRoute && ($vuetify.display.xs || $vuetify.display.sm) }">
           <component
             v-if="activeOrderPanelComponent"
             :is="activeOrderPanelComponent"
@@ -270,14 +270,14 @@ import { RouterView } from 'vue-router'
 
       <admin-menu-manager
         v-model="showMenuManager"
-        :menu="$store.state.menu"
+        :menu="$store.state.menu.menu"
         @save="handleMenuSave"
       />
 
       <admin-togo-sales
         v-model="showTogoSales"
         :sales="togoSalesHistory"
-        :loading="$store.state.loadingStates.loadingTogoSales"
+        :loading="$store.state.ui.loadingStates.loadingTogoSales"
       />
       <admin-live-sales
         v-model="showLiveSales"
@@ -323,7 +323,7 @@ import { RouterView } from 'vue-router'
                     <div class="d-flex align-center justify-space-between">
                       <div>
                         <div class="text-body-2 text-medium-emphasis mb-1">Current Count</div>
-                        <div class="text-h6">{{ $store.state.ticketCount || 0 }}</div>
+                        <div class="text-h6">{{ $store.state.sales.ticketCount || 0 }}</div>
                       </div>
                       <v-btn
                         color="error"
@@ -485,7 +485,7 @@ import { RouterView } from 'vue-router'
                         Table 1
                       </div>
                       <div v-if="receiptSettingsForm.showPrintTime" style="text-align: center; margin-top: 8px; font-size: 11px; color: #999;">
-                        {{ new Date().toLocaleString() }}
+                        {{ formatCurrentTime() }}
                       </div>
                       <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #ddd;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -694,8 +694,8 @@ import { RouterView } from 'vue-router'
               color="error"
               variant="flat"
               :aria-label="'Confirm reset ticket count'"
-              :loading="$store.state.loadingStates.resettingTicketCount"
-              :disabled="$store.state.loadingStates.resettingTicketCount"
+              :loading="$store.state.ui.loadingStates.resettingTicketCount"
+              :disabled="$store.state.ui.loadingStates.resettingTicketCount"
               @click="performResetTicketCount"
               @keydown.enter.prevent="performResetTicketCount"
             >
@@ -741,8 +741,8 @@ import { RouterView } from 'vue-router'
               color="error"
               variant="flat"
               :aria-label="'Confirm reset sales data'"
-              :loading="$store.state.loadingStates.resettingSales"
-              :disabled="$store.state.loadingStates.resettingSales"
+              :loading="$store.state.ui.loadingStates.resettingSales"
+              :disabled="$store.state.ui.loadingStates.resettingSales"
               @click="performResetSales"
               @keydown.enter.prevent="performResetSales"
             >
@@ -812,6 +812,7 @@ export default {
     },
   data: () => ({ 
     drawer: null,
+    priceMode: 'lunch', // Local state for lunch/dinner toggle
     togoDialogOpen: false,
     togoEditDialogOpen: false,
     bottomNav: null,
@@ -862,13 +863,24 @@ export default {
     }
   }),
   methods: {
+    formatCurrentTime() {
+      try {
+        const now = new Date()
+        if (isFinite(now.getTime())) {
+          return now.toLocaleString('en-US', { timeZone: 'America/New_York' })
+        }
+        return now.toISOString()
+      } catch (error) {
+        return new Date().toISOString()
+      }
+    },
     getTranslatedLabel(label) {
       return translate(label, this.isChinese)
     },
     openReceiptSettings() {
       // Seed form from current store values
-      const state = this.$store.state
-      const receiptSettings = state.receiptSettings || {}
+      const settings = this.$store.state.settings || {}
+      const receiptSettings = settings.receiptSettings || {}
       this.receiptSettingsForm.showTicketCount = receiptSettings.showTicketCount !== false
       this.receiptSettingsForm.showPrintTime = receiptSettings.showPrintTime !== false
       this.receiptSettingsForm.headerText = receiptSettings.headerText || 'China Buffet'
@@ -883,7 +895,7 @@ export default {
       this.showReceiptSettings = true
     },
     async saveReceiptSettings() {
-      this.$store.dispatch('updateReceiptSettings', {
+      this.$store.commit('settings/updateReceiptSettings', {
         showTicketCount: this.receiptSettingsForm.showTicketCount,
         showPrintTime: this.receiptSettingsForm.showPrintTime,
         headerText: this.receiptSettingsForm.headerText || 'China Buffet',
@@ -896,11 +908,11 @@ export default {
       })
       
       // Immediately save app state to Firestore to ensure persistence
-      if (this.$store.state.useFirebase && this.$store.state.firebaseInitialized) {
+      if (this.$store.state.firebase.useFirebase && this.$store.state.firebase.firebaseInitialized) {
         try {
           const snapshot = this.getAppStateSnapshot(this.$store.state)
           snapshot.timestamp = new Date().toISOString()
-          await this.$store.dispatch('saveAppStateImmediately', snapshot)
+          await this.$store.dispatch('firebase/saveAppStateImmediately', snapshot)
         } catch (error) {
           errorHandler.handleFirestore(error, 'saveReceiptSettings', {
             context: 'saveReceiptSettings',
@@ -915,20 +927,20 @@ export default {
     },
     openPricingSettings() {
       // Seed form from current store values
-      const state = this.$store.state
-      this.pricingForm.adultLunch = state.ADULTPRICE
-      this.pricingForm.bigKidLunch = state.BIGKIDPRICE
-      this.pricingForm.smallKidLunch = state.SMALLKIDPRICE
-      this.pricingForm.adultDinner = state.ADULTDINNERPRICE
-      this.pricingForm.bigKidDinner = state.BIGKIDDINNERPRICE
-      this.pricingForm.smallKidDinner = state.SMALLKIDDINNERPRICE
-      this.pricingForm.taxRatePercent = ((state.TAX_RATE - 1) * 100).toFixed(2)
-      this.pricingForm.waterPrice = state.WATERPRICE
-      this.pricingForm.drinkPrice = state.DRINKPRICE
+      const settings = this.$store.state.settings || {}
+      this.pricingForm.adultLunch = settings.ADULTPRICE || 0
+      this.pricingForm.bigKidLunch = settings.BIGKIDPRICE || 0
+      this.pricingForm.smallKidLunch = settings.SMALLKIDPRICE || 0
+      this.pricingForm.adultDinner = settings.ADULTDINNERPRICE || 0
+      this.pricingForm.bigKidDinner = settings.BIGKIDDINNERPRICE || 0
+      this.pricingForm.smallKidDinner = settings.SMALLKIDDINNERPRICE || 0
+      this.pricingForm.taxRatePercent = (((settings.TAX_RATE || 1.07) - 1) * 100).toFixed(2)
+      this.pricingForm.waterPrice = settings.WATERPRICE || 0
+      this.pricingForm.drinkPrice = settings.DRINKPRICE || 0
       this.showPricingSettings = true
     },
     async savePricingSettings() {
-      this.$store.dispatch('updatePricingSettings', {
+      this.$store.commit('settings/updatePricingSettings', {
         adultLunch: this.pricingForm.adultLunch,
         bigKidLunch: this.pricingForm.bigKidLunch,
         smallKidLunch: this.pricingForm.smallKidLunch,
@@ -941,11 +953,11 @@ export default {
       })
       
       // Immediately save app state to Firestore to ensure persistence
-      if (this.$store.state.useFirebase && this.$store.state.firebaseInitialized) {
+      if (this.$store.state.firebase.useFirebase && this.$store.state.firebase.firebaseInitialized) {
         try {
           const snapshot = this.getAppStateSnapshot(this.$store.state)
           snapshot.timestamp = new Date().toISOString()
-          await this.$store.dispatch('saveAppStateImmediately', snapshot)
+          await this.$store.dispatch('firebase/saveAppStateImmediately', snapshot)
         } catch (error) {
           errorHandler.handleFirestore(error, 'savePricingSettings', {
             context: 'savePricingSettings',
@@ -957,23 +969,24 @@ export default {
       this.showPricingSettings = false
       showSuccess('Pricing & tax updated')
     },
-    getAppStateSnapshot(state) {
+    getAppStateSnapshot() {
       // Helper to create app state snapshot (same logic as in store)
+      const state = this.$store.state
       return {
-        isDinner: state.isDinner,
-        tableNum: state.tableNum,
-        catID: state.catID,
-        TAX_RATE: state.TAX_RATE,
-        ADULTPRICE: state.ADULTPRICE,
-        BIGKIDPRICE: state.BIGKIDPRICE,
-        SMALLKIDPRICE: state.SMALLKIDPRICE,
-        ADULTDINNERPRICE: state.ADULTDINNERPRICE,
-        BIGKIDDINNERPRICE: state.BIGKIDDINNERPRICE,
-        SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
-        WATERPRICE: state.WATERPRICE,
-        DRINKPRICE: state.DRINKPRICE,
-        ticketCount: state.ticketCount || 0,
-        receiptSettings: JSON.parse(JSON.stringify(state.receiptSettings || { 
+        isDinner: state.settings.isDinner,
+        tableNum: state.ui.tableNum,
+        catID: state.ui.catID,
+        TAX_RATE: state.settings.TAX_RATE,
+        ADULTPRICE: state.settings.ADULTPRICE,
+        BIGKIDPRICE: state.settings.BIGKIDPRICE,
+        SMALLKIDPRICE: state.settings.SMALLKIDPRICE,
+        ADULTDINNERPRICE: state.settings.ADULTDINNERPRICE,
+        BIGKIDDINNERPRICE: state.settings.BIGKIDDINNERPRICE,
+        SMALLKIDDINNERPRICE: state.settings.SMALLKIDDINNERPRICE,
+        WATERPRICE: state.settings.WATERPRICE,
+        DRINKPRICE: state.settings.DRINKPRICE,
+        ticketCount: state.sales.ticketCount || 0,
+        receiptSettings: JSON.parse(JSON.stringify(state.settings.receiptSettings || { 
           showTicketCount: true,
           headerText: 'China Buffet',
           subHeaderText: '',
@@ -983,14 +996,13 @@ export default {
           gratuityPercentages: [10, 15, 20],
           gratuityOnPreTax: false
         })),
-        togoLines: JSON.parse(JSON.stringify(state.togoLines)),
-        togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
-        totalTogoPrice: state.totalTogoPrice,
-        tableOrder: state.tableOrder,
+        togoLines: JSON.parse(JSON.stringify(state.togo.togoLines)),
+        totalTogoPrice: state.togo.totalTogoPrice,
+        tableOrder: state.ui.tableOrder,
       }
     },
     toggleLanguage() {
-      this.$store.dispatch('toggleLanguage')
+      this.$store.commit('settings/toggleLanguage')
       // Prevent navigation when clicking language button
       this.syncBottomNavWithRoute()
     },
@@ -1001,7 +1013,7 @@ export default {
         return
       }
       try {
-        await this.$store.dispatch('signIn', {
+        await this.$store.dispatch('auth/signIn', {
           email: this.loginEmail.trim(),
           password: this.loginPassword
         })
@@ -1013,7 +1025,7 @@ export default {
       }
     },
     async logout() {
-      await this.$store.dispatch('signOut')
+      await this.$store.dispatch('auth/signOut')
       this.drawer = false
     },
     openTogoDialog() {
@@ -1127,36 +1139,37 @@ export default {
       }
     },
     async performResetTicketCount() {
-      this.$store.commit('setLoadingState', { key: 'resettingTicketCount', value: true })
+        this.$store.commit('ui/setLoadingState', { key: 'resettingTicketCount', value: true })
       try {
         // Reset ticket count in store
-        this.$store.dispatch('setTicketCount', 0)
+        this.$store.dispatch('sales/setTicketCount', 0)
         
         // Immediately save app state to Firestore
-        if (this.$store.state.useFirebase && this.$store.state.firebaseInitialized && this.$store.state.authUser) {
+        if (this.$store.state.firebase.useFirebase && this.$store.state.firebase.firebaseInitialized && this.$store.state.auth.authUser) {
           try {
             const state = this.$store.state
+            const settings = state.settings || {}
+            const ui = state.ui || {}
             const snapshot = {
-              isDinner: state.isDinner,
-              tableNum: state.tableNum,
-              catID: state.catID,
-              TAX_RATE: state.TAX_RATE,
-              ADULTPRICE: state.ADULTPRICE,
-              BIGKIDPRICE: state.BIGKIDPRICE,
-              SMALLKIDPRICE: state.SMALLKIDPRICE,
-              ADULTDINNERPRICE: state.ADULTDINNERPRICE,
-              BIGKIDDINNERPRICE: state.BIGKIDDINNERPRICE,
-              SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
-              WATERPRICE: state.WATERPRICE,
-              DRINKPRICE: state.DRINKPRICE,
+              isDinner: settings.isDinner,
+              tableNum: ui.tableNum,
+              catID: ui.catID || 0, // TODO: Move to settings module if still used
+              TAX_RATE: settings.TAX_RATE,
+              ADULTPRICE: settings.ADULTPRICE,
+              BIGKIDPRICE: settings.BIGKIDPRICE,
+              SMALLKIDPRICE: settings.SMALLKIDPRICE,
+              ADULTDINNERPRICE: settings.ADULTDINNERPRICE,
+              BIGKIDDINNERPRICE: settings.BIGKIDDINNERPRICE,
+              SMALLKIDDINNERPRICE: settings.SMALLKIDDINNERPRICE,
+              WATERPRICE: settings.WATERPRICE,
+              DRINKPRICE: settings.DRINKPRICE,
               ticketCount: 0,
-              togoLines: JSON.parse(JSON.stringify(state.togoLines)),
-              togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
-              totalTogoPrice: state.totalTogoPrice,
-              tableOrder: state.tableOrder,
+              togoLines: JSON.parse(JSON.stringify(state.togo.togoLines || [])),
+              totalTogoPrice: state.togo.totalTogoPrice || 0,
+              tableOrder: ui.tableOrder || [],
             }
             snapshot.timestamp = new Date().toISOString()
-            await this.$store.dispatch('saveAppStateImmediately', snapshot)
+            await this.$store.dispatch('firebase/saveAppStateImmediately', snapshot)
           } catch (error) {
             // Error will be handled by outer catch block with user-friendly messages
             throw error
@@ -1172,7 +1185,7 @@ export default {
         })
       } finally {
         this.drawer = false
-        this.$store.commit('setLoadingState', { key: 'resettingTicketCount', value: false })
+        this.$store.commit('ui/setLoadingState', { key: 'resettingTicketCount', value: false })
       }
     },
     ensureRoute(target) {
@@ -1182,8 +1195,8 @@ export default {
       return this.$router.push({ name: target })
     },
     handlePanelManageTable(index) {
-      const tableIndex = typeof index === 'number' ? index : this.$store.state.tableNum || 0
-      this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex })
+      const tableIndex = typeof index === 'number' ? index : this.$store.state.ui.tableNum || 0
+        this.$store.dispatch('ui/setOrderPanel', { type: 'table', tableIndex })
       this.ensureRoute('home').finally(() => {
         window.dispatchEvent(
           new CustomEvent('pos-open-table-details', { detail: { tableIndex } })
@@ -1191,8 +1204,8 @@ export default {
       })
     },
     handlePanelPrintTable(index) {
-      const tableIndex = typeof index === 'number' ? index : this.$store.state.tableNum || 0
-      this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex })
+      const tableIndex = typeof index === 'number' ? index : this.$store.state.ui.tableNum || 0
+        this.$store.dispatch('ui/setOrderPanel', { type: 'table', tableIndex })
       this.ensureRoute('home').finally(() => {
         window.dispatchEvent(
           new CustomEvent('pos-print-table', { detail: { tableIndex } })
@@ -1201,10 +1214,10 @@ export default {
     },
     handlePanelPayTable(index) {
       try {
-        const tableIndex = typeof index === 'number' ? index : this.$store.state.tableNum || 0
-        this.$store.dispatch('setOrderPanel', { type: 'table', tableIndex })
-        this.$store.dispatch('payTable')
-        const tables = this.$store.state.tables || {}
+        const tableIndex = typeof index === 'number' ? index : this.$store.state.ui.tableNum || 0
+        this.$store.dispatch('ui/setOrderPanel', { type: 'table', tableIndex })
+        this.$store.dispatch('tables/payTable')
+        const tables = this.$store.state.tables.tables || {}
         const table = Array.isArray(tables) ? tables[tableIndex] : tables[tableIndex]
         const tableName = table?.name || `Table ${table?.number || tableIndex + 1}`
         showSuccess(`${this.getTranslatedLabel('Table')} ${tableName} ${this.getTranslatedLabel('marked as paid')}`)
@@ -1225,11 +1238,11 @@ export default {
         ref.printTogoReceipt()
         return
       }
-      this.$store.dispatch('calculateTogoTotal')
+      this.$store.dispatch('togo/calculateTogoTotal')
     },
     async handlePanelTogoPaid() {
       try {
-        await this.$store.dispatch('payTogo')
+        await this.$store.dispatch('togo/payTogo')
         showSuccess('To-go order marked as paid')
         // Refresh to-go sales history if the dialog is open
         if (this.showTogoSales) {
@@ -1261,34 +1274,22 @@ export default {
     }
   },
   computed: {
-    priceMode: {
-      get() {
-        return this.$store.state.isDinner ? 'dinner' : 'lunch'
-      },
-      set(value) {
-        this.$store.dispatch('setDinnerMode', value === 'dinner')
-        this.applyTheme(value)
-        if (this.$route.name !== 'home') {
-          this.$router.push({ name: 'home' })
-        }
-      }
-    },
     requiresAuth() {
-      return this.$store.state.useFirebase
+      return this.$store.state.firebase.useFirebase
     },
     authLoading() {
-      return this.$store.state.authLoading
+      return this.$store.state.auth.authLoading
     },
     isAuthenticated() {
       if (!this.requiresAuth) return true
-      return !!this.$store.state.authUser
+      return !!this.$store.state.auth.authUser
     },
     firebaseReady() {
       if (!this.requiresAuth) return true
-      if (!this.$store.state.firebaseInitialized) return false
-      if (!Array.isArray(this.$store.state.menu) || this.$store.state.menu.length === 0) return false
+      if (!this.$store.state.firebase.firebaseInitialized) return false
+      if (!Array.isArray(this.$store.state.menu.menu) || this.$store.state.menu.menu.length === 0) return false
       // Handle both array (legacy) and object (new format) for tables
-      const tables = this.$store.state.tables || {}
+      const tables = this.$store.state.tables.tables || {}
       const hasTables = Array.isArray(tables) 
         ? tables.length > 0 
         : Object.keys(tables).length > 0
@@ -1299,13 +1300,13 @@ export default {
       return this.requiresAuth && !this.authLoading && !this.isAuthenticated
     },
     displayAuthError() {
-      return this.localAuthError || this.$store.state.authError
+      return this.localAuthError || this.$store.state.auth.authError
     },
     userEmail() {
-      return this.$store.state.authUser?.email || ''
+      return this.$store.state.auth.authUser?.email || ''
     },
     isAdmin() {
-      return this.$store.getters.isAdmin
+      return this.$store.getters['auth/isAdmin']
     },
     bottomNavItems() {
       const items = [
@@ -1358,7 +1359,7 @@ export default {
       return this.$route.name === 'cashier'
     },
     activeOrderPanel() {
-      return this.$store.state.orderPanel || { type: null }
+      return this.$store.state.ui.orderPanel || { type: null }
     },
     activeOrderPanelComponent() {
       switch (this.activeOrderPanel.type) {
@@ -1373,7 +1374,7 @@ export default {
     activeOrderPanelProps() {
       if (this.activeOrderPanel.type === 'table') {
         return {
-          tableIndex: this.activeOrderPanel.tableIndex ?? this.$store.state.tableNum ?? 0
+          tableIndex: this.activeOrderPanel.tableIndex ?? this.$store.state.ui.tableNum ?? 0
         }
       }
       return {}
@@ -1382,13 +1383,16 @@ export default {
       return 'drawer'
     },
     isChinese() {
-      return this.$store.state.language === 'zh'
+      return this.$store.state.settings.language === 'zh'
     },
     currentLanguageLabel() {
       return this.isChinese ? '中文' : 'English'
     }
   },
   mounted() {
+    // Initialize priceMode from store state
+    this.priceMode = this.$store.state.settings.isDinner ? 'dinner' : 'lunch'
+    
     // Set up error handler notification callback
     errorHandler.setNotificationCallback((errorInfo) => {
       // Show user-friendly message (not technical error details)
@@ -1410,17 +1414,17 @@ export default {
       
       // If index URL exists, log it with the full error
       if (errorInfo.indexUrl) {
-        console.error('[Firestore Index Error]', {
+        logger.error('[Firestore Index Error]', {
           context: errorInfo.context,
           indexUrl: errorInfo.indexUrl,
           error: errorInfo.error
         })
-        console.log('[Firestore Index] Click this link to create the index:', errorInfo.indexUrl)
+        logger.info('[Firestore Index] Click this link to create the index:', errorInfo.indexUrl)
       }
       
       // Log technical details for debugging (not shown to user)
       if (errorInfo.error && process.env.NODE_ENV === 'development') {
-        console.error('[Error Handler]', errorInfo.context, errorInfo.error)
+        logger.error('[Error Handler]', errorInfo.context, errorInfo.error)
       }
     })
     
@@ -1447,25 +1451,42 @@ export default {
       if (this.localAuthError) {
         this.localAuthError = ''
       }
-      if (this.requiresAuth && this.$store.state.authError) {
-        this.$store.commit('setAuthError', null)
+      if (this.requiresAuth && this.$store.state.auth.authError) {
+        this.$store.commit('auth/setAuthError', null)
       }
     },
     loginPassword() {
       if (this.localAuthError) {
         this.localAuthError = ''
       }
-      if (this.requiresAuth && this.$store.state.authError) {
-        this.$store.commit('setAuthError', null)
+      if (this.requiresAuth && this.$store.state.auth.authError) {
+        this.$store.commit('auth/setAuthError', null)
       }
     },
-    '$store.state.authUser'(user) {
+    '$store.state.auth.authUser'(user) {
       if (user) {
         this.drawer = false
       }
     },
-    '$store.state.isDinner'(value) {
+    '$store.state.settings.isDinner'(value) {
+      // Sync local priceMode with store state
+      this.priceMode = value ? 'dinner' : 'lunch'
       this.applyTheme(value ? 'dinner' : 'lunch')
+    },
+    priceMode: {
+      immediate: false,
+      handler(value) {
+        const isDinner = value === 'dinner'
+        // Only dispatch if the value is actually changing
+        if (this.$store.state.settings.isDinner !== isDinner) {
+          this.$store.commit('settings/setDinnerMode', isDinner)
+        }
+        this.applyTheme(value)
+        // Don't navigate if we're on the cashier route - let the user stay there
+        if (this.$route.name !== 'home' && this.$route.name !== 'cashier') {
+          this.$router.push({ name: 'home' })
+        }
+      }
     },
     isAdmin(value) {
       if (!value) {
@@ -1609,14 +1630,26 @@ export default {
   }
 }
 
-/* Hide side panel on iPhone vertical for cashier view */
-@media (max-width: 480px) and (orientation: portrait) {
+/* Hide side panel on phones (vertical and horizontal) for single-page cashier configuration */
+@media (max-width: 600px) {
   .pos-content {
     grid-template-columns: 1fr;
   }
   
   .pos-content__panel {
     display: none;
+  }
+  
+  /* On phones, make primary content full width */
+  .pos-content__primary {
+    width: 100%;
+  }
+}
+
+/* Specific portrait phone optimizations */
+@media (max-width: 600px) and (orientation: portrait) {
+  .pos-content__primary {
+    padding: 0;
   }
 }
 

@@ -100,7 +100,7 @@
                     <div class="text-caption text-medium-emphasis mt-1">
                       <span v-if="table.occupied">
                         Occupied
-                        <span v-if="table.sitDownTime"> since {{ table.sitDownTime }}</span>
+                        <span v-if="table.sitDownTime"> since {{ formatTime(table.sitDownTime) }}</span>
                       </span>
                       <span v-else>Available</span>
                     </div>
@@ -198,6 +198,7 @@
 
 <script>
 import { showSuccess } from '../utils/successNotifications.js'
+import { formatTime } from '../utils/timeUtils.js'
 
 export default {
   name: 'AdminTableManager',
@@ -230,7 +231,7 @@ export default {
       },
     },
     tables() {
-      const tables = this.$store.state.tables || {}
+      const tables = this.$store.state.tables.tables || {}
       if (Array.isArray(tables)) {
         return tables
       }
@@ -249,8 +250,8 @@ export default {
       this.tableToRemove = null
     },
     addTable() {
-      this.$store.dispatch('addTable')
-      const tables = this.$store.state.tables || []
+      this.$store.dispatch('tables/addTable')
+      const tables = this.$store.state.tables.tables || []
       const newTable = Array.isArray(tables) ? tables[tables.length - 1] : Object.values(tables).pop()
       const tableName = this.getTableDisplayName(newTable)
       showSuccess(`Table ${tableName} added`)
@@ -267,7 +268,7 @@ export default {
         return
       }
       const tableName = this.getTableDisplayName(this.tableToRemove)
-      this.$store.dispatch('removeTable', this.tableToRemove.number)
+      this.$store.dispatch('tables/removeTable', this.tableToRemove.number)
       this.showRemoveConfirm = false
       showSuccess(`Table ${tableName} removed`)
       this.tableToRemove = null
@@ -285,13 +286,16 @@ export default {
     },
     saveTableName(table) {
       const name = (this.editingTableName || '').trim()
-      this.$store.dispatch('updateTableName', {
+      this.$store.dispatch('tables/updateTableName', {
         tableNumber: table.number,
         name: name || null
       })
       const displayName = name || `Table ${table.number}`
       showSuccess(`Table name updated to "${displayName}"`)
       this.cancelEdit()
+    },
+    formatTime(timestamp) {
+      return formatTime(timestamp)
     },
   },
 }

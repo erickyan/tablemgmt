@@ -48,7 +48,7 @@
                   @click="decrementItem(item)"
                   :disabled="item.quantity <= 0"
                 >
-                  <v-icon>mdi-minus</v-icon>
+                  <v-icon size="32">mdi-minus</v-icon>
                 </v-btn>
                 <span>{{ item.quantity }}</span>
                 <v-btn
@@ -58,7 +58,7 @@
                   color="accent"
                   @click="incrementItem(item)"
                 >
-                  <v-icon>mdi-plus</v-icon>
+                  <v-icon size="32">mdi-plus</v-icon>
                 </v-btn>
               </div>
               <v-btn
@@ -216,14 +216,14 @@ export default {
     },
     incrementItem(item) {
       const nextQuantity = Number(item.quantity ?? 0) + 1
-      this.$store.dispatch('updateTogoLine', {
+      this.$store.dispatch('togo/updateTogoLine', {
         lineId: item.lineId,
         quantity: nextQuantity
       })
     },
     decrementItem(item) {
       const nextQuantity = Number(item.quantity ?? 0) - 1
-      this.$store.dispatch('updateTogoLine', {
+      this.$store.dispatch('togo/updateTogoLine', {
         lineId: item.lineId,
         quantity: nextQuantity
       })
@@ -273,7 +273,7 @@ export default {
         }
       }
       const label = option.label === 'No special request' ? '' : option.label
-      this.$store.dispatch('updateTogoLine', {
+      this.$store.dispatch('togo/updateTogoLine', {
         lineId: this.customizationDialog.item.lineId,
         note: label,
         extraPrice: Number(option.price || 0)

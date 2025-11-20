@@ -14,7 +14,7 @@
         variant="tonal"
       >
         <v-icon start size="16">mdi-clock-outline</v-icon>
-        Sat {{ table.sitDownTime }}
+        Sat {{ formattedSitDownTime }}
       </v-chip>
     </div>
 
@@ -96,7 +96,8 @@
 import { translate, getTranslation } from '../../utils/translations.js'
 import { DRINK_CODES } from '../../constants/drinks.js'
 import { useTimerManagement } from '../../composables/useTimerManagement.js'
-import { isOccupiedOrPrinted } from '../../services/tableStatusService.js'
+import { isOccupiedOrPrinted, isTablePrinted } from '../../services/tableStatusService.js'
+import { formatTime } from '../../utils/timeUtils.js'
 
 export default {
   name: 'TableOrderPanel',
@@ -121,7 +122,7 @@ export default {
   }),
   computed: {
     table() {
-      return this.$store.state.tables?.[this.tableIndex] || {}
+      return this.$store.state.tables.tables?.[this.tableIndex] || {}
     },
     tableNumber() {
       const number = this.table?.number
@@ -129,19 +130,29 @@ export default {
       return this.tableIndex + 1
     },
     isDinner() {
-      return this.$store.state.isDinner
+      return this.$store.state.settings.isDinner
     },
     // For occupied/printed tables, use the stored pricing mode that was used when calculated
     // For unoccupied tables, use current mode
+    formattedSitDownTime() {
+      return this.table?.sitDownTime ? formatTime(this.table.sitDownTime) : ''
+    },
     pricingModeWasDinner() {
-      // If table has a stored pricing mode, use it
+      // Only printed tables preserve their pricing mode
+      // All other tables (empty or occupied) should follow current nav bar mode
+      if (!isTablePrinted(this.table)) {
+        return this.$store.state.settings.isDinner
+      }
+      
+      // For printed tables, use stored pricing mode if available
       if (this.table.pricingModeDinner !== undefined) {
         return !!this.table.pricingModeDinner
       }
-      // For occupied or printed tables without stored mode, infer from stored price
-      // This handles tables that were calculated before pricingModeDinner was added
-      if (isOccupiedOrPrinted(this.table) && this.table.totalPrice && parseFloat(this.table.totalPrice) > 0) {
-        const state = this.$store.state
+      
+      // For printed tables without stored mode, infer from stored price
+      // This handles tables that were printed before pricingModeDinner was added
+      if (this.table.totalPrice && parseFloat(this.table.totalPrice) > 0) {
+        const settings = this.$store.state.settings || {}
         const adultCount = parseInt(this.table.adult) || 0
         const bigKidCount = parseInt(this.table.bigKid) || 0
         const smlKidCount = parseInt(this.table.smlKid) || 0
@@ -149,17 +160,17 @@ export default {
         
         // Calculate what price would be in dinner mode
         const dinnerSubtotal = drinkPrice + 
-          (adultCount * state.ADULTDINNERPRICE) + 
-          (bigKidCount * state.BIGKIDDINNERPRICE) + 
-          (smlKidCount * state.SMALLKIDDINNERPRICE)
-        const dinnerTotal = parseFloat((dinnerSubtotal * state.TAX_RATE).toFixed(2))
+          (adultCount * (settings.ADULTDINNERPRICE || 0)) + 
+          (bigKidCount * (settings.BIGKIDDINNERPRICE || 0)) + 
+          (smlKidCount * (settings.SMALLKIDDINNERPRICE || 0))
+        const dinnerTotal = parseFloat((dinnerSubtotal * (settings.TAX_RATE || 1.07)).toFixed(2))
         
         // Calculate what price would be in lunch mode
         const lunchSubtotal = drinkPrice + 
-          (adultCount * state.ADULTPRICE) + 
-          (bigKidCount * state.BIGKIDPRICE) + 
-          (smlKidCount * state.SMALLKIDPRICE)
-        const lunchTotal = parseFloat((lunchSubtotal * state.TAX_RATE).toFixed(2))
+          (adultCount * (settings.ADULTPRICE || 0)) + 
+          (bigKidCount * (settings.BIGKIDPRICE || 0)) + 
+          (smlKidCount * (settings.SMALLKIDPRICE || 0))
+        const lunchTotal = parseFloat((lunchSubtotal * (settings.TAX_RATE || 1.07)).toFixed(2))
         
         // Compare stored price to see which mode was used
         const storedPrice = parseFloat(this.table.totalPrice)
@@ -176,15 +187,15 @@ export default {
       return this.isDinner
     },
     pricing() {
-      const state = this.$store.state
+      const settings = this.$store.state.settings || {}
       // Use preserved mode for occupied tables, current mode for unoccupied
       const useDinnerMode = this.pricingModeWasDinner
       return {
-        adult: useDinnerMode ? state.ADULTDINNERPRICE : state.ADULTPRICE,
-        bigKid: useDinnerMode ? state.BIGKIDDINNERPRICE : state.BIGKIDPRICE,
-        smlKid: useDinnerMode ? state.SMALLKIDDINNERPRICE : state.SMALLKIDPRICE,
-        drink: state.DRINKPRICE,
-        water: state.WATERPRICE
+        adult: useDinnerMode ? (settings.ADULTDINNERPRICE || 0) : (settings.ADULTPRICE || 0),
+        bigKid: useDinnerMode ? (settings.BIGKIDDINNERPRICE || 0) : (settings.BIGKIDPRICE || 0),
+        smlKid: useDinnerMode ? (settings.SMALLKIDDINNERPRICE || 0) : (settings.SMALLKIDPRICE || 0),
+        drink: settings.DRINKPRICE || 0,
+        water: settings.WATERPRICE || 0
       }
     },
     lineItems() {
@@ -223,7 +234,7 @@ export default {
       // Otherwise, calculate from line items based on current mode
       if (this.table.occupied && this.table.totalPrice && parseFloat(this.table.totalPrice) > 0) {
         // Use stored totalPrice to avoid recalculation based on mode changes
-        return parseFloat(this.table.totalPrice) / this.$store.state.TAX_RATE
+        return parseFloat(this.table.totalPrice) / (this.$store.state.settings.TAX_RATE || 1.07)
       }
       return this.lineItems.reduce((sum, item) => sum + item.total, 0)
     },
@@ -234,7 +245,7 @@ export default {
         return Number(this.table.totalPrice || 0)
       }
       // For new/unoccupied tables, calculate based on current mode
-      return this.subtotal * this.$store.state.TAX_RATE
+      return this.subtotal * (this.$store.state.settings.TAX_RATE || 1.07)
     },
     hasGuests() {
       return this.lineItems.some(item => item.qty > 0)
@@ -309,7 +320,7 @@ export default {
       return translate(label, this.isChinese)
     },
     isChinese() {
-      return this.$store.state.language === 'zh'
+      return this.$store.state.settings.language === 'zh'
     },
     emitManage() {
       this.setHighlight('actions')

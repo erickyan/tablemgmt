@@ -18,28 +18,6 @@ export const resetMenuQuantities = (menu = []) => {
   })
 }
 
-/**
- * Sync legacy to-go state format
- */
-export const syncLegacyTogoState = (state) => {
-  const selections = (state.togoLines || []).map(line => ({
-    item: line.itemName,
-    quantity: Number(line.quantity ?? 0),
-    price: (Number(line.basePrice ?? 0) + Number(line.extraPrice ?? 0)).toFixed(2),
-    id: Number.isInteger(line.categoryIndex) ? line.categoryIndex : null,
-    nTerm: Number.isInteger(line.itemIndex) ? line.itemIndex : null
-  }))
-  state.seletedTogo = JSON.parse(JSON.stringify(selections))
-  const customizations = {}
-  state.togoLines.forEach(line => {
-    const note = line.note || ''
-    const extra = Number(line.extraPrice ?? 0)
-    if (!customizations[line.itemName]) {
-      customizations[line.itemName] = { label: note, price: extra }
-    }
-  })
-  state.togoCustomizations = customizations
-}
 
 /**
  * Recalculate to-go totals
@@ -50,7 +28,6 @@ export const recalcTogoTotals = (state, rootState) => {
     return sum + unitPrice * Number(line.quantity ?? 0)
   }, 0)
   state.totalTogoPrice = (subtotal * rootState.settings.TAX_RATE).toFixed(2)
-  syncLegacyTogoState(state)
 }
 
 /**

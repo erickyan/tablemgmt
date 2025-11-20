@@ -25,6 +25,20 @@ import { normalizeMenu, denormalizeMenu, findMenuItemIdFromIndices } from '../ut
 import { validatePrice, validateTaxRatePercent, validateCount, validateTableNumber, assertNonNegativeInteger } from '../utils/validation.js'
 import { incrementSalesCounters, optimisticUpdate } from '../services/firestoreTransactions.js'
 import { createPersistencePlugin } from './plugins/persistencePlugin.js'
+import { getCurrentTimestamp, formatTime, normalizeTimestamp } from '../utils/timeUtils.js'
+import { addMoney, multiplyMoney, applyTax, roundMoney, decimalToNumber } from '../utils/decimalMoney.js'
+import Decimal from 'decimal.js'
+
+// Import store modules
+import authModule from './modules/auth.js'
+import settings from './modules/settings.js'
+import ui from './modules/ui.js'
+import togo from './modules/togo.js'
+import cashier from './modules/cashier.js'
+import sales from './modules/sales.js'
+import menu from './modules/menu.js'
+import tables from './modules/tables.js'
+import firebase from './modules/firebase.js'
 
 const resetMenuQuantities = (menu = []) => {
   menu.forEach(category => {
@@ -37,51 +51,18 @@ const resetMenuQuantities = (menu = []) => {
   })
 }
 
-/**
- * Sync legacy togo state - DEPRECATED: This creates duplicate state
- * TODO: Remove seletedTogo and togoCustomizations, derive from togoLines when needed
- * 
- * @deprecated Use togoLines directly instead of seletedTogo
- */
-const syncLegacyTogoState = (state) => {
-  const selections = (state.togoLines || []).map(line => ({
-    item: line.itemName,
-    quantity: Number(line.quantity ?? 0),
-    price: (Number(line.basePrice ?? 0) + Number(line.extraPrice ?? 0)).toFixed(2),
-    id: Number.isInteger(line.categoryIndex) ? line.categoryIndex : null,
-    nTerm: Number.isInteger(line.itemIndex) ? line.itemIndex : null,
-    // Store menu item reference if available
-    menuItemId: line.menuItemId || null
-  }))
-  state.seletedTogo = JSON.parse(JSON.stringify(selections))
-  
-  // Normalize customizations by item ID instead of name
-  const customizations = {}
-  state.togoLines.forEach(line => {
-    const note = line.note || ''
-    const extra = Number(line.extraPrice ?? 0)
-    // Use menuItemId as key if available, otherwise fall back to itemName
-    const key = line.menuItemId || line.itemName
-    if (!customizations[key]) {
-      customizations[key] = { 
-        label: note, 
-        price: extra,
-        menuItemId: line.menuItemId || null
-      }
-    }
-  })
-  state.togoCustomizations = customizations
-}
 
 const recalcTogoTotals = (state) => {
-  const items = (state.togoLines || []).map(line => ({
+  const items = (state.togo?.togoLines || []).map(line => ({
     price: Number(line.basePrice ?? 0) + Number(line.extraPrice ?? 0),
     quantity: Number(line.quantity ?? 0)
   }))
   
   const subtotal = calculateTogoSubtotal(items)
-  state.totalTogoPrice = calculateTotalWithTax(subtotal, state.TAX_RATE).toFixed(2)
-  syncLegacyTogoState(state)
+  // Note: This function modifies state directly, so it needs to access the nested module state
+  if (state.togo) {
+    state.togo.totalTogoPrice = calculateTotalWithTax(subtotal, state.settings?.TAX_RATE || DEFAULT_TAX_RATE).toFixed(2)
+  }
 }
 
 /**
@@ -165,8 +146,6 @@ const store = createStore({
         catID: 0,
         togoLines: [],
         nextTogoLineId: 1,
-        seletedTogo: [],
-        togoCustomizations: {},
         cashierForm: (() => {
             // Initialize drinkCounts with all drink options from shared list
             const drinkCounts = {}
@@ -928,9 +907,9 @@ const store = createStore({
                 state.DRINKPRICE
             )
             
-            // Store the pricing mode used when calculating this table's price
-            // This ensures line items always show the correct prices even after mode changes
-            table.pricingModeDinner = state.isDinner
+            // Don't set pricingModeDinner here - only set it when printing
+            // This allows occupied tables to follow current nav bar mode (lunch/dinner toggle)
+            // Only printed tables preserve their pricing mode
             
             // Get pricing for current mode
             const pricing = getPricingForMode({
@@ -965,11 +944,8 @@ const store = createStore({
             if (!table) {
                 return
             }
-            const today = new Date();
-            const hours = String(today.getHours()).padStart(2, '0')
-            const minutes = String(today.getMinutes()).padStart(2, '0')
-            const now = `${hours}:${minutes}`
-            table.sitDownTime = now
+            // Store timestamp in ISO 8601 format
+            table.sitDownTime = getCurrentTimestamp()
             persistTableByNumber(state, tableNumber)
         },
         setTableSitDownTime(state, payload = {}) {
@@ -1026,9 +1002,29 @@ const store = createStore({
          * - Updates sales summary in Firestore
          * - Clears the table after payment
          */
-        paid(state){
-            const tableNumber = getTableNumber(state, state.tableNum)
+        paid(state, payload = {}){
+            const settings = state.settings || {}
+            const tablesModule = state.tables || {}
+            const tables = tablesModule.tables || {}
+            const ui = state.ui || {}
+            // Sales updates are handled by tables/payTable action via sales/addTableSale dispatch
+            
+            // IMPORTANT: If payload already has computed values from tables/paid mutation,
+            // use those instead of recalculating (table may already be cleared by tables/paid)
+            if (payload._computedRevenue !== undefined || 
+                payload._adultCount !== undefined || 
+                payload._bigKidCount !== undefined || 
+                payload._smlKidCount !== undefined) {
+                // Values already set by tables/paid, don't overwrite them
+                return
+            }
+            
+            const tableNumber = payload.tableNumber || getTableNumber(state, ui.tableNum)
             const table = getTableByNumber(state, tableNumber)
+            if (!table) {
+                logger.store.warn('paid: Table not found', tableNumber)
+                return
+            }
             const adultCount = parseInt(table.adult) || 0
             const bigKidCount = parseInt(table.bigKid) || 0
             const smlKidCount = parseInt(table.smlKid) || 0
@@ -1057,103 +1053,56 @@ const store = createStore({
                 numDrink = drinks.length - numWater
             }
             
-            table.drinkPrice = state.WATERPRICE * numWater + state.DRINKPRICE * numDrink
+            // Use settings from payload if provided, otherwise use state
+            const effectiveSettings = payload.settings || settings
+            
+            // Calculate drink price using decimal arithmetic
+            const waterTotal = multiplyMoney(effectiveSettings.WATERPRICE || 0, numWater)
+            const drinkTotal = multiplyMoney(effectiveSettings.DRINKPRICE || 0, numDrink)
+            table.drinkPrice = decimalToNumber(roundMoney(addMoney(waterTotal, drinkTotal)))
             
             let revenue = 0
             // Only recalculate total price if table is not already occupied with a price set
             // This preserves prices for seated/printed tables when mode changes
             if (!shouldPreservePrice) {
-                // Store the pricing mode used when calculating this table's price
-                table.pricingModeDinner = state.isDinner
-                // Calculate total price based on lunch/dinner
-                let subtotal = table.drinkPrice
-                if (state.isDinner) {
-                    subtotal += (adultCount * state.ADULTDINNERPRICE) + (bigKidCount * state.BIGKIDDINNERPRICE) + (smlKidCount * state.SMALLKIDDINNERPRICE)
+                // Calculate total price based on lunch/dinner using decimal arithmetic
+                let subtotal = new Decimal(table.drinkPrice || 0)
+                if (effectiveSettings.isDinner) {
+                    subtotal = addMoney(subtotal, multiplyMoney(effectiveSettings.ADULTDINNERPRICE || 0, adultCount))
+                    subtotal = addMoney(subtotal, multiplyMoney(effectiveSettings.BIGKIDDINNERPRICE || 0, bigKidCount))
+                    subtotal = addMoney(subtotal, multiplyMoney(effectiveSettings.SMALLKIDDINNERPRICE || 0, smlKidCount))
                 } else {
-                    subtotal += (adultCount * state.ADULTPRICE) + (bigKidCount * state.BIGKIDPRICE) + (smlKidCount * state.SMALLKIDPRICE)
+                    subtotal = addMoney(subtotal, multiplyMoney(effectiveSettings.ADULTPRICE || 0, adultCount))
+                    subtotal = addMoney(subtotal, multiplyMoney(effectiveSettings.BIGKIDPRICE || 0, bigKidCount))
+                    subtotal = addMoney(subtotal, multiplyMoney(effectiveSettings.SMALLKIDPRICE || 0, smlKidCount))
                 }
                 
-                revenue = parseFloat((subtotal * state.TAX_RATE).toFixed(2))
+                const totalWithTax = applyTax(subtotal, effectiveSettings.TAX_RATE || 1)
+                revenue = decimalToNumber(roundMoney(totalWithTax))
                 table.totalPrice = revenue.toFixed(2)
+                
+                // Don't set pricingModeDinner here - only set it when printing
+                // This allows occupied tables to follow current nav bar mode (lunch/dinner toggle)
+                // Only printed tables preserve their pricing mode
+                table.occupied = true
             } else {
                 // Use existing totalPrice if preserving price
                 // Don't update pricingModeDinner - keep the original mode that was used
                 revenue = parseFloat(table.totalPrice) || 0
+                table.occupied = true
             }
             
-            table.occupied = true
-            
-            // Only process payment if there's actual revenue or customers
-            if (revenue > 0 || adultCount > 0 || bigKidCount > 0 || smlKidCount > 0) {
-                // Update sales summary in state (this updates the UI immediately)
-                const currentRevenue = parseFloat(state.sales.revenue) || 0
-                const currentAdultCount = parseInt(state.sales.adultCount) || 0
-                const currentBigKidCount = parseInt(state.sales.bigKidCount) || 0
-                const currentSmlKidCount = parseInt(state.sales.smlKidCount) || 0
-                
-                state.sales.revenue = (currentRevenue + revenue).toFixed(2)
-                state.sales.adultCount = currentAdultCount + adultCount
-                state.sales.bigKidCount = currentBigKidCount + bigKidCount
-                state.sales.smlKidCount = currentSmlKidCount + smlKidCount
-                state.sales.totalCount = state.sales.adultCount + state.sales.bigKidCount + state.sales.smlKidCount
-                
-                console.log('Sales updated:', {
-                    revenue: state.sales.revenue,
-                    adultCount: state.sales.adultCount,
-                    bigKidCount: state.sales.bigKidCount,
-                    smlKidCount: state.sales.smlKidCount,
-                    totalCount: state.sales.totalCount,
-                    tableRevenue: revenue,
-                    tableNumber: table.number
-                })
-                
-            // Add sales record to Firestore if enabled - with transaction for race condition prevention
-                if (state.useFirebase && state.firebaseInitialized) {
-                    // Use optimistic update for immediate UI feedback, then persist with transaction
-                    const optimisticRollback = () => {
-                        // Rollback state changes
-                        state.sales.revenue = (currentRevenue).toFixed(2)
-                        state.sales.adultCount = currentAdultCount
-                        state.sales.bigKidCount = currentBigKidCount
-                        state.sales.smlKidCount = currentSmlKidCount
-                        state.sales.totalCount = state.sales.adultCount + state.sales.bigKidCount + state.sales.smlKidCount
-                        logger.store.warn('Sales update rolled back due to failure')
-                    }
-                    
-                    optimisticUpdate(
-                        () => optimisticRollback, // Return rollback function
-                        async () => {
-                            // Persist with atomic transaction to prevent race conditions
-                            await Promise.all([
-                                firestore.addSalesRecord({
-                                    tableNumber: table.number,
-                                    orderType: 'dine-in',
-                                    revenue: revenue,
-                                    adultCount: adultCount,
-                                    bigKidCount: bigKidCount,
-                                    smlKidCount: smlKidCount
-                                }),
-                                incrementSalesCounters({
-                                    revenue: revenue,
-                                    adultCount: adultCount,
-                                    bigKidCount: bigKidCount,
-                                    smlKidCount: smlKidCount
-                                })
-                            ])
-                            logger.firestore.info('Sales successfully saved (transaction)')
-                        },
-                        { retry: true, maxRetries: 3 }
-                    ).then(result => {
-                        if (!result.success) {
-                            logger.firestore.error('Failed to save sales after retries:', result.error)
-                        }
-                    }).catch(err => {
-                        logger.firestore.error('[Firestore] Failed to save sales:', err)
-                    })
-                }
-            } else {
-                console.warn('Payment attempted but no revenue or customers to process')
+            // Store computed values in payload for the action to use
+            if (payload) {
+                payload._computedRevenue = revenue
+                payload._adultCount = adultCount
+                payload._bigKidCount = bigKidCount
+                payload._smlKidCount = smlKidCount
             }
+            
+            // Sales updates are handled by the tables/payTable action via sales/addTableSale dispatch
+            // This mutation only handles table state clearing
+            // Firestore updates are also handled in the tables/payTable action
             
             // resetting table (always clear table after payment attempt)
             table.sitDownTime=""
@@ -1219,7 +1168,7 @@ const store = createStore({
                 // Try to find menuItemId from normalized menu structure
                 let menuItemId = line.menuItemId || null
                 if (!menuItemId && Number.isInteger(categoryIndex) && Number.isInteger(itemIndex)) {
-                    menuItemId = findMenuItemIdFromIndices(state.menu, categoryIndex, itemIndex)
+                    menuItemId = findMenuItemIdFromIndices(state.menu?.menu || [], categoryIndex, itemIndex)
                 }
                 
                 // Check for existing line - prefer menuItemId if available, otherwise match by name/price/note
@@ -1354,18 +1303,33 @@ const store = createStore({
         },
         togoPaid(state){
             // Recalculate togo total before payment (ensure price is up to date)
-            const orderItems = state.togoLines.map(line => ({
-                name: line.itemName,
-                quantity: line.quantity,
-                price: (line.basePrice + line.extraPrice),
-                note: line.note,
-                basePrice: line.basePrice,
-                extraCharge: line.extraPrice
-            }))
-            const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-            const togoRevenue = (subtotal * state.TAX_RATE).toFixed(2)
-            state.totalTogoPrice = (subtotal * state.TAX_RATE).toFixed(2)
-            state.sales.totalTogoRevenue = Number(state.sales.totalTogoRevenue || 0) + Number(state.totalTogoPrice || 0)
+            const orderItems = state.togoLines.map(line => {
+                // Calculate price using decimal arithmetic
+                const price = decimalToNumber(addMoney(line.basePrice || 0, line.extraPrice || 0))
+                return {
+                    name: line.itemName,
+                    quantity: line.quantity,
+                    price,
+                    note: line.note,
+                    basePrice: line.basePrice,
+                    extraCharge: line.extraPrice
+                }
+            })
+            // Calculate subtotal using decimal arithmetic
+            const subtotal = orderItems.reduce((sum, item) => {
+                const itemTotal = multiplyMoney(item.price || 0, item.quantity || 0)
+                return addMoney(sum, itemTotal)
+            }, new Decimal(0))
+            
+            // Calculate total with tax using decimal arithmetic
+            const totalWithTax = applyTax(subtotal, state.TAX_RATE || 1)
+            const togoRevenue = decimalToNumber(roundMoney(totalWithTax))
+            state.totalTogoPrice = togoRevenue.toFixed(2)
+            
+            // Update sales using decimal arithmetic
+            const currentTogoRevenue = new Decimal(state.sales.totalTogoRevenue || 0)
+            const newTogoRevenue = addMoney(currentTogoRevenue, new Decimal(togoRevenue))
+            state.sales.totalTogoRevenue = decimalToNumber(roundMoney(newTogoRevenue))
             
             if (state.useFirebase && state.firebaseInitialized) {
                 Promise.all([
@@ -1410,7 +1374,7 @@ const store = createStore({
                     try {
                         unsub()
                     } catch (err) {
-                        console.error('[Firestore] Failed to unsubscribe listener:', err)
+                        logger.firestore.error('Failed to unsubscribe listener:', err)
                     }
                 }
             })
@@ -1434,7 +1398,7 @@ const store = createStore({
                 try {
                     state.authUnsubscriber()
                 } catch (err) {
-                    console.error('[Firebase] Failed to remove auth listener:', err)
+                    logger.auth.error('Failed to remove auth listener:', err)
                 }
             }
             state.authUnsubscriber = typeof unsub === 'function' ? unsub : null
@@ -1470,7 +1434,7 @@ const store = createStore({
                 // If found, update DRINKPRICE
                 if (drinkItem && drinkItem.listPrice > 0) {
                     state.DRINKPRICE = Number(drinkItem.listPrice)
-                    console.log('[Menu] Updated DRINKPRICE from menu:', state.DRINKPRICE)
+                    logger.store.debug('[Menu] Updated DRINKPRICE from menu:', state.DRINKPRICE)
                 }
             }
         },
@@ -1583,46 +1547,49 @@ const store = createStore({
             const bigKidCount = Number(buffetCounts.bigKid || 0)
             const smallKidCount = Number(buffetCounts.smallKid || 0)
             
-            let buffetSubtotal = 0
+            // Calculate buffet revenue using decimal arithmetic
+            let buffetSubtotal = new Decimal(0)
             if (isDinner) {
-                buffetSubtotal = (adultCount * state.ADULTDINNERPRICE) + 
-                                (bigKidCount * state.BIGKIDDINNERPRICE) + 
-                                (smallKidCount * state.SMALLKIDDINNERPRICE)
+                buffetSubtotal = addMoney(buffetSubtotal, multiplyMoney(state.ADULTDINNERPRICE || 0, adultCount))
+                buffetSubtotal = addMoney(buffetSubtotal, multiplyMoney(state.BIGKIDDINNERPRICE || 0, bigKidCount))
+                buffetSubtotal = addMoney(buffetSubtotal, multiplyMoney(state.SMALLKIDDINNERPRICE || 0, smallKidCount))
             } else {
-                buffetSubtotal = (adultCount * state.ADULTPRICE) + 
-                                (bigKidCount * state.BIGKIDPRICE) + 
-                                (smallKidCount * state.SMALLKIDPRICE)
+                buffetSubtotal = addMoney(buffetSubtotal, multiplyMoney(state.ADULTPRICE || 0, adultCount))
+                buffetSubtotal = addMoney(buffetSubtotal, multiplyMoney(state.BIGKIDPRICE || 0, bigKidCount))
+                buffetSubtotal = addMoney(buffetSubtotal, multiplyMoney(state.SMALLKIDPRICE || 0, smallKidCount))
             }
             
-            // Calculate drink revenue
-            let drinkSubtotal = 0
+            // Calculate drink revenue using decimal arithmetic
+            let drinkSubtotal = new Decimal(0)
             Object.entries(drinkCounts).forEach(([code, qty]) => {
                 const quantity = Number(qty || 0)
                 if (quantity <= 0) return
                 // Check if it's water using the utility function
                 const unitPrice = isWater(code) ? state.WATERPRICE : state.DRINKPRICE
-                drinkSubtotal += quantity * unitPrice
+                drinkSubtotal = addMoney(drinkSubtotal, multiplyMoney(unitPrice || 0, quantity))
             })
             
-            // Calculate total with tax
-            const subtotal = buffetSubtotal + drinkSubtotal
-            const revenue = parseFloat((subtotal * state.TAX_RATE).toFixed(2))
+            // Calculate total with tax using decimal arithmetic
+            const subtotal = addMoney(buffetSubtotal, drinkSubtotal)
+            const totalWithTax = applyTax(subtotal, state.TAX_RATE || 1)
+            const revenue = decimalToNumber(roundMoney(totalWithTax))
             
             // Only process if there's actual revenue or customers
             if (revenue > 0 || adultCount > 0 || bigKidCount > 0 || smallKidCount > 0) {
                 // Update sales summary in state
-                const currentRevenue = parseFloat(state.sales.revenue) || 0
+                const currentRevenue = new Decimal(state.sales.revenue || 0)
                 const currentAdultCount = parseInt(state.sales.adultCount) || 0
                 const currentBigKidCount = parseInt(state.sales.bigKidCount) || 0
                 const currentSmlKidCount = parseInt(state.sales.smlKidCount) || 0
                 
-                state.sales.revenue = (currentRevenue + revenue).toFixed(2)
+                const newRevenue = addMoney(currentRevenue, new Decimal(revenue))
+                state.sales.revenue = decimalToNumber(roundMoney(newRevenue)).toFixed(2)
                 state.sales.adultCount = currentAdultCount + adultCount
                 state.sales.bigKidCount = currentBigKidCount + bigKidCount
                 state.sales.smlKidCount = currentSmlKidCount + smallKidCount
                 state.sales.totalCount = state.sales.adultCount + state.sales.bigKidCount + state.sales.smlKidCount
                 
-                console.log('Cashier sales updated:', {
+                logger.store.debug('Cashier sales updated:', {
                     revenue: state.sales.revenue,
                     adultCount: state.sales.adultCount,
                     bigKidCount: state.sales.bigKidCount,
@@ -2087,36 +2054,6 @@ const store = createStore({
                 const maxId = state.togoLines.reduce((max, line) => Math.max(max, Number(line.lineId) || 0), 0)
                 state.nextTogoLineId = maxId + 1
                 recalcTogoTotals(state)
-            } else if (Array.isArray(payload.seletedTogo)) {
-                state.togoLines = []
-                state.nextTogoLineId = 1
-                payload.seletedTogo.forEach(entry => {
-                    if (!entry || Number(entry.quantity) <= 0) return
-                    const categoryIndex = Number.isInteger(entry.id) ? entry.id : null
-                    const itemIndex = Number.isInteger(entry.nTerm) ? entry.nTerm : null
-                    
-                    // Try to find menuItemId from normalized menu
-                    let menuItemId = entry.menuItemId || null
-                    if (!menuItemId && Number.isInteger(categoryIndex) && Number.isInteger(itemIndex)) {
-                        menuItemId = findMenuItemIdFromIndices(state.menu, categoryIndex, itemIndex)
-                    }
-                    
-                    state.togoLines.push({
-                        lineId: state.nextTogoLineId++,
-                        itemName: entry.item,
-                        categoryIndex,
-                        itemIndex,
-                        menuItemId, // Store reference to normalized menu item
-                        quantity: Number(entry.quantity ?? 0),
-                        basePrice: Number(entry.price ?? 0),
-                        extraPrice: 0,
-                        note: ''
-                    })
-                })
-                recalcTogoTotals(state)
-            }
-            if (payload.togoCustomizations && typeof payload.togoCustomizations === 'object') {
-                state.togoCustomizations = JSON.parse(JSON.stringify(payload.togoCustomizations))
             }
             if (payload.totalTogoPrice !== undefined && payload.totalTogoPrice !== null) {
                 state.totalTogoPrice = payload.totalTogoPrice
@@ -2417,12 +2354,14 @@ const store = createStore({
         /**
          * Initialize Firestore and register real-time listeners
          */
-        async initializeFirebase({ commit, state }) {
-            if (!state.useFirebase || state.firebaseInitialized) {
+        async initializeFirebase({ commit, rootState }) {
+            const firebase = rootState.firebase || {}
+            const auth = rootState.auth || {}
+            if (!firebase.useFirebase || firebase.firebaseInitialized) {
                 return
             }
-            if (!state.authUser) {
-                console.log('[Firestore] Skipping initialization until user is authenticated')
+            if (!auth.authUser) {
+                logger.firestore.debug('Skipping initialization until user is authenticated')
                 return
             }
 
@@ -2439,7 +2378,7 @@ const store = createStore({
 
                 if (Array.isArray(menuDocs) && menuDocs.length > 0) {
                     commit('setMenu', menuDocs)
-                    console.log('[Firestore] Menu loaded:', menuDocs.length, 'categories')
+                    logger.firestore.info('Menu loaded:', menuDocs.length, 'categories')
                 }
 
                 // Handle both array (legacy) and object (new format) from Firestore
@@ -2453,12 +2392,12 @@ const store = createStore({
 
                 if (salesSummaryDoc) {
                     commit('setSales', formatSalesSummaryDoc(salesSummaryDoc))
-                    console.log('[Firestore] Sales summary loaded')
+                    logger.firestore.info('Sales summary loaded')
                 }
 
                 if (appStateDoc) {
                     commit('setAppState', { ...appStateDoc, timestamp: appStateDoc.updatedAt })
-                    console.log('[Firestore] App state snapshot loaded')
+                    logger.firestore.info('App state snapshot loaded')
                 }
 
                 const menuUnsub = firestore.watchMenu(menu => {
@@ -2492,7 +2431,7 @@ const store = createStore({
 
                 commit('setFirebaseUnsubscribers', unsubscribers)
                 commit('setFirebaseInitialized', true)
-                console.log('[Firestore] Real-time listeners attached')
+                logger.firestore.info('Real-time listeners attached')
 
                 if (stateSupportsSync(state)) {
                     const snapshot = getAppStateSnapshot(state)
@@ -2500,11 +2439,11 @@ const store = createStore({
                     const response = await firestore.saveAppState(snapshot)
                     if (response && response.success) {
                         commit('setAppStateSyncTimestamp', snapshot.timestamp)
-                        console.log('[Firestore] Initial AppState snapshot saved')
+                        logger.firestore.debug('Initial AppState snapshot saved')
                     }
                 }
             } catch (error) {
-                console.error('Failed to initialize Firestore:', error)
+                logger.firestore.error('Failed to initialize Firestore:', error)
                 commit('setFirebaseUnsubscribers', [])
                 commit('setFirebaseInitialized', false)
             } finally {
@@ -2521,8 +2460,10 @@ const store = createStore({
          * Persist entire menu collection to Firestore
          * Also removes orphaned categories (e.g., when category names are changed)
          */
-        async saveMenuToFirestore({ state }) {
-            if (!state.useFirebase || !state.firebaseInitialized || !state.authUser) {
+        async saveMenuToFirestore({ rootState }) {
+            const firebase = rootState.firebase || {}
+            const auth = rootState.auth || {}
+            if (!firebase.useFirebase || !firebase.firebaseInitialized || !auth.authUser) {
                 return
             }
             const categories = state.menu || []
@@ -2549,33 +2490,36 @@ const store = createStore({
                 const orphanedIds = existingCategoryIds.filter(id => !newCategoryIds.includes(id))
                 if (orphanedIds.length > 0) {
                     await Promise.all(orphanedIds.map(id => firestore.deleteMenuCategory(id)))
-                    console.log('[Firestore] Deleted', orphanedIds.length, 'orphaned menu category(ies):', orphanedIds)
+                    logger.firestore.debug('Deleted', orphanedIds.length, 'orphaned menu category(ies):', orphanedIds)
                 }
                 
-                console.log('[Firestore] Menu saved')
+                logger.firestore.info('Menu saved')
             } catch (error) {
-                console.error('[Firestore] Failed to save menu:', error)
+                logger.firestore.error('Failed to save menu:', error)
             }
         },
 
         /**
          * Persist a table to Firestore (keeps existing action name for compatibility)
          */
-        async saveTableToFirestore({ state }, tableIndex) {
-            if (!state.useFirebase || !state.firebaseInitialized || !state.authUser) {
+        async saveTableToFirestore({ rootState }, tableIndex) {
+            const firebase = rootState.firebase || {}
+            const auth = rootState.auth || {}
+            const ui = rootState.ui || {}
+            if (!firebase.useFirebase || !firebase.firebaseInitialized || !auth.authUser) {
                 return
             }
-            const index = typeof tableIndex === 'number' ? tableIndex : state.tableNum
-            const tableNumber = getTableNumber(state, index)
-            const table = getTableByNumber(state, tableNumber)
+            const index = typeof tableIndex === 'number' ? tableIndex : ui.tableNum
+            const tableNumber = getTableNumber(rootState, index)
+            const table = getTableByNumber(rootState, tableNumber)
             if (!table || !table.number) {
                 return
             }
             try {
                 await firestore.saveTable(table.number, table)
-                console.log('[Firestore] Table', table.number, 'saved')
+                logger.firestore.debug('Table', table.number, 'saved')
             } catch (error) {
-                console.error('[Firestore] Failed to save table:', error)
+                logger.firestore.error('Failed to save table:', error)
             }
         },
 
@@ -2584,11 +2528,11 @@ const store = createStore({
          */
         async populateSampleData({ state }) {
             if (!state.useFirebase) {
-                console.log('Firestore integration is disabled')
+                logger.firestore.warn('Firestore integration is disabled')
                 return { error: 'Firestore integration is disabled' }
             }
             if (!state.authUser) {
-                console.log('User must be authenticated to populate data')
+                logger.firestore.warn('User must be authenticated to populate data')
                 return { error: 'Authentication required' }
             }
 
@@ -2614,13 +2558,13 @@ const store = createStore({
 
                 await firestore.saveSalesSummary(buildSalesSummaryForFirestore(state.sales))
 
-                console.log('[Firestore] Sample data populated')
+                logger.firestore.info('Sample data populated')
                 const tableCount = Array.isArray(tables) 
                     ? tables.length 
                     : Object.keys(tables).length
                 return { success: true, menuItems: categories.length, tables: tableCount }
             } catch (error) {
-                console.error('Failed to populate sample data:', error)
+                logger.firestore.error('Failed to populate sample data:', error)
                 return { error: error.toString() }
             }
         },
@@ -2664,7 +2608,7 @@ const store = createStore({
                 // If found, update DRINKPRICE
                 if (drinkItem && drinkItem.listPrice > 0) {
                     commit('setDrinkPrice', drinkItem.listPrice)
-                    console.log('[Menu] Updated DRINKPRICE from menu:', drinkItem.listPrice)
+                    logger.store.debug('[Menu] Updated DRINKPRICE from menu:', drinkItem.listPrice)
                 }
             }
             
@@ -2676,9 +2620,11 @@ const store = createStore({
             }
         },
 
-        async resetSalesData({ commit, state }) {
-            if (!state.useFirebase || !state.firebaseInitialized || !state.authUser) {
-                console.log('[Firestore] resetSalesData skipped - not authenticated or initialized')
+        async resetSalesData({ commit, rootState }) {
+            const firebase = rootState.firebase || {}
+            const auth = rootState.auth || {}
+            if (!firebase.useFirebase || !firebase.firebaseInitialized || !auth.authUser) {
+                logger.firestore.warn('resetSalesData skipped - not authenticated or initialized')
                 return { error: 'Not authorized' }
             }
             commit('setLoadingState', { key: 'resettingSales', value: true })
@@ -2697,20 +2643,22 @@ const store = createStore({
                 snapshot.timestamp = new Date().toISOString()
                 await firestore.saveAppState(snapshot)
                 commit('setAppStateSyncTimestamp', snapshot.timestamp)
-                console.log('[Firestore] Sales data reset')
+                logger.firestore.info('Sales data reset')
                 return { success: true }
             } catch (error) {
-                console.error('[Firestore] Failed to reset sales data:', error)
+                logger.firestore.error('Failed to reset sales data:', error)
                 return { error: error.toString() }
             } finally {
                 commit('setLoadingState', { key: 'resettingSales', value: false })
             }
         },
 
-        async loadTogoSalesHistory({ commit, state }, options = {}) {
-            commit('setLoadingState', { key: 'loadingTogoSales', value: true })
+        async loadTogoSalesHistory({ commit, rootState }, options = {}) {
+            commit('ui/setLoadingState', { key: 'loadingTogoSales', value: true })
             try {
-                if (!state.useFirebase || !state.firebaseInitialized || !state.authUser) {
+                const firebaseState = rootState.firebase || {}
+                const authState = rootState.auth || {}
+                if (!firebaseState.useFirebase || !firebaseState.firebaseInitialized || !authState.authUser) {
                     logger.firestore.warn('loadTogoSalesHistory skipped - not authenticated or initialized')
                     // Return backward-compatible format if no options provided
                     return Object.keys(options).length === 0 ? [] : { records: [], lastDoc: null, hasMore: false }
@@ -2730,16 +2678,17 @@ const store = createStore({
                 // Re-throw error so it can be handled by the caller
                 throw error
             } finally {
-                commit('setLoadingState', { key: 'loadingTogoSales', value: false })
+                commit('ui/setLoadingState', { key: 'loadingTogoSales', value: false })
             }
         },
 
-        async initializeAuth({ state, commit, dispatch }) {
-            if (!state.useFirebase) {
+        async initializeAuth({ rootState, commit, dispatch }) {
+            const firebase = rootState.firebase || {}
+            if (!firebase.useFirebase) {
                 return Promise.resolve()
             }
             if (!auth) {
-                console.warn('[Firebase] Auth is not configured. Check environment variables.')
+                logger.auth.warn('Auth is not configured. Check environment variables.')
                 commit('setAuthLoading', false)
                 return Promise.resolve()
             }
@@ -2767,7 +2716,7 @@ const store = createStore({
                         resolve()
                     }
                 }, error => {
-                    console.error('[Firebase] Auth state change error:', error)
+                    logger.auth.error('Auth state change error:', error)
                     commit('setAuthError', error.message)
                     commit('setAuthLoading', false)
                     resolve()
@@ -2806,7 +2755,7 @@ const store = createStore({
             try {
                 await firebaseSignOut(auth)
             } catch (error) {
-                console.error('[Firebase] Sign-out failed:', error)
+                logger.auth.error('Sign-out failed:', error)
             } finally {
                 commit('setAuthUser', null)
                 commit('setAuthRole', 'server')
@@ -2819,8 +2768,10 @@ const store = createStore({
          * Immediately save app state to Firestore (bypasses debounce)
          * Used when critical settings like pricing need to be persisted immediately
          */
-        async saveAppStateImmediately({ state, commit }, snapshot) {
-            if (!state.useFirebase || !state.firebaseInitialized || !state.authUser) {
+        async saveAppStateImmediately({ rootState, commit }, snapshot) {
+            const firebase = rootState.firebase || {}
+            const auth = rootState.auth || {}
+            if (!firebase.useFirebase || !firebase.firebaseInitialized || !auth.authUser) {
                 return { error: 'Firestore not available' }
             }
             try {
@@ -2828,17 +2779,27 @@ const store = createStore({
                 if (response && response.success) {
                     const timestamp = response.updatedAt || snapshot.timestamp
                     commit('setAppStateSyncTimestamp', timestamp)
-                    console.log('[Firestore] App state saved immediately', timestamp ? `(@ ${timestamp})` : '')
+                    logger.firestore.debug('App state saved immediately', timestamp ? `(@ ${timestamp})` : '')
                     return { success: true, timestamp }
                 }
                 return { error: 'Save failed', response }
             } catch (error) {
-                console.error('[Firestore] Failed to save app state immediately:', error)
+                logger.firestore.error('Failed to save app state immediately:', error)
                 return { error: error.toString() }
             }
         }
     },
-    modules: {}
+    modules: {
+        auth: authModule,
+        settings,
+        ui,
+        togo,
+        cashier,
+        sales,
+        menu,
+        tables,
+        firebase,
+    }
 })
 
 function formatSalesSummaryDoc(data) {
@@ -2861,27 +2822,35 @@ function buildSalesSummaryForFirestore(data) {
         adultCount: Number(data.adultCount ?? 0),
         bigKidCount: Number(data.bigKidCount ?? 0),
         smlKidCount: Number(data.smlKidCount ?? 0),
-        totalTogoRevenue: Number(data.totalTogoRevenue ?? 0)
+        totalTogoRevenue: Number(data.totalTogoRevenue ?? 0),
+        togoOrderCount: Number(data.togoOrderCount ?? 0)
     }
 }
 
 function getAppStateSnapshot(state) {
+    const settings = state.settings || {}
+    const ui = state.ui || {}
+    const tables = state.tables?.tables || {}
+    const sales = state.sales || {}
+    const menu = state.menu?.menu || []
+    const togo = state.togo || {}
+    
     const snapshot = {
-        isDinner: state.isDinner,
-        tableNum: state.tableNum,
-        catID: state.catID,
+        isDinner: settings.isDinner,
+        tableNum: ui.tableNum,
+        catID: ui.catID, // TODO: Move to settings module if still used
         // Persist pricing + tax so admin changes survive reloads
-        TAX_RATE: state.TAX_RATE,
-        ADULTPRICE: state.ADULTPRICE,
-        BIGKIDPRICE: state.BIGKIDPRICE,
-        SMALLKIDPRICE: state.SMALLKIDPRICE,
-        ADULTDINNERPRICE: state.ADULTDINNERPRICE,
-        BIGKIDDINNERPRICE: state.BIGKIDDINNERPRICE,
-        SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
-        WATERPRICE: state.WATERPRICE,
-        DRINKPRICE: state.DRINKPRICE,
-        ticketCount: state.ticketCount || 0,
-        receiptSettings: JSON.parse(JSON.stringify(state.receiptSettings || { 
+        TAX_RATE: settings.TAX_RATE,
+        ADULTPRICE: settings.ADULTPRICE,
+        BIGKIDPRICE: settings.BIGKIDPRICE,
+        SMALLKIDPRICE: settings.SMALLKIDPRICE,
+        ADULTDINNERPRICE: settings.ADULTDINNERPRICE,
+        BIGKIDDINNERPRICE: settings.BIGKIDDINNERPRICE,
+        SMALLKIDDINNERPRICE: settings.SMALLKIDDINNERPRICE,
+        WATERPRICE: settings.WATERPRICE,
+        DRINKPRICE: settings.DRINKPRICE,
+        ticketCount: sales.ticketCount || 0,
+        receiptSettings: JSON.parse(JSON.stringify(settings.receiptSettings || { 
             showTicketCount: true,
             showPrintTime: true,
             headerText: 'China Buffet',
@@ -2892,17 +2861,16 @@ function getAppStateSnapshot(state) {
             gratuityPercentages: [10, 15, 20],
             gratuityOnPreTax: false
         })),
-        togoLines: JSON.parse(JSON.stringify(state.togoLines)),
-        togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
-        totalTogoPrice: state.totalTogoPrice,
-            tableOrder: normalizeTableOrder(state.tableOrder, Array.isArray(state.tables) ? state.tables.length : Object.keys(state.tables).length)
+        togoLines: JSON.parse(JSON.stringify(togo.togoLines || [])),
+        totalTogoPrice: togo.totalTogoPrice || 0,
+        tableOrder: normalizeTableOrder(ui.tableOrder || [], Array.isArray(tables) ? tables.length : Object.keys(tables).length)
     }
 
-    if (!state.useFirebase) {
-        snapshot.sales = JSON.parse(JSON.stringify(state.sales))
-        snapshot.tables = JSON.parse(JSON.stringify(state.tables))
-        snapshot.menu = JSON.parse(JSON.stringify(state.menu))
-        snapshot.togoCustomizations = JSON.parse(JSON.stringify(state.togoCustomizations || {}))
+    const firebase = state.firebase || {}
+    if (!firebase.useFirebase) {
+        snapshot.sales = JSON.parse(JSON.stringify(sales.sales || {}))
+        snapshot.tables = JSON.parse(JSON.stringify(tables))
+        snapshot.menu = JSON.parse(JSON.stringify(menu))
     }
 
     return snapshot
@@ -2911,31 +2879,36 @@ function getAppStateSnapshot(state) {
 // Helper function to get table by number (handles both object and legacy array format)
 function getTableByNumber(state, number) {
     if (number == null || number <= 0) return null
+    const tables = state.tables?.tables || {}
     // If tables is an object (new format), access directly
-    if (!Array.isArray(state.tables)) {
-        return state.tables[number] || null
+    if (!Array.isArray(tables)) {
+        return tables[number] || null
     }
     // Legacy array format - find by number
-    return state.tables.find(t => t && t.number === number) || null
+    return tables.find(t => t && t.number === number) || null
 }
 
 // Helper function to get table number from index or number
 // In new format, tableNum stores the actual table number (not index)
 function getTableNumber(state, indexOrNumber) {
-    if (indexOrNumber == null) return state.tableNum || null
+    const ui = state.ui || {}
+    if (indexOrNumber == null) return ui.tableNum || null
     
+    const tables = state.tables?.tables || {}
     // If tables is an object, the value is already a table number
-    if (!Array.isArray(state.tables)) {
+    if (!Array.isArray(tables)) {
         return Number(indexOrNumber) || null
     }
     
     // Legacy array format - convert index to table number
-    const table = state.tables[indexOrNumber]
+    const table = tables[indexOrNumber]
     return table && table.number ? table.number : null
 }
 
 function persistTableByNumber(state, number) {
-    if (!state.useFirebase || !state.firebaseInitialized || !state.authUser) {
+    const firebase = state.firebase || {}
+    const auth = state.auth || {}
+    if (!firebase.useFirebase || !firebase.firebaseInitialized || !auth.authUser) {
         return
     }
     const table = getTableByNumber(state, number)
@@ -2949,7 +2922,8 @@ function persistTableByNumber(state, number) {
 
 function persistCurrentTable(state) {
     // In new format, tableNum is the table number (not index)
-    const tableNumber = getTableNumber(state, state.tableNum)
+    const ui = state.ui || {}
+    const tableNumber = getTableNumber(state, ui.tableNum)
     if (tableNumber) {
         persistTableByNumber(state, tableNumber)
     }
@@ -3025,7 +2999,10 @@ function attachFirestoreStateSync(store) {
 }
 
 function stateSupportsSync(state) {
-    if (!state || !state.useFirebase || !state.authUser) {
+    if (!state) return false
+    const firebase = state.firebase || {}
+    const auth = state.auth || {}
+    if (!firebase.useFirebase || !auth.authUser) {
         return false
     }
     return typeof firestore.saveAppState === 'function'
@@ -3037,19 +3014,21 @@ attachFirestoreStateSync(store)
 // This ensures table mutations are automatically persisted to Firestore
 const persistencePlugin = createPersistencePlugin({
   getTableNumber: (state, indexOrNumber) => {
-    if (indexOrNumber == null) return state.tableNum || null
-    if (!Array.isArray(state.tables)) {
+    if (indexOrNumber == null) return state.ui.tableNum || null
+    const tables = state.tables.tables || {}
+    if (!Array.isArray(tables)) {
       return Number(indexOrNumber) || null
     }
-    const table = state.tables[indexOrNumber]
+    const table = tables[indexOrNumber]
     return table && table.number ? table.number : null
   },
   getTableByNumber: (state, number) => {
     if (number == null || number <= 0) return null
-    if (!Array.isArray(state.tables)) {
-      return state.tables[number] || null
+    const tables = state.tables.tables || {}
+    if (!Array.isArray(tables)) {
+      return tables[number] || null
     }
-    return state.tables.find(t => t && t.number === number) || null
+    return tables.find(t => t && t.number === number) || null
   }
 })
 persistencePlugin(store)

@@ -11,7 +11,7 @@ export default {
   }),
   computed: {
     menuCategories() {
-      const menu = this.$store.state.menu
+      const menu = this.$store.state.menu.menu || []
       const categories = []
       
       // Find drinks category in menu (if it exists)
@@ -61,7 +61,7 @@ export default {
       }))
     },
     isChinese() {
-      return this.$store.state.language === 'zh'
+      return this.$store.state.settings.language === 'zh'
     }
   },
   methods: {
@@ -102,19 +102,19 @@ export default {
       // Get the category object at this position
       const category = this.menuCategories[safeIndex]
       if (category && category.isDrinks) {
-        this.$store.state.catID = -1 // Special marker for drinks
+        this.$store.commit('ui/setCategoryId', -1) // Special marker for drinks
       } else if (category) {
-        this.$store.state.catID = category.index // Use the category's actual index
+        this.$store.commit('ui/setCategoryId', category.index) // Use the category's actual index
       } else {
-        this.$store.state.catID = 0 // Fallback
+        this.$store.commit('ui/setCategoryId', 0)
       }
-      this.$store.dispatch('setOrderPanel', { type: 'togo' })
+      this.$store.dispatch('ui/setOrderPanel', { type: 'togo' })
     },
     handleCategoryTap(categoryArrayIndex) {
       // categoryArrayIndex is the position in the menuCategories array
       this.selectCategory(categoryArrayIndex)
       this.togoCompose = true
-      this.$store.dispatch('setOrderPanel', { type: 'togo' })
+      this.$store.dispatch('ui/setOrderPanel', { type: 'togo' })
     },
     registerPanelListeners() {
       if (this.listenersRegistered) return
@@ -135,7 +135,7 @@ export default {
       if (Number.isInteger(detail.categoryIndex)) {
         this.selectCategory(detail.categoryIndex)
       } else {
-        this.$store.dispatch('setOrderPanel', { type: 'togo' })
+        this.$store.dispatch('ui/setOrderPanel', { type: 'togo' })
       }
       if (Number.isInteger(detail.itemIndex)) {
         this.pendingFocusIndex = detail.itemIndex
@@ -146,7 +146,7 @@ export default {
     }
   },
   mounted() {
-    const catID = Number(this.$store.state.catID || 0)
+    const catID = Number(this.$store.state.ui.catID || 0)
     // Find the array index that corresponds to this catID
     if (catID === -1) {
       // Find drinks category array index
@@ -158,15 +158,15 @@ export default {
       this.activeCategoryIndex = categoryIndex >= 0 ? categoryIndex : 0
     }
     this.selectCategory(this.activeCategoryIndex)
-    this.$store.dispatch('setOrderPanel', { type: 'togo' })
+    this.$store.dispatch('ui/setOrderPanel', { type: 'togo' })
     this.registerPanelListeners()
   },
   beforeUnmount() {
     this.unregisterPanelListeners()
-    this.$store.dispatch('setOrderPanel', null)
+      this.$store.dispatch('ui/setOrderPanel', null)
   },
   watch: {
-    '$store.state.catID'(value) {
+    '$store.state.ui.catID'(value) {
       const parsed = Number(value || 0)
       if (Number.isNaN(parsed)) {
         return

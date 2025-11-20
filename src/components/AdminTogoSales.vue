@@ -158,10 +158,12 @@ export default {
         } else {
           date = new Date(value)
         }
-        if (Number.isNaN(date.getTime())) {
+        // Validate date is finite before using toLocaleString
+        if (!date || Number.isNaN(date.getTime()) || !isFinite(date.getTime())) {
           return value
         }
-        return date.toLocaleString(undefined, {
+        return date.toLocaleString('en-US', {
+          timeZone: 'America/New_York',
           year: 'numeric',
           month: 'short',
           day: 'numeric',

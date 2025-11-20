@@ -22,7 +22,7 @@
             </v-chip>
             <span class="meta-time" v-if="table.sitDownTime">
               <v-icon size="16" icon="mdi-clock-outline" class="me-1"></v-icon>
-              {{ getTranslatedLabel('Sat') }} {{ table.sitDownTime }}
+              {{ getTranslatedLabel('Sat') }} {{ formattedSitDownTime }}
             </span>
           </div>
         </div>
@@ -32,8 +32,8 @@
             color="accent"
             class="header-btn"
             :aria-label="`${getTranslatedLabel('Clear')} ${getTableDisplayName()}`"
-            :loading="$store.state.loadingStates.clearingTable"
-            :disabled="$store.state.loadingStates.clearingTable"
+            :loading="$store.state.ui.loadingStates.clearingTable"
+            :disabled="$store.state.ui.loadingStates.clearingTable"
             @click="showClearConfirm = true"
             @keydown.enter.prevent="showClearConfirm = true"
           >
@@ -45,8 +45,8 @@
             color="accent"
             class="header-btn"
             :aria-label="`${getTranslatedLabel('Print')} receipt for ${getTableDisplayName()}`"
-            :loading="$store.state.loadingStates.printingReceipt"
-            :disabled="$store.state.loadingStates.printingReceipt"
+            :loading="$store.state.ui.loadingStates.printingReceipt"
+            :disabled="$store.state.ui.loadingStates.printingReceipt"
             @click="printReceipt"
             @keydown.enter.prevent="printReceipt"
           >
@@ -58,8 +58,8 @@
             color="accent"
             class="header-btn"
             :aria-label="getTranslatedLabel(table.goodPpl ? 'Remove VIP status' : 'Mark as VIP')"
-            @click="$store.dispatch('updateTableGoodPpl', !table.goodPpl)"
-            @keydown.enter.prevent="$store.dispatch('updateTableGoodPpl', !table.goodPpl)"
+            @click="$store.dispatch('tables/updateTableGoodPpl', !table.goodPpl)"
+            @keydown.enter.prevent="$store.dispatch('tables/updateTableGoodPpl', !table.goodPpl)"
           >
             <v-icon start>
               {{ table.goodPpl ? 'mdi-heart-off' : 'mdi-heart' }}
@@ -71,8 +71,8 @@
             color="accent"
             class="header-btn"
             :aria-label="`${getTranslatedLabel('Mark')} ${getTableDisplayName()} ${getTranslatedLabel('as paid')}`"
-            :loading="$store.state.loadingStates.payingTable"
-            :disabled="$store.state.loadingStates.payingTable"
+            :loading="$store.state.ui.loadingStates.payingTable"
+            :disabled="$store.state.ui.loadingStates.payingTable"
             @click="payAndClose"
             @keydown.enter.prevent="payAndClose"
           >
@@ -123,7 +123,7 @@
                     @keydown.enter.prevent="adjustGuest('adult', -1)"
                     :disabled="table.adult <= 0"
                   >
-                    <v-icon>mdi-minus</v-icon>
+                    <v-icon size="32">mdi-minus</v-icon>
                   </v-btn>
                   <v-btn
                     icon
@@ -133,7 +133,7 @@
                     @click="adjustGuest('adult', 1)"
                     @keydown.enter.prevent="adjustGuest('adult', 1)"
                   >
-                    <v-icon>mdi-plus</v-icon>
+                    <v-icon size="32">mdi-plus</v-icon>
                   </v-btn>
                 </div>
               </div>
@@ -161,7 +161,7 @@
                     @keydown.enter.prevent="adjustGuest('bigKid', -1)"
                     :disabled="table.bigKid <= 0"
                   >
-                    <v-icon>mdi-minus</v-icon>
+                    <v-icon size="32">mdi-minus</v-icon>
                   </v-btn>
                   <v-btn
                     icon
@@ -171,7 +171,7 @@
                     @click="adjustGuest('bigKid', 1)"
                     @keydown.enter.prevent="adjustGuest('bigKid', 1)"
                   >
-                    <v-icon>mdi-plus</v-icon>
+                    <v-icon size="32">mdi-plus</v-icon>
                   </v-btn>
                 </div>
               </div>
@@ -199,7 +199,7 @@
                     @keydown.enter.prevent="adjustGuest('smlKid', -1)"
                     :disabled="table.smlKid <= 0"
                   >
-                    <v-icon>mdi-minus</v-icon>
+                    <v-icon size="32">mdi-minus</v-icon>
                   </v-btn>
                   <v-btn
                     icon
@@ -209,7 +209,7 @@
                     @click="adjustGuest('smlKid', 1)"
                     @keydown.enter.prevent="adjustGuest('smlKid', 1)"
                   >
-                    <v-icon>mdi-plus</v-icon>
+                    <v-icon size="32">mdi-plus</v-icon>
                   </v-btn>
                 </div>
               </div>
@@ -333,8 +333,8 @@
             color="error"
             variant="flat"
             :aria-label="`${getTranslatedLabel('Confirm clear')} ${getTableDisplayName()}`"
-            :loading="$store.state.loadingStates.clearingTable"
-            :disabled="$store.state.loadingStates.clearingTable"
+            :loading="$store.state.ui.loadingStates.clearingTable"
+            :disabled="$store.state.ui.loadingStates.clearingTable"
             @click="confirmClearTable"
             @keydown.enter.prevent="confirmClearTable"
           >
@@ -354,7 +354,8 @@ import { usePrinting } from '../composables/usePrinting.js'
 import { DRINK_CODES } from '../constants/drinks.js'
 import { errorHandler } from '../services/errorHandler.js'
 import { showSuccess } from '../utils/successNotifications.js'
-import { isOccupiedOrPrinted } from '../services/tableStatusService.js'
+import { isOccupiedOrPrinted, isTablePrinted } from '../services/tableStatusService.js'
+import { formatTime } from '../utils/timeUtils.js'
 
 export default {
     props: {
@@ -387,12 +388,12 @@ export default {
         },
         tableIndex() {
             // tableNum can be either a table number (new format) or index (legacy)
-            return this.$store.state.tableNum || 0
+            return this.$store.state.ui.tableNum || 0
         },
         table() {
             // Access table by number (not index)
             // tables is now an object: { [tableNumber]: Table }
-            const tables = this.$store.state.tables || {}
+            const tables = this.$store.state.tables.tables || {}
             const indexOrNumber = this.tableIndex
             
             if (Array.isArray(tables)) {
@@ -424,33 +425,43 @@ export default {
         guestCount() {
             return Number(this.table.adult || 0) + Number(this.table.bigKid || 0) + Number(this.table.smlKid || 0)
         },
+        formattedSitDownTime() {
+            return this.table?.sitDownTime ? formatTime(this.table.sitDownTime) : ''
+        },
         pricingModeWasDinner() {
-            // If table has a stored pricing mode, use it
+            // Only printed tables preserve their pricing mode
+            // All other tables (empty or occupied) should follow current nav bar mode
+            if (!isTablePrinted(this.table)) {
+                return this.$store.state.settings.isDinner
+            }
+            
+            // For printed tables, use stored pricing mode if available
             if (this.table.pricingModeDinner !== undefined) {
                 return !!this.table.pricingModeDinner
             }
-            // For occupied or printed tables without stored mode, infer from stored price
-            // This handles tables that were calculated before pricingModeDinner was added
-            if (isOccupiedOrPrinted(this.table) && this.table.totalPrice && parseFloat(this.table.totalPrice) > 0) {
-                const state = this.$store.state
-                const adultCount = parseInt(this.table.adult) || 0
-                const bigKidCount = parseInt(this.table.bigKid) || 0
-                const smlKidCount = parseInt(this.table.smlKid) || 0
-                const drinkPrice = parseFloat(this.table.drinkPrice) || 0
-                
-                // Calculate what price would be in dinner mode
-                const dinnerSubtotal = drinkPrice + 
-                  (adultCount * state.ADULTDINNERPRICE) + 
-                  (bigKidCount * state.BIGKIDDINNERPRICE) + 
-                  (smlKidCount * state.SMALLKIDDINNERPRICE)
-                const dinnerTotal = parseFloat((dinnerSubtotal * state.TAX_RATE).toFixed(2))
-                
-                // Calculate what price would be in lunch mode
-                const lunchSubtotal = drinkPrice + 
-                  (adultCount * state.ADULTPRICE) + 
-                  (bigKidCount * state.BIGKIDPRICE) + 
-                  (smlKidCount * state.SMALLKIDPRICE)
-                const lunchTotal = parseFloat((lunchSubtotal * state.TAX_RATE).toFixed(2))
+            
+            // For printed tables without stored mode, infer from stored price
+            // This handles tables that were printed before pricingModeDinner was added
+            if (this.table.totalPrice && parseFloat(this.table.totalPrice) > 0) {
+            const settings = this.$store.state.settings || {}
+            const adultCount = parseInt(this.table.adult) || 0
+            const bigKidCount = parseInt(this.table.bigKid) || 0
+            const smlKidCount = parseInt(this.table.smlKid) || 0
+            const drinkPrice = parseFloat(this.table.drinkPrice) || 0
+            
+            // Calculate what price would be in dinner mode
+            const dinnerSubtotal = drinkPrice + 
+              (adultCount * (settings.ADULTDINNERPRICE || 0)) + 
+              (bigKidCount * (settings.BIGKIDDINNERPRICE || 0)) + 
+              (smlKidCount * (settings.SMALLKIDDINNERPRICE || 0))
+            const dinnerTotal = parseFloat((dinnerSubtotal * (settings.TAX_RATE || 1.07)).toFixed(2))
+            
+            // Calculate what price would be in lunch mode
+            const lunchSubtotal = drinkPrice + 
+              (adultCount * (settings.ADULTPRICE || 0)) + 
+              (bigKidCount * (settings.BIGKIDPRICE || 0)) + 
+              (smlKidCount * (settings.SMALLKIDPRICE || 0))
+            const lunchTotal = parseFloat((lunchSubtotal * (settings.TAX_RATE || 1.07)).toFixed(2))
                 
                 // Compare stored price to see which mode was used
                 const storedPrice = parseFloat(this.table.totalPrice)
@@ -463,8 +474,9 @@ export default {
                 }
                 return false // Was lunch mode
             }
-            // For unoccupied tables, use current mode
-            return this.$store.state.isDinner
+            
+            // Fallback to current mode
+            return this.$store.state.settings.isDinner
         },
         pricing() {
             const state = this.$store.state
@@ -519,7 +531,7 @@ export default {
             window.dispatchEvent(new CustomEvent('pos-table-panel-highlight', { detail }))
         },
         adjustGuest(type, delta) {
-            this.$store.dispatch('adjustGuestCount', { type, delta })
+            this.$store.dispatch('tables/adjustGuestCount', { type, delta })
             this.notifyPanel('check', { tab: 'check' })
             
             // Visual feedback animation
@@ -532,7 +544,7 @@ export default {
             }, 400)
         },
         addDrinks(code) {
-            this.$store.dispatch('addDrink', code)
+            this.$store.dispatch('tables/addDrink', code)
             this.notifyPanel('drinks', { tab: 'check' })
             
             // Visual feedback for added drink
@@ -559,13 +571,13 @@ export default {
             return translate(label, this.isChinese)
         },
         isChinese() {
-            return this.$store.state.language === 'zh'
+            return this.$store.state.settings.language === 'zh'
         },
         // openPrintDocument and printWithIframe are now provided by usePrinting composable
         confirmClearTable() {
             this.showClearConfirm = false
             try {
-                this.$store.dispatch('clearTable')
+                this.$store.dispatch('tables/clearTable')
                 this.notifyPanel('summary', { tab: 'check' })
                 showSuccess(`${this.getTableDisplayName()} ${this.getTranslatedLabel('cleared')}`)
             } catch (error) {
@@ -576,24 +588,24 @@ export default {
             }
         },
         updateMenu() {
-            this.$store.dispatch('calculateTableTotal')
+            this.$store.dispatch('tables/calculateTableTotal')
             if (this.tableHasActivity(this.tableIndex)) {
-                this.$store.dispatch('getTableTimestamp', this.tableIndex)
+                    this.$store.dispatch('tables/getTableTimestamp', this.tableIndex)
                 if (!this.table.occupied) {
-                    this.$store.dispatch('setTableOccupied', { index: this.tableIndex, value: true })
+                        this.$store.dispatch('tables/setTableOccupied', { index: this.tableIndex, value: true })
                 }
                 this.notifyPanel('check', { tab: 'check' })
                 showSuccess(`${this.getTableDisplayName()} ${this.getTranslatedLabel('updated')}`)
             } else {
-                this.$store.dispatch('setTableSitDownTime', { index: this.tableIndex, value: '' })
-                this.$store.dispatch('setTableOccupied', { index: this.tableIndex, value: false })
+                    this.$store.dispatch('tables/setTableSitDownTime', { index: this.tableIndex, value: '' })
+                    this.$store.dispatch('tables/setTableOccupied', { index: this.tableIndex, value: false })
                 this.notifyPanel('summary', { tab: 'check' })
                 showSuccess(`${this.getTableDisplayName()} ${this.getTranslatedLabel('cleared')}`)
             }
             this.dialogOpen = false
         },
         async printReceipt() {
-            this.$store.commit('setLoadingState', { key: 'printingReceipt', value: true })
+                this.$store.commit('ui/setLoadingState', { key: 'printingReceipt', value: true })
             try {
                 await this.printTableReceiptComposable({
                     store: this.$store,
@@ -612,12 +624,12 @@ export default {
                     showToUser: true
                 })
             } finally {
-                this.$store.commit('setLoadingState', { key: 'printingReceipt', value: false })
+                this.$store.commit('ui/setLoadingState', { key: 'printingReceipt', value: false })
             }
         },
         payAndClose() {
             try {
-                this.$store.dispatch('payTable')
+                this.$store.dispatch('tables/payTable')
                 this.notifyPanel('summary', { tab: 'check' })
                 this.dialogOpen = false
                 showSuccess(`${this.getTableDisplayName()} ${this.getTranslatedLabel('marked as paid')}`)
@@ -630,7 +642,7 @@ export default {
         },
         tableHasActivity(index) {
             // Access table by number (not index)
-            const tables = this.$store.state.tables || {}
+            const tables = this.$store.state.tables.tables || {}
             const table = Array.isArray(tables)
                 ? tables[index] || {}
                 : tables[index] || {}

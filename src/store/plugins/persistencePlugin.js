@@ -20,6 +20,11 @@ const installedStores = new WeakSet()
  * @returns {number|null} Table number or null
  */
 function getTableNumberFromMutation(state, mutation, getTableNumber) {
+  // Strip namespace prefix from mutation type (e.g., 'tables/increaseAdult' -> 'increaseAdult')
+  const mutationName = mutation.type.includes('/') 
+    ? mutation.type.split('/').pop() 
+    : mutation.type
+  
   // For mutations that operate on current table (state.tableNum)
   const mutationsUsingTableNum = [
     'increaseAdult', 'decreaseAdult',
@@ -28,14 +33,16 @@ function getTableNumberFromMutation(state, mutation, getTableNumber) {
     'addDrink', 'calculateTotal', 'updateTableGoodPpl'
   ]
 
-  if (mutationsUsingTableNum.includes(mutation.type)) {
-    // Get table number from state.tableNum
+  if (mutationsUsingTableNum.includes(mutationName)) {
+    // Get table number from state.ui.tableNum
+    const tableNum = state.ui?.tableNum || null
     if (typeof getTableNumber === 'function') {
-      return getTableNumber(state, state.tableNum)
+      return getTableNumber(state, tableNum)
     }
-    // Fallback: if tables is an object, state.tableNum is the table number
-    if (!Array.isArray(state.tables) && state.tableNum) {
-      return state.tableNum
+    // Fallback: if tables is an object, tableNum is the table number
+    const tables = state.tables?.tables || {}
+    if (!Array.isArray(tables) && tableNum) {
+      return tableNum
     }
   }
 
@@ -56,19 +63,21 @@ function getTableNumberFromMutation(state, mutation, getTableNumber) {
   }
 
   // For mutations that accept tableNumber as first parameter
-  if (mutation.type === 'updateTableName' && mutation.payload) {
+  if (mutationName === 'updateTableName' && mutation.payload) {
     if (typeof mutation.payload === 'object' && mutation.payload.tableNumber) {
       return mutation.payload.tableNumber
     }
   }
 
-  // For clearEverything, paid - use state.tableNum
-  if (mutation.type === 'clearEverything' || mutation.type === 'paid') {
+  // For clearEverything, paid - use state.ui.tableNum
+  if (mutationName === 'clearEverything' || mutationName === 'paid') {
+    const tableNum = state.ui?.tableNum || null
     if (typeof getTableNumber === 'function') {
-      return getTableNumber(state, state.tableNum)
+      return getTableNumber(state, tableNum)
     }
-    if (!Array.isArray(state.tables) && state.tableNum) {
-      return state.tableNum
+    const tables = state.tables?.tables || {}
+    if (!Array.isArray(tables) && tableNum) {
+      return tableNum
     }
   }
 
@@ -88,11 +97,12 @@ function getTableFromState(state, tableNumber, getTableByNumber) {
   }
   
   // Fallback: direct access
-  if (Array.isArray(state.tables)) {
-    const table = state.tables.find(t => t && Number(t.number) === tableNumber)
+  const tables = state.tables?.tables || {}
+  if (Array.isArray(tables)) {
+    const table = tables.find(t => t && Number(t.number) === tableNumber)
     return table || null
   } else {
-    return state.tables[tableNumber] || null
+    return tables[tableNumber] || null
   }
 }
 
@@ -104,7 +114,7 @@ function getTableFromState(state, tableNumber, getTableByNumber) {
  * @param {Function} getTableByNumber - Helper to get table by number
  */
 function persistTable(store, state, tableNumber, getTableByNumber) {
-  if (!state.useFirebase || !state.firebaseInitialized || !state.authUser) {
+  if (!state.firebase?.useFirebase || !state.firebase?.firebaseInitialized || !state.auth?.authUser) {
     return
   }
 
@@ -168,16 +178,22 @@ export function createPersistencePlugin(helpers = {}) {
     // Listen to mutations
     store.subscribe((mutation, state) => {
       // Only persist if Firebase is enabled and initialized
-      if (!state.useFirebase || !state.firebaseInitialized || !state.authUser) {
+      if (!state.firebase?.useFirebase || !state.firebase?.firebaseInitialized || !state.auth?.authUser) {
         return
       }
 
+      // Strip namespace prefix from mutation type for strategy lookup
+      // (e.g., 'tables/increaseAdult' -> 'increaseAdult')
+      const mutationName = mutation.type.includes('/') 
+        ? mutation.type.split('/').pop() 
+        : mutation.type
+      
       // Check if this mutation should persist immediately
-      if (!shouldPersistImmediately(mutation.type)) {
+      if (!shouldPersistImmediately(mutationName)) {
         return
       }
 
-      const persistenceType = getPersistenceType(mutation.type)
+      const persistenceType = getPersistenceType(mutationName)
       
       // Handle table persistence
       if (persistenceType === 'table') {
@@ -185,11 +201,11 @@ export function createPersistencePlugin(helpers = {}) {
         if (tableNumber) {
           // Debounce table persistence slightly to batch rapid changes
           // (But still persist immediately for critical changes)
-          const config = getPersistenceConfig(mutation.type)
+          const config = getPersistenceConfig(mutationName)
           logger.store.debug(`Persisting table ${tableNumber} due to mutation: ${mutation.type}`, config?.description || '')
           
           // For critical mutations (paid, clearEverything), persist immediately
-          if (mutation.type === 'paid' || mutation.type === 'clearEverything') {
+          if (mutationName === 'paid' || mutationName === 'clearEverything') {
             persistTable(store, state, tableNumber, getTableByNumber)
           } else {
             // For other mutations, use a microtask to batch rapid changes

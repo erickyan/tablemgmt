@@ -5,6 +5,7 @@
 
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth'
 import { auth } from '../../firebase'
+import logger from '../../services/logger.js'
 
 const ADMIN_EMAILS = (import.meta.env.VITE_FIREBASE_ADMIN_EMAILS || '')
   .split(',')
@@ -64,7 +65,7 @@ export default {
         try {
           state.authUnsubscriber()
         } catch (err) {
-          console.error('[Firebase] Failed to remove auth listener:', err)
+          logger.auth.error('Failed to remove auth listener:', err)
         }
       }
       state.authUnsubscriber = typeof unsub === 'function' ? unsub : null
@@ -84,7 +85,7 @@ export default {
         return Promise.resolve()
       }
       if (!auth) {
-        console.warn('[Firebase] Auth is not configured. Check environment variables.')
+        logger.auth.warn('Auth is not configured. Check environment variables.')
         commit('setAuthLoading', false)
         return Promise.resolve()
       }
@@ -113,7 +114,7 @@ export default {
             resolve()
           }
         }, error => {
-          console.error('[Firebase] Auth state change error:', error)
+          logger.auth.error('Auth state change error:', error)
           commit('setAuthError', error.message)
           commit('setAuthLoading', false)
           resolve()
@@ -136,7 +137,7 @@ export default {
       try {
         await signInWithEmailAndPassword(auth, email, password)
       } catch (error) {
-        console.error('[Firebase] Sign-in failed:', error)
+        logger.auth.error('Sign-in failed:', error)
         commit('setAuthError', error.message)
         commit('setAuthLoading', false)
         throw error
@@ -153,7 +154,7 @@ export default {
       try {
         await firebaseSignOut(auth)
       } catch (error) {
-        console.error('[Firebase] Sign-out failed:', error)
+        logger.auth.error('Sign-out failed:', error)
       } finally {
         commit('setAuthUser', null)
         commit('setAuthRole', 'server')

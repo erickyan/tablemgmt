@@ -8,7 +8,8 @@ import { generateTableReceipt, generateTogoReceipt, generateCashierReceipt } fro
 import { printHTML } from '../services/printService.js'
 import { DRINK_CODES } from '../constants/drinks.js'
 import { getDrinkLabel, isWater } from '../utils/drinkOptions.js'
-import { isOccupiedOrPrinted } from '../services/tableStatusService.js'
+import { isOccupiedOrPrinted, isTablePrinted } from '../services/tableStatusService.js'
+import logger from '../services/logger.js'
 
 export function usePrinting() {
   /**
@@ -19,7 +20,7 @@ export function usePrinting() {
     try {
       await printHTML(html)
     } catch (error) {
-      console.error('Print failed:', error)
+      logger.error('Print failed:', error)
       throw error
     }
   }
@@ -29,33 +30,32 @@ export function usePrinting() {
    * @param {Object} store - Vuex store instance
    */
   const saveAppStateIfNeeded = async (store) => {
-    if (store.state.useFirebase && store.state.firebaseInitialized && store.state.authUser) {
+    if (store.state.firebase.useFirebase && store.state.firebase.firebaseInitialized && store.state.auth.authUser) {
       try {
         const state = store.state
         const snapshot = {
-          isDinner: state.isDinner,
-          tableNum: state.tableNum,
-          catID: state.catID,
-          TAX_RATE: state.TAX_RATE,
-          ADULTPRICE: state.ADULTPRICE,
-          BIGKIDPRICE: state.BIGKIDPRICE,
-          SMALLKIDPRICE: state.SMALLKIDPRICE,
-          ADULTDINNERPRICE: state.ADULTDINNERPRICE,
-          BIGKIDDINNERPRICE: state.BIGKIDDINNERPRICE,
-          SMALLKIDDINNERPRICE: state.SMALLKIDDINNERPRICE,
-          WATERPRICE: state.WATERPRICE,
-          DRINKPRICE: state.DRINKPRICE,
-          ticketCount: state.ticketCount,
-          receiptSettings: JSON.parse(JSON.stringify(state.receiptSettings || { showTicketCount: true })),
-          togoLines: JSON.parse(JSON.stringify(state.togoLines)),
-          togoCustomizations: JSON.parse(JSON.stringify(state.togoCustomizations || {})),
-          totalTogoPrice: state.totalTogoPrice,
-          tableOrder: state.tableOrder,
+          isDinner: state.settings.isDinner,
+          tableNum: state.ui.tableNum,
+          catID: state.ui.catID,
+          TAX_RATE: state.settings.TAX_RATE,
+          ADULTPRICE: state.settings.ADULTPRICE,
+          BIGKIDPRICE: state.settings.BIGKIDPRICE,
+          SMALLKIDPRICE: state.settings.SMALLKIDPRICE,
+          ADULTDINNERPRICE: state.settings.ADULTDINNERPRICE,
+          BIGKIDDINNERPRICE: state.settings.BIGKIDDINNERPRICE,
+          SMALLKIDDINNERPRICE: state.settings.SMALLKIDDINNERPRICE,
+          WATERPRICE: state.settings.WATERPRICE,
+          DRINKPRICE: state.settings.DRINKPRICE,
+          ticketCount: state.sales.ticketCount,
+          receiptSettings: JSON.parse(JSON.stringify(state.settings.receiptSettings || { showTicketCount: true })),
+          togoLines: JSON.parse(JSON.stringify(state.togo.togoLines)),
+          totalTogoPrice: state.togo.totalTogoPrice,
+          tableOrder: state.ui.tableOrder,
         }
         snapshot.timestamp = new Date().toISOString()
-        await store.dispatch('saveAppStateImmediately', snapshot)
+        await store.dispatch('firebase/saveAppStateImmediately', snapshot)
       } catch (error) {
-        console.error('[Firestore] Failed to save ticket count:', error)
+        logger.firestore.error('Failed to save ticket count:', error)
       }
     }
   }
@@ -63,32 +63,40 @@ export function usePrinting() {
   /**
    * Determine pricing mode for a table
    * @param {Object} table - Table object
-   * @param {Object} store - Vuex store state
+   * @param {Object} settings - Settings state object
    * @returns {boolean} Whether dinner mode should be used
    */
-  const determineTablePricingMode = (table, store) => {
+  const determineTablePricingMode = (table, settings) => {
+    // Only printed tables preserve their pricing mode
+    // All other tables (empty or occupied) should follow current nav bar mode
+    if (!isTablePrinted(table)) {
+      return !!settings.isDinner
+    }
+    
+    // For printed tables, use stored pricing mode if available
     if (table.pricingModeDinner !== undefined) {
       return !!table.pricingModeDinner
     }
     
-    // Infer from stored price if available
-    if (isOccupiedOrPrinted(table) && table.totalPrice && parseFloat(table.totalPrice) > 0) {
+    // For printed tables without stored mode, infer from stored price
+    // This handles tables that were printed before pricingModeDinner was added
+    if (table.totalPrice && parseFloat(table.totalPrice) > 0) {
       const adultCount = parseInt(table.adult) || 0
       const bigKidCount = parseInt(table.bigKid) || 0
       const smlKidCount = parseInt(table.smlKid) || 0
       const drinkPrice = parseFloat(table.drinkPrice) || 0
       
       const dinnerSubtotal = drinkPrice + 
-        (adultCount * store.ADULTDINNERPRICE) + 
-        (bigKidCount * store.BIGKIDDINNERPRICE) + 
-        (smlKidCount * store.SMALLKIDDINNERPRICE)
-      const dinnerTotal = parseFloat((dinnerSubtotal * store.TAX_RATE).toFixed(2))
+        (adultCount * settings.ADULTDINNERPRICE) + 
+        (bigKidCount * settings.BIGKIDDINNERPRICE) + 
+        (smlKidCount * settings.SMALLKIDDINNERPRICE)
+      const dinnerTotal = parseFloat((dinnerSubtotal * settings.TAX_RATE).toFixed(2))
       
       const lunchSubtotal = drinkPrice + 
-        (adultCount * store.ADULTPRICE) + 
-        (bigKidCount * store.BIGKIDPRICE) + 
-        (smlKidCount * store.SMALLKIDPRICE)
-      const lunchTotal = parseFloat((lunchSubtotal * store.TAX_RATE).toFixed(2))
+        (adultCount * settings.ADULTPRICE) + 
+        (bigKidCount * settings.BIGKIDPRICE) + 
+        (smlKidCount * settings.SMALLKIDPRICE)
+      const lunchTotal = parseFloat((lunchSubtotal * settings.TAX_RATE).toFixed(2))
       
       const storedPrice = parseFloat(table.totalPrice)
       const dinnerDiff = Math.abs(dinnerTotal - storedPrice)
@@ -97,7 +105,8 @@ export function usePrinting() {
       return dinnerDiff < lunchDiff
     }
     
-    return store.isDinner
+    // Fallback to current mode for printed tables
+    return !!settings.isDinner
   }
 
   /**
@@ -112,13 +121,13 @@ export function usePrinting() {
    */
   const printTableReceipt = async ({ store, tableIndex, table = null, getDrinkLabelEnglish = null }) => {
     // Ensure total is calculated
-    await store.dispatch('calculateTableTotal')
+    await store.dispatch('tables/calculateTableTotal')
     
     // tableIndex is the actual table number (not array index)
     // Access table by number: tables[tableNumber]
     let tableData = table
     if (!tableData) {
-      const tables = store.state.tables || {}
+      const tables = store.state.tables.tables || {}
       if (Array.isArray(tables)) {
         // Legacy array format - convert tableIndex (number) to array index
         tableData = tables[tableIndex - 1] || {}
@@ -127,20 +136,21 @@ export function usePrinting() {
         tableData = tables[tableIndex] || {}
       }
     }
-    const state = store.state
+    const settings = store.state.settings
     
     // Determine pricing mode
-    const isDinner = determineTablePricingMode(tableData, state)
+    const isDinner = determineTablePricingMode(tableData, settings)
     
-    // Ensure pricingModeDinner is stored when printing
-    if (tableData && isOccupiedOrPrinted(tableData) && tableData.pricingModeDinner === undefined) {
+    // Store pricingModeDinner when printing (this preserves the mode for printed receipts)
+    // Note: Only printed tables preserve pricing mode - occupied tables follow current nav bar mode
+    if (tableData && tableData.pricingModeDinner === undefined) {
       tableData.pricingModeDinner = isDinner
-      await store.dispatch('setTableOccupied', { index: tableIndex, value: tableData.occupied })
+      // Don't need to call setTableOccupied here - it's just storing the pricing mode
     }
     
     // Increment ticket counter
-    await store.dispatch('incrementTicketCount')
-    const ticketCount = store.state.ticketCount
+    await store.dispatch('sales/incrementTicketCount')
+    const ticketCount = store.state.sales.ticketCount
     
     // Save app state if needed
     await saveAppStateIfNeeded(store)
@@ -149,7 +159,7 @@ export function usePrinting() {
     const receiptHtml = generateTableReceipt({
       table: tableData,
       tableIndex,
-      store: state,
+      store: settings,
       isDinner,
       ticketCount
     })
@@ -158,7 +168,7 @@ export function usePrinting() {
     openPrintDocument(receiptHtml)
     
     // Update table state (mark as not occupied after printing)
-    await store.dispatch('setTableOccupied', { index: tableIndex, value: false })
+    await store.dispatch('tables/setTableOccupied', { index: tableIndex, value: false })
   }
 
   /**
@@ -170,21 +180,32 @@ export function usePrinting() {
    */
   const printTogoReceipt = async ({ store, items }) => {
     // Calculate total
-    await store.dispatch('calculateTogoTotal')
+    await store.dispatch('togo/calculateTogoTotal')
     
-    const state = store.state
+    const settings = store.state.settings
+    const togo = store.state.togo
     
     if (!items || items.length === 0) {
-      console.warn('No items selected for to-go receipt')
+      logger.warn('No items selected for to-go receipt')
       return
     }
     
-    const subtotal = items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0)
-    const total = parseFloat(state.totalTogoPrice || (subtotal * state.TAX_RATE).toFixed(2))
+    // item.price is unit price (basePrice + extraPrice), need to multiply by quantity
+    const subtotalNum = items.reduce((sum, item) => {
+      const unitPrice = Number(item.price || 0)
+      const quantity = Number(item.quantity || 0)
+      return sum + (unitPrice * quantity)
+    }, 0)
+    
+    // totalTogoPrice already includes tax, so use it if available and valid
+    const totalFromStore = parseFloat(togo.totalTogoPrice || 0)
+    // If totalFromStore is valid (> 0), use it; otherwise calculate from subtotal * tax rate
+    const total = totalFromStore > 0 ? totalFromStore : parseFloat((subtotalNum * (settings.TAX_RATE || 1.07)).toFixed(2))
+    const subtotal = subtotalNum
     
     // Increment ticket counter
-    await store.dispatch('incrementTicketCount')
-    const ticketCount = store.state.ticketCount
+    await store.dispatch('sales/incrementTicketCount')
+    const ticketCount = store.state.sales.ticketCount
     
     // Save app state if needed
     await saveAppStateIfNeeded(store)
@@ -194,7 +215,7 @@ export function usePrinting() {
       items,
       subtotal,
       total,
-      store: state,
+      store: settings,
       ticketCount
     })
     
@@ -214,16 +235,16 @@ export function usePrinting() {
    * @returns {Promise<void>}
    */
   const printCashierReceipt = async ({ store, buffetCounts = {}, drinkCounts = {}, isDinner = false, getDrinkLabelFn = null, isWaterFn = null }) => {
-    const state = store.state
+    const settings = store.state.settings
     
     // Get pricing
     const pricing = {
-      adult: isDinner ? state.ADULTDINNERPRICE : state.ADULTPRICE,
-      bigKid: isDinner ? state.BIGKIDDINNERPRICE : state.BIGKIDPRICE,
-      smlKid: isDinner ? state.SMALLKIDDINNERPRICE : state.SMALLKIDPRICE,
-      drink: state.DRINKPRICE,
-      water: state.WATERPRICE,
-      taxRate: state.TAX_RATE
+      adult: isDinner ? settings.ADULTDINNERPRICE : settings.ADULTPRICE,
+      bigKid: isDinner ? settings.BIGKIDDINNERPRICE : settings.BIGKIDPRICE,
+      smlKid: isDinner ? settings.SMALLKIDDINNERPRICE : settings.SMALLKIDPRICE,
+      drink: settings.DRINKPRICE,
+      water: settings.WATERPRICE,
+      taxRate: settings.TAX_RATE
     }
     
     // Build receipt lines
@@ -253,7 +274,7 @@ export function usePrinting() {
     })
     
     if (lines.length === 0) {
-      console.warn('No items to print for cashier receipt')
+      logger.warn('No items to print for cashier receipt')
       return
     }
     
@@ -262,8 +283,8 @@ export function usePrinting() {
     const taxAmount = totalWithTax - subtotal
     
     // Increment ticket counter
-    await store.dispatch('incrementTicketCount')
-    const ticketCount = store.state.ticketCount
+    await store.dispatch('sales/incrementTicketCount')
+    const ticketCount = store.state.sales.ticketCount
     
     // Save app state if needed
     await saveAppStateIfNeeded(store)
@@ -273,7 +294,7 @@ export function usePrinting() {
       lines,
       subtotal,
       totalWithTax,
-      store: state,
+      store: settings,
       isDinner,
       ticketCount
     })
@@ -282,7 +303,7 @@ export function usePrinting() {
     openPrintDocument(receiptHtml)
     
     // Process payment
-    await store.dispatch('processCashierPayment')
+    await store.dispatch('cashier/processCashierPayment')
   }
 
   return {

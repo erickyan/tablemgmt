@@ -37,7 +37,7 @@
           :aria-label="`${getTranslatedLabel('Set sit down time for')} ${tableName}`"
           @click.stop="handleSetSitDownTime"
         ></v-icon>
-        <span>{{ sitDownTime || '—' }}</span>
+        <span>{{ formattedSitDownTime || '—' }}</span>
       </div>
     </div>
 
@@ -86,6 +86,8 @@
 <script>
 import TableStatusChip from './TableStatusChip.vue'
 import { translate } from '../../utils/translations.js'
+import { formatTime } from '../../utils/timeUtils.js'
+import logger from '../../services/logger.js'
 
 export default {
   name: 'TableTile',
@@ -153,6 +155,9 @@ export default {
     },
     goodPpl() {
       return !!this.table?.goodPpl
+    },
+    formattedSitDownTime() {
+      return this.sitDownTime ? formatTime(this.sitDownTime) : ''
     }
   },
   methods: {
@@ -162,7 +167,7 @@ export default {
     handleClick(event) {
       // Validate tableIndex before emitting
       if (this.tableIndex === undefined || this.tableIndex === null || isNaN(Number(this.tableIndex)) || Number(this.tableIndex) <= 0) {
-        console.warn('TableTile: Invalid tableIndex:', this.tableIndex, 'Event:', event)
+        logger.component.warn('TableTile', 'Invalid tableIndex:', this.tableIndex, 'Event:', event)
         return
       }
       // Emit the tableIndex (not the event)

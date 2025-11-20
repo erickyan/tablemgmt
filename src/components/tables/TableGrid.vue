@@ -15,6 +15,8 @@
         getTableCached(tableIndex)?.goodPpl,
         getTableCached(tableIndex)?.sitDownTime,
         getTableCached(tableIndex)?.name,
+        getTableCached(tableIndex)?.pricingModeDinner,
+        isDinner,
         getTableTotalPrice(tableIndex),
         isOccupiedOverHour(tableIndex),
         draggedIndex === index,
@@ -31,7 +33,7 @@
       :is-dragged="draggedIndex === index"
       :is-drag-over="draggedOverIndex === index"
       :is-chinese="isChinese"
-      @click="(tableIndex) => handleTileClick(tableIndex)"
+      @click="handleTileClick"
       @dragstart="handleDragStart"
       @dragover="handleDragOver"
       @dragenter="handleDragEnter"
@@ -50,6 +52,7 @@ import { useTableCalculations } from '../../composables/useTableCalculations.js'
 import { useMemoizedTablePrices } from '../../composables/useMemoizedTablePrices.js'
 import { useTimerManagement } from '../../composables/useTimerManagement.js'
 import { translate } from '../../utils/translations.js'
+import logger from '../../services/logger.js'
 
 export default {
   name: 'TableGrid',
@@ -74,45 +77,58 @@ export default {
     } = useTableCalculations(store)
 
     // Use memoized table prices for better performance
-    const { getPrice: getTableTotalPriceMemoized } = useMemoizedTablePrices(store)
+    const { getPrice: getTableTotalPriceMemoized, clearCache: clearPriceCache } = useMemoizedTablePrices(store)
 
-    const tableOrder = computed(() => store.state.tableOrder || [])
-    const currentLanguage = computed(() => store.state.language || 'en')
-    const isChinese = computed(() => store.state.language === 'zh')
+    const tableOrder = computed(() => store.state.ui.tableOrder || [])
+    const currentLanguage = computed(() => store.state.settings.language || 'en')
+    const isChinese = computed(() => store.state.settings.language === 'zh')
+    const isDinner = computed(() => store.state.settings.isDinner)
     
     // Cache for table objects per render cycle - reduces store accesses in v-memo
     // This Map caches table objects within a single render cycle
     const tableCache = new Map()
     
     // Watch tables state to clear cache when table data changes
-    const tables = computed(() => store.state.tables)
+    const tables = computed(() => store.state.tables.tables)
     
-    // Clear cache when tableOrder or tables change (new render cycle or data update)
+    // Clear cache when tableOrder or tables change
+    // Use deep watch to detect nested property changes
     watch([tableOrder, tables], () => {
       tableCache.clear()
+      clearPriceCache()
     }, { immediate: false, deep: true })
     
+    // Watch isDinner separately and clear price cache when it changes
+    // This must happen BEFORE v-memo re-evaluates to ensure fresh prices
+    watch(isDinner, (newVal, oldVal) => {
+      if (newVal !== oldVal) {
+        // Clear price cache FIRST when pricing mode changes
+        clearPriceCache()
+        // Also clear table cache to force re-render
+        tableCache.clear()
+      }
+    }, { immediate: false })
+    
     // Direct access to tables - Vue's reactivity will handle updates efficiently
-    // The memoization in getTableTotalPrice will prevent unnecessary recalculations
-    // tables is now an object keyed by table number: { [number]: Table }
+    // Always access state directly to ensure Vue tracks changes to nested properties
     const getTable = (tableIndex) => {
+      // Access tables state directly - this ensures reactivity
+      const tablesState = store.state.tables?.tables || {}
       // tableIndex is the actual table number (not array index)
-      // Access directly: tables[tableNumber]
-      if (Array.isArray(store.state.tables)) {
+      if (Array.isArray(tablesState)) {
         // Legacy array format - convert tableIndex (number) to array index
-        return store.state.tables[tableIndex - 1] || {}
+        return tablesState[tableIndex - 1] || {}
       }
       // New object format - direct access by number
-      return store.state.tables[tableIndex] || {}
+      // Always return fresh object reference to ensure reactivity
+      return tablesState[tableIndex] || {}
     }
     
-    // Optimized version that caches table object per render cycle
-    // This reduces multiple store accesses in v-memo array
+    // Don't cache - always access directly to ensure reactivity
+    // Caching breaks reactivity because Vue can't track changes to cached objects
     const getTableCached = (tableIndex) => {
-      if (!tableCache.has(tableIndex)) {
-        tableCache.set(tableIndex, getTable(tableIndex))
-      }
-      return tableCache.get(tableIndex)
+      // Always get fresh table object to ensure reactivity
+      return getTable(tableIndex)
     }
 
     const getTableName = (tableIndex) => {
@@ -128,7 +144,13 @@ export default {
     }
 
     // Use memoized price calculation
+    // Make it explicitly reactive to isDinner by accessing it in the function
+    // This ensures Vue tracks the dependency and re-runs when isDinner changes
     const getTableTotalPrice = (tableIndex) => {
+      // Access isDinner.value to establish reactivity
+      // When isDinner changes, Vue will re-run this function
+      // The cache key includes isDinner, so it will be different and force recalculation
+      const _ = isDinner.value // Establish reactivity
       return getTableTotalPriceMemoized(tableIndex)
     }
 
@@ -153,7 +175,7 @@ export default {
       if (index === undefined || index === null || isNaN(Number(index)) || Number(index) <= 0) {
         // Only log warning, don't crash - might be a click on a child element
         if (process.env.NODE_ENV === 'development') {
-          console.debug('TableGrid: Invalid or missing tableIndex, click ignored:', tableIndex)
+          logger.component.debug('TableGrid', 'Invalid or missing tableIndex, click ignored:', tableIndex)
         }
         return
       }
@@ -225,6 +247,7 @@ export default {
       tables,
       currentLanguage,
       isChinese,
+      isDinner,
       draggedIndex,
       draggedOverIndex,
       currentTime,

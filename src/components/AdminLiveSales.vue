@@ -17,26 +17,26 @@
         <section class="metrics-grid">
           <div class="metric-card metric-card--primary">
             <span class="metric-label">Total Revenue</span>
-            <span class="metric-value">${{ formatCurrency(metrics.revenue) }}</span>
+            <span class="metric-value">${{ formatCurrency(totalRevenue) }}</span>
             <span class="metric-caption">Includes buffet + to-go</span>
           </div>
 
           <div class="metric-card">
             <span class="metric-label">Buffet Revenue</span>
-            <span class="metric-value">${{ formatCurrency(metrics.buffetRevenue) }}</span>
-            <span class="metric-caption">{{ metrics.guestTotal }} guests served</span>
+            <span class="metric-value">${{ formatCurrency(buffetRevenue) }}</span>
+            <span class="metric-caption">{{ guestTotal }} guests served</span>
           </div>
 
           <div class="metric-card">
             <span class="metric-label">To-Go Revenue</span>
-            <span class="metric-value">${{ formatCurrency(metrics.togoRevenue) }}</span>
-            <span class="metric-caption">{{ metrics.togoOrders }} orders today</span>
+            <span class="metric-value">${{ formatCurrency(togoRevenue) }}</span>
+            <span class="metric-caption">{{ togoOrders }} orders today</span>
           </div>
 
           <div class="metric-card">
             <span class="metric-label">Open Tables</span>
             <span class="metric-value">{{ openTables.length }}</span>
-            <span class="metric-caption">Avg. check ${{ formatCurrency(metrics.averageCheck) }}</span>
+            <span class="metric-caption">Avg. check ${{ formatCurrency(averageCheck) }}</span>
           </div>
         </section>
 
@@ -87,26 +87,26 @@
 
         <section class="section">
           <div class="section-heading">
-            <h3>Today’s snapshot</h3>
+            <h3>Today's snapshot</h3>
             <span class="section-note">Key counts pulled from the register.</span>
           </div>
 
           <div class="snapshot-grid">
             <div class="snapshot-card">
               <span class="snapshot-label">Adult Guests</span>
-              <span class="snapshot-value">{{ sales.adultCount }}</span>
+              <span class="snapshot-value">{{ salesData.adultCount }}</span>
             </div>
             <div class="snapshot-card">
               <span class="snapshot-label">Kid (6-9)</span>
-              <span class="snapshot-value">{{ sales.bigKidCount }}</span>
+              <span class="snapshot-value">{{ salesData.bigKidCount }}</span>
             </div>
             <div class="snapshot-card">
               <span class="snapshot-label">Kid (2-5)</span>
-              <span class="snapshot-value">{{ sales.smlKidCount }}</span>
+              <span class="snapshot-value">{{ salesData.smlKidCount }}</span>
             </div>
             <div class="snapshot-card">
               <span class="snapshot-label">Tickets Closed</span>
-              <span class="snapshot-value">{{ sales.totalCount }}</span>
+              <span class="snapshot-value">{{ salesData.totalCount }}</span>
             </div>
           </div>
         </section>
@@ -125,11 +125,11 @@
 
 <script>
 import { useTimerManagement } from '../composables/useTimerManagement.js'
+import { formatTime } from '../utils/timeUtils.js'
 
 export default {
   name: 'AdminLiveSales',
   setup() {
-    // Use timer management composable for automatic cleanup
     const { setManagedTimeout, clearManagedTimeout } = useTimerManagement()
     return {
       setManagedTimeout,
@@ -145,7 +145,17 @@ export default {
   emits: ['update:modelValue'],
   data: () => ({
     refreshing: false,
-    refreshTimeoutId: null // Store timeout ID for clearing
+    refreshTimeoutId: null,
+    // Cache sales data to ensure reactivity
+    cachedSalesData: {
+      totalCount: 0,
+      adultCount: 0,
+      bigKidCount: 0,
+      smlKidCount: 0,
+      revenue: 0,
+      totalTogoRevenue: 0,
+      togoOrderCount: 0
+    }
   }),
   computed: {
     internalOpen: {
@@ -156,30 +166,39 @@ export default {
         this.$emit('update:modelValue', value)
       }
     },
-    sales() {
-      return this.$store.state.sales || {}
+    
+    // Use cached data which is updated by watcher - this ensures reactivity
+    salesData() {
+      return this.cachedSalesData
     },
+    
+    // Individual computed properties - use cached data
+    buffetRevenue() {
+      return Number(this.cachedSalesData.revenue || 0)
+    },
+    
+    togoRevenue() {
+      return Number(this.cachedSalesData.totalTogoRevenue || 0)
+    },
+    
+    totalRevenue() {
+      return this.buffetRevenue + this.togoRevenue
+    },
+    
+    togoOrders() {
+      return Number(this.cachedSalesData.togoOrderCount || 0)
+    },
+    
+    guestTotal() {
+      // Use cached data which is updated by watcher - this ensures reactivity
+      return Number(this.cachedSalesData.totalCount || 0)
+    },
+    
     tables() {
-      return Array.isArray(this.$store.state.tables) ? this.$store.state.tables : []
+      const tablesState = this.$store.state.tables?.tables || {}
+      return Array.isArray(tablesState) ? tablesState : Object.values(tablesState)
     },
-    metrics() {
-      const revenue = Number(this.sales.revenue || 0)
-      const togoRevenue = Number(this.sales.totalTogoRevenue || 0)
-      const buffetRevenue = Math.max(0, revenue - togoRevenue)
-      const togoOrders = this.$store.state.togoSales?.length || 0
-      const openRevenue = this.openTables.reduce((sum, table) => sum + table.total, 0)
-      const averageCheck = this.openTables.length ? openRevenue / this.openTables.length : 0
-      const guestTotal = Number(this.sales.totalCount || 0)
-
-      return {
-        revenue,
-        togoRevenue,
-        buffetRevenue,
-        togoOrders,
-        averageCheck,
-        guestTotal
-      }
-    },
+    
     openTables() {
       return this.tables
         .filter(table => table && table.occupied)
@@ -191,11 +210,16 @@ export default {
           const total = Number(table.totalPrice || 0)
           return {
             number: table.number || '-',
-            since: this.formatSeatedTime(table.sitDownTime),
+            since: table.sitDownTime ? `since ${formatTime(table.sitDownTime)}` : '—',
             guestCount,
             total
           }
         })
+    },
+    
+    averageCheck() {
+      const openRevenue = this.openTables.reduce((sum, table) => sum + table.total, 0)
+      return this.openTables.length ? openRevenue / this.openTables.length : 0
     }
   },
   methods: {
@@ -204,7 +228,6 @@ export default {
     },
     refreshMetrics() {
       this.refreshing = true
-      // Use managed timeout for automatic cleanup
       this.refreshTimeoutId = this.setManagedTimeout(() => {
         this.refreshing = false
         this.refreshTimeoutId = null
@@ -212,17 +235,45 @@ export default {
     },
     formatCurrency(value) {
       return Number(value || 0).toFixed(2)
-    },
-    formatSeatedTime(raw) {
-      if (!raw) return '—'
-      if (typeof raw === 'string' && raw.includes(':')) {
-        return `since ${raw}`
+    }
+  },
+  watch: {
+    // Watch the nested sales state and update cached data
+    '$store.state.sales.sales': {
+      handler(newVal, oldVal) {
+        if (newVal) {
+          // Update cached data - this triggers reactivity
+          this.cachedSalesData = {
+            totalCount: Number(newVal.totalCount || 0),
+            adultCount: Number(newVal.adultCount || 0),
+            bigKidCount: Number(newVal.bigKidCount || 0),
+            smlKidCount: Number(newVal.smlKidCount || 0),
+            revenue: Number(newVal.revenue || 0),
+            totalTogoRevenue: Number(newVal.totalTogoRevenue || 0),
+            togoOrderCount: Number(newVal.togoOrderCount || 0)
+          }
+        }
+      },
+      deep: true,
+      immediate: true // Update immediately on mount
+    }
+  },
+  mounted() {
+    // Initialize cached data from current state
+    const salesState = this.$store.state.sales?.sales
+    if (salesState) {
+      this.cachedSalesData = {
+        totalCount: Number(salesState.totalCount || 0),
+        adultCount: Number(salesState.adultCount || 0),
+        bigKidCount: Number(salesState.bigKidCount || 0),
+        smlKidCount: Number(salesState.smlKidCount || 0),
+        revenue: Number(salesState.revenue || 0),
+        totalTogoRevenue: Number(salesState.totalTogoRevenue || 0),
+        togoOrderCount: Number(salesState.togoOrderCount || 0)
       }
-      return raw
     }
   },
   beforeUnmount() {
-    // Clear timeout if it exists (composable will also clean up automatically on unmount)
     if (this.refreshTimeoutId !== null) {
       this.clearManagedTimeout(this.refreshTimeoutId)
       this.refreshTimeoutId = null
@@ -572,6 +623,3 @@ export default {
   }
 }
 </style>
-
-
-

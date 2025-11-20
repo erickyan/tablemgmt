@@ -29,7 +29,12 @@
         >
           <div class="item-row__info">
             <div class="item-row__title">
-              <span class="item-name">{{ isDrinksCategory ? getTranslatedLabel(item.name) : item.name }}</span>
+              <span 
+                class="item-name"
+                :class="{ 'clickable-item-name': !isDrinksCategory }"
+                @click="!isDrinksCategory && openCustomization(item, index)"
+                :title="!isDrinksCategory ? getTranslatedLabel('Click to add special request') : ''"
+              >{{ isDrinksCategory ? getTranslatedLabel(item.name) : item.name }}</span>
               <v-chip
                 v-if="getCustomizationForKey(dialogKey(index))?.label"
                 size="small"
@@ -54,7 +59,7 @@
               @click="openCustomization(item, index)"
               :title="getTranslatedLabel('Edit special request')"
             >
-              <v-icon>mdi-square-edit-outline</v-icon>
+              <v-icon size="32">mdi-square-edit-outline</v-icon>
             </v-btn>
             <v-btn
               icon
@@ -63,7 +68,7 @@
               color="accent"
               @click="decrementItem(index)"
             >
-              <v-icon>mdi-minus</v-icon>
+              <v-icon size="32">mdi-minus</v-icon>
             </v-btn>
             <v-btn
               icon
@@ -72,7 +77,7 @@
               color="accent"
               @click="incrementItem(index)"
             >
-              <v-icon>mdi-plus</v-icon>
+              <v-icon size="32">mdi-plus</v-icon>
             </v-btn>
           </div>
         </div>
@@ -194,12 +199,16 @@ export default {
             }
         },
         menuItems() {
-            const store = this.$store.state
+            const state = this.$store.state
+            const menu = state.menu.menu || []
+            const settings = state.settings || {}
+            const ui = state.ui || {}
+            
             // Check if drinks category is selected (catID === -1)
-            if (store.catID === -1) {
+            if (ui.catID === -1) {
                 // First, check if there's a "Drinks" category in the menu
-                const drinksCategory = Array.isArray(store.menu)
-                    ? store.menu.find(cat => 
+                const drinksCategory = Array.isArray(menu)
+                    ? menu.find(cat => 
                         cat?.category && cat.category.toLowerCase().trim() === 'drinks'
                       )
                     : null
@@ -223,30 +232,30 @@ export default {
                 // Fallback: Return drinks as menu items from DRINK_OPTIONS
                 return DRINK_OPTIONS.map(drink => ({
                     name: drink.label,
-                    listPrice: isWater(drink.code) ? store.WATERPRICE : store.DRINKPRICE,
+                    listPrice: isWater(drink.code) ? (settings.WATERPRICE || 0) : (settings.DRINKPRICE || 0),
                     code: drink.code,
                     icon: drink.icon
                 }))
             }
             // Regular menu category
-            const category = store.menu[store.catID]
+            const category = menu[ui.catID]
             if (!category || !Array.isArray(category.items)) {
                 return []
             }
             return category.items
         },
         isDrinksCategory() {
-            return this.$store.state.catID === -1
+            return this.$store.state.ui.catID === -1
         },
         isChinese() {
-            return this.$store.state.language === 'zh'
+            return this.$store.state.settings.language === 'zh'
         },
         visibleItems() {
             const base = this.menuItems.map((item, index) => ({ item, index }))
             return base
         },
         selectedItems() {
-            return (this.$store.state.togoLines || [])
+            return (this.$store.state.togo.togoLines || [])
                 .filter(line => Number(line.quantity ?? 0) > 0)
                 .map(line => {
                     const unitPrice = Number(line.basePrice ?? 0) + Number(line.extraPrice ?? 0)
@@ -278,7 +287,7 @@ export default {
             return translate(label, this.isChinese)
         },
         dialogKey(index) {
-            return `${this.$store.state.catID}-${index}`
+            return `${this.$store.state.ui.catID}-${index}`
         },
         resetDraft() {
             this.draftQuantities = {}
@@ -290,7 +299,7 @@ export default {
         },
         updateAndClose() {
             const lines = []
-            const categoryIndex = this.$store.state.catID
+            const categoryIndex = this.$store.state.ui.catID
             this.menuItems.forEach((item, index) => {
                 const key = this.dialogKey(index)
                 const quantity = Number(this.draftQuantities[key] || 0)
@@ -316,19 +325,19 @@ export default {
             })
             if (lines.length) {
                 // Lines now include menuItemId when available for normalized state
-                this.$store.dispatch('appendTogoLines', lines)
+                this.$store.dispatch('togo/appendTogoLines', lines)
                 const itemCount = lines.reduce((sum, line) => sum + (line.quantity || 0), 0)
                 showSuccess(`${itemCount} ${this.getTranslatedLabel('item')}${itemCount !== 1 ? 's' : ''} ${this.getTranslatedLabel('added to order')}`)
             }
             this.resetDraft()
             this.dialogOpen = false
-            this.$store.dispatch('setOrderPanel', { type: 'togo' })
+            this.$store.dispatch('ui/setOrderPanel', { type: 'togo' })
         },
         getCustomizationForKey(key) {
             return this.draftCustomizations[key] || null
         },
         findBasePrice(itemName) {
-            const menu = this.$store.state.menu || []
+            const menu = this.$store.state.menu.menu || []
             for (const category of menu) {
                 if (!Array.isArray(category?.items)) continue
                 const match = category.items.find(menuItem => menuItem?.name === itemName)
@@ -606,6 +615,16 @@ export default {
 .item-name {
   font-size: 18px;
   font-weight: 600;
+}
+
+.clickable-item-name {
+  cursor: pointer;
+  transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+.clickable-item-name:hover {
+  color: rgb(var(--v-theme-accent));
+  text-decoration: underline;
 }
 
 .item-row__meta {

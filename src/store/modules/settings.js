@@ -34,6 +34,9 @@ export default {
     // App settings
     isDinner: false,
     language: 'en', // 'en' for English, 'zh' for Chinese
+    
+    // Cashier preferences
+    cashierAutoClear: false, // Auto-clear cashier form after successful print (for experienced users)
   },
 
   getters: {
@@ -51,6 +54,9 @@ export default {
     },
     receiptSettings(state) {
       return state.receiptSettings
+    },
+    cashierAutoClear(state) {
+      return state.cashierAutoClear || false
     }
   },
 

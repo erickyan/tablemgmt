@@ -325,9 +325,9 @@ function getUserMessage(error, errorType, context = null) {
       // Log extracted URL for debugging
       if (process.env.NODE_ENV === 'development') {
         if (indexUrl) {
-          console.log('[Firestore Index] Extracted URL:', indexUrl)
+          logger.info('[Firestore Index] Extracted URL:', indexUrl)
         } else {
-          console.error('[Firestore Index Error] Full error object for URL extraction:', {
+          logger.error('[Firestore Index Error] Full error object for URL extraction:', {
             message: error.message,
             code: error.code,
             errorString: error.toString(),

@@ -6,6 +6,8 @@
 import { computed, ref } from 'vue'
 import { DRINK_CODES } from '../constants/drinks.js'
 import { shouldUseStoredPrice } from '../services/tableStatusService.js'
+import { addMoney, multiplyMoney, applyTax, roundMoney, decimalToNumber } from '../utils/decimalMoney.js'
+import Decimal from 'decimal.js'
 
 /**
  * Creates a memoized map of table prices
@@ -20,16 +22,16 @@ export function useMemoizedTablePrices(store) {
   
   // Track dependencies that affect prices
   const dependencies = computed(() => ({
-    isDinner: store.state.isDinner,
-    taxRate: store.state.TAX_RATE,
-    adultPrice: store.state.ADULTPRICE,
-    bigKidPrice: store.state.BIGKIDPRICE,
-    smallKidPrice: store.state.SMALLKIDPRICE,
-    adultDinnerPrice: store.state.ADULTDINNERPRICE,
-    bigKidDinnerPrice: store.state.BIGKIDDINNERPRICE,
-    smallKidDinnerPrice: store.state.SMALLKIDDINNERPRICE,
-    drinkPrice: store.state.DRINKPRICE,
-    waterPrice: store.state.WATERPRICE
+    isDinner: store.state.settings.isDinner,
+    taxRate: store.state.settings.TAX_RATE,
+    adultPrice: store.state.settings.ADULTPRICE,
+    bigKidPrice: store.state.settings.BIGKIDPRICE,
+    smallKidPrice: store.state.settings.SMALLKIDPRICE,
+    adultDinnerPrice: store.state.settings.ADULTDINNERPRICE,
+    bigKidDinnerPrice: store.state.settings.BIGKIDDINNERPRICE,
+    smallKidDinnerPrice: store.state.settings.SMALLKIDDINNERPRICE,
+    drinkPrice: store.state.settings.DRINKPRICE,
+    waterPrice: store.state.settings.WATERPRICE
   }))
   
   // Track current dependency values for cache invalidation
@@ -88,9 +90,9 @@ export function useMemoizedTablePrices(store) {
       return Number(table.totalPrice || 0)
     }
     
-    // Calculate drink price dynamically from drinks array
-    let drinkPrice = Number(table.drinkPrice || 0)
-    if (!drinkPrice && table.drinks && Array.isArray(table.drinks) && table.drinks.length > 0) {
+    // Calculate drink price dynamically from drinks array using decimal arithmetic
+    let drinkPrice = new Decimal(table.drinkPrice || 0)
+    if (drinkPrice.isZero() && table.drinks && Array.isArray(table.drinks) && table.drinks.length > 0) {
       const drinks = table.drinks
       let numWater = 0
       let numDrink = 0
@@ -101,7 +103,9 @@ export function useMemoizedTablePrices(store) {
           numDrink++
         }
       })
-      drinkPrice = (deps.waterPrice * numWater) + (deps.drinkPrice * numDrink)
+      const waterTotal = multiplyMoney(deps.waterPrice || 0, numWater)
+      const drinkTotal = multiplyMoney(deps.drinkPrice || 0, numDrink)
+      drinkPrice = addMoney(waterTotal, drinkTotal)
     }
     
     // For tables without explicit pricing mode, use current global mode
@@ -109,19 +113,20 @@ export function useMemoizedTablePrices(store) {
       ? table.pricingModeDinner 
       : deps.isDinner
     
-    // Calculate price based on current mode
+    // Calculate price based on current mode using decimal arithmetic
     let subtotal = drinkPrice
     if (useDinnerMode) {
-      subtotal += (adultCount * deps.adultDinnerPrice) + 
-                 (bigKidCount * deps.bigKidDinnerPrice) + 
-                 (smlKidCount * deps.smallKidDinnerPrice)
+      subtotal = addMoney(subtotal, multiplyMoney(deps.adultDinnerPrice || 0, adultCount))
+      subtotal = addMoney(subtotal, multiplyMoney(deps.bigKidDinnerPrice || 0, bigKidCount))
+      subtotal = addMoney(subtotal, multiplyMoney(deps.smallKidDinnerPrice || 0, smlKidCount))
     } else {
-      subtotal += (adultCount * deps.adultPrice) + 
-                 (bigKidCount * deps.bigKidPrice) + 
-                 (smlKidCount * deps.smallKidPrice)
+      subtotal = addMoney(subtotal, multiplyMoney(deps.adultPrice || 0, adultCount))
+      subtotal = addMoney(subtotal, multiplyMoney(deps.bigKidPrice || 0, bigKidCount))
+      subtotal = addMoney(subtotal, multiplyMoney(deps.smallKidPrice || 0, smlKidCount))
     }
     
-    return Number((subtotal * deps.taxRate).toFixed(2))
+    const totalWithTax = applyTax(subtotal, deps.taxRate || 1)
+    return decimalToNumber(roundMoney(totalWithTax))
   }
   
   /**
@@ -130,9 +135,10 @@ export function useMemoizedTablePrices(store) {
   function getPrice(tableIndex) {
     // tableIndex is the actual table number (not array index)
     // Access directly: tables[tableNumber]
-    const table = Array.isArray(store.state.tables)
-      ? store.state.tables[tableIndex - 1]  // Legacy array format
-      : store.state.tables[tableIndex]      // New object format
+    const tables = store.state.tables.tables || {}
+    const table = Array.isArray(tables)
+      ? tables[tableIndex - 1]  // Legacy array format
+      : tables[tableIndex]      // New object format
     if (!table) return 0
     
     const deps = dependencies.value
@@ -140,10 +146,10 @@ export function useMemoizedTablePrices(store) {
     
     if (!cacheKey) return 0
     
-    // Check if dependencies changed - only invalidate dynamic price caches
+    // Check if dependencies changed - clear dynamic price caches
     const depsChanged = lastDependencies && JSON.stringify(lastDependencies) !== JSON.stringify(deps)
     if (depsChanged) {
-      // Only clear dynamic price caches, keep stored price caches
+      // Clear all dynamic price caches when dependencies change (e.g., isDinner toggle)
       const keysToDelete = Array.from(priceCache.value.keys())
         .filter(key => !key.includes('-stored-'))
       keysToDelete.forEach(key => priceCache.value.delete(key))
@@ -152,7 +158,7 @@ export function useMemoizedTablePrices(store) {
       lastDependencies = { ...deps }
     }
     
-    // Check cache
+    // Check cache - if cache key includes isDinner, it will be different when isDinner changes
     if (priceCache.value.has(cacheKey)) {
       return priceCache.value.get(cacheKey)
     }

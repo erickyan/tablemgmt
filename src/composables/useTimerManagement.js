@@ -5,6 +5,7 @@
  */
 
 import { onUnmounted, ref } from 'vue'
+import logger from '../services/logger.js'
 
 /**
  * Timer management composable
@@ -26,7 +27,7 @@ export function useTimerManagement() {
       try {
         callback()
       } catch (error) {
-        console.error('Error in interval callback:', error)
+        logger.error('Error in interval callback:', error)
       }
     }, delay)
     intervals.value.add(id)
@@ -56,7 +57,7 @@ export function useTimerManagement() {
       try {
         callback()
       } catch (error) {
-        console.error('Error in timeout callback:', error)
+        logger.error('Error in timeout callback:', error)
       }
     }, delay)
     timeouts.value.add(id)

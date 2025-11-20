@@ -52,11 +52,14 @@
         block
         variant="flat"
         color="accent"
-        :disabled="!hasActivity"
+        size="large"
+        :disabled="!hasActivity || isPrinting"
+        :loading="isPrinting"
         @click="printReceipt"
+        class="print-btn-panel"
       >
-        <v-icon start>mdi-printer</v-icon>
-        {{ getTranslatedLabel('Print Receipt') }}
+        <v-icon start size="20">mdi-printer</v-icon>
+        {{ isPrinting ? getTranslatedLabel('Printing...') : getTranslatedLabel('Print Receipt') }}
       </v-btn>
     </div>
   </div>
@@ -66,16 +69,20 @@
 import { DRINK_OPTIONS, getDrinkLabel, isWater } from '../../utils/drinkOptions.js'
 import { translate } from '../../utils/translations.js'
 import { usePrinting } from '../../composables/usePrinting.js'
+import { showSuccess } from '../../utils/successNotifications.js'
 
 export default {
   name: 'CashierReceiptPanel',
+  data: () => ({
+    isPrinting: false
+  }),
   setup() {
     const { printCashierReceipt: printCashierReceiptComposable } = usePrinting()
     return { printCashierReceiptComposable }
   },
   computed: {
     cashierForm() {
-      return this.$store.state.cashierForm || {
+      return this.$store.getters['cashier/getCashierForm'] || {
         mode: 'lunch',
         buffetCounts: { adult: 0, bigKid: 0, smallKid: 0 },
         drinkCounts: {}
@@ -85,13 +92,13 @@ export default {
       return this.cashierForm.mode === 'dinner'
     },
     pricing() {
-      const state = this.$store.state
+      const settings = this.$store.state.settings || {}
       return {
-        adult: this.isDinner ? state.ADULTDINNERPRICE : state.ADULTPRICE,
-        bigKid: this.isDinner ? state.BIGKIDDINNERPRICE : state.BIGKIDPRICE,
-        smlKid: this.isDinner ? state.SMALLKIDDINNERPRICE : state.SMALLKIDPRICE,
-        drink: state.DRINKPRICE,
-        water: state.WATERPRICE
+        adult: this.isDinner ? settings.ADULTDINNERPRICE : settings.ADULTPRICE,
+        bigKid: this.isDinner ? settings.BIGKIDDINNERPRICE : settings.BIGKIDPRICE,
+        smlKid: this.isDinner ? settings.SMALLKIDDINNERPRICE : settings.SMALLKIDPRICE,
+        drink: settings.DRINKPRICE,
+        water: settings.WATERPRICE
       }
     },
     lineItems() {
@@ -129,7 +136,8 @@ export default {
       return this.lineItems.reduce((sum, item) => sum + item.total, 0)
     },
     totalWithTax() {
-      return this.subtotal * this.$store.state.TAX_RATE
+      const settings = this.$store.state.settings || {}
+      return this.subtotal * (settings.TAX_RATE || 1.07)
     },
     hasActivity() {
       return this.lineItems.length > 0
@@ -138,7 +146,8 @@ export default {
       return this.totalWithTax - this.subtotal
     },
     isChinese() {
-      return this.$store.state.language === 'zh'
+      const settings = this.$store.state.settings || {}
+      return settings.language === 'zh'
     }
   },
   methods: {
@@ -146,21 +155,38 @@ export default {
       return translate(label, this.isChinese)
     },
     async printReceipt() {
-      if (!this.hasActivity) {
+      if (!this.hasActivity || this.isPrinting) {
         return
       }
 
-      const buffetCounts = this.cashierForm.buffetCounts || {}
-      const drinkCounts = this.cashierForm.drinkCounts || {}
+      try {
+        this.isPrinting = true
+        
+        const buffetCounts = this.cashierForm.buffetCounts || {}
+        const drinkCounts = this.cashierForm.drinkCounts || {}
 
-      await this.printCashierReceiptComposable({
-        store: this.$store,
-        buffetCounts,
-        drinkCounts,
-        isDinner: this.isDinner,
-        getDrinkLabelFn: getDrinkLabel,
-        isWaterFn: isWater
-      })
+        await this.printCashierReceiptComposable({
+          store: this.$store,
+          buffetCounts,
+          drinkCounts,
+          isDinner: this.isDinner,
+          getDrinkLabelFn: getDrinkLabel,
+          isWaterFn: isWater
+        })
+        
+        // Show success feedback
+        const ticketCount = this.$store.state.sales.ticketCount || 0
+        const totalDisplay = this.totalWithTax.toFixed(2)
+        showSuccess(
+          this.getTranslatedLabel(`Receipt printed successfully! Ticket #${ticketCount} - Total: $${totalDisplay}`),
+          4000
+        )
+      } catch (error) {
+        // Error handling is done by error handler service
+        console.error('Print failed:', error)
+      } finally {
+        this.isPrinting = false
+      }
     }
     // openPrintDocument and printWithIframe are now provided by usePrinting composable
   },
@@ -267,10 +293,52 @@ export default {
   padding-top: 16px;
 }
 
+.print-btn-panel {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  height: 48px;
+}
+
 /* Hide print button in side panel on mobile - it's moved to top of main view */
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 600px) {
   .desktop-print-btn {
     display: none;
+  }
+}
+
+/* iPad Mini optimizations for side panel */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .print-btn-panel {
+    height: 52px;
+    font-size: 16px;
+  }
+
+  .panel__title {
+    font-size: 24px;
+  }
+
+  .panel__subtitle {
+    font-size: 14px;
+  }
+
+  .line-item {
+    padding: 14px 16px;
+  }
+
+  .line-item__label {
+    font-size: 15px;
+  }
+
+  .line-item__amount {
+    font-size: 16px;
+  }
+
+  .summary-row {
+    font-size: 15px;
+  }
+
+  .summary-accent {
+    font-size: 18px;
   }
 }
 </style>

@@ -10,6 +10,9 @@ import {
   getTableStatusMetadata, 
   shouldUseStoredPrice 
 } from '../services/tableStatusService.js'
+import { isOlderThan, normalizeTimestamp } from '../utils/timeUtils.js'
+import { addMoney, multiplyMoney, applyTax, roundMoney, decimalToNumber } from '../utils/decimalMoney.js'
+import Decimal from 'decimal.js'
 
 export function useTableCalculations(store) {
   // If store is not provided, try to get it from current instance (Options API)
@@ -32,14 +35,14 @@ export function useTableCalculations(store) {
    */
   const getTableTotalPrice = (tableIndex) => {
     // Handle both array (legacy) and object (new format) for tables
-    const tables = store.state.tables || {}
+    const tables = store.state.tables.tables || {}
     const table = Array.isArray(tables)
       ? tables[tableIndex - 1] // Legacy array format - convert to 0-based index
       : tables[tableIndex] || {} // New object format - direct access by table number
     
     if (!table || typeof table !== 'object') return 0
     
-    const state = store.state
+    const settings = store.state.settings
     const adultCount = Number(table.adult || 0)
     const bigKidCount = Number(table.bigKid || 0)
     const smlKidCount = Number(table.smlKid || 0)
@@ -49,9 +52,9 @@ export function useTableCalculations(store) {
       return Number(table.totalPrice || 0)
     }
     
-    // Calculate drink price dynamically from drinks array
-    let drinkPrice = Number(table.drinkPrice || 0)
-    if (!drinkPrice && table.drinks && Array.isArray(table.drinks) && table.drinks.length > 0) {
+    // Calculate drink price dynamically from drinks array using decimal arithmetic
+    let drinkPrice = new Decimal(table.drinkPrice || 0)
+    if (drinkPrice.isZero() && table.drinks && Array.isArray(table.drinks) && table.drinks.length > 0) {
       const drinks = table.drinks
       let numWater = 0
       let numDrink = 0
@@ -62,27 +65,30 @@ export function useTableCalculations(store) {
           numDrink++
         }
       })
-      drinkPrice = (state.WATERPRICE * numWater) + (state.DRINKPRICE * numDrink)
+      const waterTotal = multiplyMoney(settings.WATERPRICE || 0, numWater)
+      const drinkTotal = multiplyMoney(settings.DRINKPRICE || 0, numDrink)
+      drinkPrice = addMoney(waterTotal, drinkTotal)
     }
     
     // For tables without explicit pricing mode, use current global mode
     const useDinnerMode = table.pricingModeDinner !== undefined 
       ? table.pricingModeDinner 
-      : state.isDinner
+      : settings.isDinner
     
-    // Calculate price based on current mode
+    // Calculate price based on current mode using decimal arithmetic
     let subtotal = drinkPrice
     if (useDinnerMode) {
-      subtotal += (adultCount * state.ADULTDINNERPRICE) + 
-                 (bigKidCount * state.BIGKIDDINNERPRICE) + 
-                 (smlKidCount * state.SMALLKIDDINNERPRICE)
+      subtotal = addMoney(subtotal, multiplyMoney(settings.ADULTDINNERPRICE || 0, adultCount))
+      subtotal = addMoney(subtotal, multiplyMoney(settings.BIGKIDDINNERPRICE || 0, bigKidCount))
+      subtotal = addMoney(subtotal, multiplyMoney(settings.SMALLKIDDINNERPRICE || 0, smlKidCount))
     } else {
-      subtotal += (adultCount * state.ADULTPRICE) + 
-                 (bigKidCount * state.BIGKIDPRICE) + 
-                 (smlKidCount * state.SMALLKIDPRICE)
+      subtotal = addMoney(subtotal, multiplyMoney(settings.ADULTPRICE || 0, adultCount))
+      subtotal = addMoney(subtotal, multiplyMoney(settings.BIGKIDPRICE || 0, bigKidCount))
+      subtotal = addMoney(subtotal, multiplyMoney(settings.SMALLKIDPRICE || 0, smlKidCount))
     }
     
-    return Number((subtotal * state.TAX_RATE).toFixed(2))
+    const totalWithTax = applyTax(subtotal, settings.TAX_RATE || 1)
+    return decimalToNumber(roundMoney(totalWithTax))
   }
 
   /**
@@ -93,7 +99,7 @@ export function useTableCalculations(store) {
    */
   const isOccupiedOverHour = (tableIndex, currentTime) => {
     // Handle both array (legacy) and object (new format) for tables
-    const tables = store.state.tables || {}
+    const tables = store.state.tables.tables || {}
     const table = Array.isArray(tables)
       ? tables[tableIndex - 1] // Legacy array format - convert to 0-based index
       : tables[tableIndex] || {} // New object format - direct access by table number
@@ -102,32 +108,14 @@ export function useTableCalculations(store) {
       return false
     }
     
-    // Parse sitDownTime (format: "HH:MM")
-    const sitDownTimeStr = table.sitDownTime
-    const [sitDownHours, sitDownMinutes] = sitDownTimeStr.split(':').map(Number)
-    
-    if (isNaN(sitDownHours) || isNaN(sitDownMinutes)) {
+    // Normalize timestamp (handles both ISO 8601 and legacy "HH:MM" format)
+    const normalizedTimestamp = normalizeTimestamp(table.sitDownTime)
+    if (!normalizedTimestamp) {
       return false
     }
     
-    // Get current time
-    const now = new Date()
-    const currentHours = now.getHours()
-    const currentMinutes = now.getMinutes()
-    
-    // Calculate difference in minutes
-    const sitDownTotalMinutes = sitDownHours * 60 + sitDownMinutes
-    const currentTotalMinutes = currentHours * 60 + currentMinutes
-    
-    // Handle day rollover (if sitDownTime is yesterday)
-    let diffMinutes = currentTotalMinutes - sitDownTotalMinutes
-    if (diffMinutes < 0) {
-      // If negative, assume it's from yesterday (add 24 hours)
-      diffMinutes += 24 * 60
-    }
-    
-    // Check if more than 1 hour (60 minutes)
-    return diffMinutes > 60
+    // Check if timestamp is more than 60 minutes old
+    return isOlderThan(normalizedTimestamp, 60)
   }
 
   /**
@@ -138,7 +126,7 @@ export function useTableCalculations(store) {
    */
   const getTableStatus = (tableIndex, getTranslatedLabel) => {
     // Handle both array (legacy) and object (new format) for tables
-    const tables = store.state.tables || {}
+    const tables = store.state.tables.tables || {}
     const table = Array.isArray(tables)
       ? tables[tableIndex - 1] || {} // Legacy array format - convert to 0-based index
       : tables[tableIndex] || {} // New object format - direct access by table number
@@ -154,7 +142,7 @@ export function useTableCalculations(store) {
    */
   const getDrinkCount = (tableIndex) => {
     // Handle both array (legacy) and object (new format) for tables
-    const tables = store.state.tables || {}
+    const tables = store.state.tables.tables || {}
     const table = Array.isArray(tables)
       ? tables[tableIndex - 1] // Legacy array format - convert to 0-based index
       : tables[tableIndex] || {} // New object format - direct access by table number

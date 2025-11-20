@@ -204,15 +204,29 @@ export async function incrementSalesCounters(increments) {
           adultCount: 0,
           bigKidCount: 0,
           smlKidCount: 0,
+          totalTogoRevenue: 0,
+          togoOrderCount: 0,
         }
+        
+        // Calculate new counts first
+        const newAdultCount = Number(currentData.adultCount || 0) + Number(increments.adultCount || 0)
+        const newBigKidCount = Number(currentData.bigKidCount || 0) + Number(increments.bigKidCount || 0)
+        const newSmlKidCount = Number(currentData.smlKidCount || 0) + Number(increments.smlKidCount || 0)
+        
+        // Handle to-go revenue and order count
+        const newTotalTogoRevenue = Number(currentData.totalTogoRevenue || 0) + Number(increments.totalTogoRevenue || 0)
+        const newTogoOrderCount = Number(currentData.togoOrderCount || 0) + Number(increments.togoOrderCount || 0)
         
         // Increment each field atomically
         const newData = {
           revenue: (Number(currentData.revenue || 0) + Number(increments.revenue || 0)),
           ticketCount: (Number(currentData.ticketCount || 0) + Number(increments.ticketCount || 0)),
-          adultCount: (Number(currentData.adultCount || 0) + Number(increments.adultCount || 0)),
-          bigKidCount: (Number(currentData.bigKidCount || 0) + Number(increments.bigKidCount || 0)),
-          smlKidCount: (Number(currentData.smlKidCount || 0) + Number(increments.smlKidCount || 0)),
+          adultCount: newAdultCount,
+          bigKidCount: newBigKidCount,
+          smlKidCount: newSmlKidCount,
+          totalCount: newAdultCount + newBigKidCount + newSmlKidCount,
+          totalTogoRevenue: newTotalTogoRevenue,
+          togoOrderCount: newTogoOrderCount,
           updatedAt: serverTimestamp(),
         }
         

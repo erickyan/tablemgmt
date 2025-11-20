@@ -32,7 +32,13 @@ export function renderReceiptHTML({
   showGratuity = false,
   gratuityOptions = []
 }) {
-  const printTimeStr = printTime || new Date().toLocaleString()
+  const printTimeStr = printTime || (() => {
+    const now = new Date()
+    if (isFinite(now.getTime())) {
+      return now.toLocaleString('en-US', { timeZone: 'America/New_York' })
+    }
+    return new Date().toISOString()
+  })()
   
   // Build items table rows
   const itemsRows = items.length === 0
