@@ -326,38 +326,100 @@ export async function printWithPassPRNT(html, options = {}) {
       // Build the PassPRNT URL
       const passprntUrl = `starpassprnt://v1/print/nopreview?back=${backUrl}&html=${encodedHtml}`
       
-      logger.info('Attempting to open PassPRNT with URL:', passprntUrl.substring(0, 100) + '...')
+      logger.info('Attempting to open PassPRNT')
+      logger.info('URL length:', passprntUrl.length, 'characters')
+      logger.info('URL preview:', passprntUrl.substring(0, 150) + '...')
       
-      // Try to open PassPRNT using window.location
-      // This must be triggered from a user action (which it is - button click)
-      try {
-        // Store current location
-        const currentLocation = window.location.href
-        
-        // Attempt to open PassPRNT
-        window.location.href = passprntUrl
-        
-        // Give PassPRNT time to open
-        // If PassPRNT opens, it will handle the URL
-        // If it doesn't open, we'll still be on the current page
-        setTimeout(() => {
-          // Check if we're still on the same page (PassPRNT didn't open)
-          if (window.location.href === currentLocation || !window.location.href.includes('starpassprnt://')) {
-            logger.warn('PassPRNT may not have opened. URL scheme might be blocked.')
-            // Still resolve - user might need to install PassPRNT or use a different browser
-            resolve()
-          } else {
-            // PassPRNT opened successfully
-            logger.info('PassPRNT opened successfully')
-            resolve()
-          }
-        }, 1000)
-        
-      } catch (error) {
-        logger.error('Failed to open PassPRNT:', error)
-        reject(new Error('Failed to open PassPRNT: ' + error.message))
+      // Check URL length - some browsers have limits
+      if (passprntUrl.length > 2000) {
+        logger.warn('URL is very long (' + passprntUrl.length + ' chars). This might cause issues.')
       }
-
+      
+      // Store current location for comparison
+      const currentLocation = window.location.href
+      let urlOpened = false
+      
+      // Method 1: Try using a link element with click (more reliable in some browsers)
+      const tryLinkMethod = () => {
+        try {
+          const link = document.createElement('a')
+          link.href = passprntUrl
+          link.style.display = 'none'
+          link.target = '_self'
+          
+          // Add to DOM temporarily
+          document.body.appendChild(link)
+          
+          // Trigger click
+          const clickEvent = new MouseEvent('click', {
+            view: window,
+            bubbles: true,
+            cancelable: true
+          })
+          link.dispatchEvent(clickEvent)
+          
+          // Remove from DOM
+          setTimeout(() => {
+            try {
+              document.body.removeChild(link)
+            } catch (e) {
+              // Already removed
+            }
+          }, 100)
+          
+          urlOpened = true
+          logger.info('PassPRNT URL triggered via link click method')
+          return true
+        } catch (error) {
+          logger.warn('Link click method failed:', error)
+          return false
+        }
+      }
+      
+      // Method 2: Try window.location (fallback)
+      const tryWindowLocation = () => {
+        try {
+          window.location.href = passprntUrl
+          urlOpened = true
+          logger.info('PassPRNT URL triggered via window.location')
+          return true
+        } catch (error) {
+          logger.warn('window.location method failed:', error)
+          return false
+        }
+      }
+      
+      // Try link method first (more reliable)
+      if (!tryLinkMethod()) {
+        // Fallback to window.location
+        tryWindowLocation()
+      }
+      
+      // Give PassPRNT time to open
+      // Note: We can't reliably detect if PassPRNT opened, so we'll assume it did
+      // If it didn't open, the user will see no response and can try again
+      setTimeout(() => {
+        // Log for debugging
+        const stillOnPage = window.location.href === currentLocation || 
+                           (!window.location.href.includes('starpassprnt://') && 
+                            !window.location.href.includes('passprnt://'))
+        
+        if (stillOnPage) {
+          logger.warn('Still on same page - PassPRNT may not have opened')
+          logger.warn('This could mean:')
+          logger.warn('1. Browser is blocking the URL scheme')
+          logger.warn('2. PassPRNT is not installed')
+          logger.warn('3. URL scheme format is incorrect')
+          logger.warn('Try: Using Chrome instead of Safari, or check PassPRNT installation')
+        } else {
+          logger.info('Page changed - PassPRNT likely opened')
+        }
+        
+        // Always resolve - we can't definitively know if it worked
+        // User will see PassPRNT open if it worked
+        resolve()
+      }, 500)
+        
     } catch (error) {
       logger.error('PassPRNT print failed:', error)
       reject(error)
@@ -377,14 +439,31 @@ export async function printToThermalPrinter(html, options = {}) {
 
   if (useThermal) {
     try {
-      logger.info('Attempting to print via PassPRNT (starpassprnt://)')
+      logger.info('=== PassPRNT Print Attempt ===')
+      logger.info('iOS device detected')
+      logger.info('HTML content length:', html.length, 'characters')
       
       // PassPRNT expects HTML content, not plain text
       // The URL scheme format is: starpassprnt://v1/print/nopreview?back=<url>&html=<html>
       await printWithPassPRNT(html, options)
-      logger.info('PassPRNT URL opened - check if PassPRNT app opened')
+      
+      logger.info('PassPRNT URL scheme triggered')
+      logger.info('Check if PassPRNT app opened on your device')
+      logger.info('If PassPRNT did not open, the browser may be blocking the URL scheme')
+      logger.info('Try: Use Chrome instead of Safari, or check browser console for errors')
+      
+      // Show user-visible message in console (for debugging)
+      if (import.meta.env.DEV) {
+        console.log('%c🔵 PassPRNT Print', 'color: blue; font-weight: bold; font-size: 14px;')
+        console.log('%cIf PassPRNT did not open:', 'color: orange; font-weight: bold;')
+        console.log('1. Check that PassPRNT is installed')
+        console.log('2. Try using Chrome instead of Safari')
+        console.log('3. Check browser console for errors')
+        console.log('4. Verify printer works in StarQuickSetup app (you said this works ✅)')
+      }
       
       // Return successfully - don't trigger standard print
+      // Even if PassPRNT didn't open, we don't want to fall back to AirPrint
       return
     } catch (error) {
       logger.error('Thermal printer print failed:', error)

@@ -1,4 +1,12 @@
-# Correct PassPRNT Setup
+# Correct PassPRNT Setup for TSP143IIIW
+
+## Printer Model: TSP143IIIW (WiFi/Wireless)
+
+Your printer is the **TSP143IIIW** model, which supports **WiFi/Network printing**. This is actually better than Bluetooth because:
+- ✅ More reliable connection
+- ✅ Works over network (no pairing needed)
+- ✅ Better range
+- ✅ Can print from multiple devices
 
 ## Important: Correct URL Scheme
 
@@ -36,18 +44,43 @@ If Chrome is doing a Google search instead of opening PassPRNT, it means:
 - Safari: Settings > Safari > Make sure "Block Pop-ups" is OFF
 - Chrome: Settings > Privacy > Make sure pop-ups aren't blocked
 
-### Option 2: Verify PassPRNT Installation
-1. Open PassPRNT app
-2. Verify your TSP143III printer is configured
-3. Try printing a test page from within PassPRNT app
+### Option 2: Verify PassPRNT Installation & Network Setup
+1. **Open PassPRNT app**
+2. **Add your TSP143IIIW printer:**
+   - Select "Add Printer" or "Network Printer"
+   - Choose "TSP143IIIW" or "TSP100III" series
+   - Enter the printer's IP address (or let it auto-discover)
+   - Make sure both iPad and printer are on the **same WiFi network**
+3. **Test print from PassPRNT app** to verify connection works
+4. **Verify printer is on 2.4 GHz WiFi** (TSP143IIIW may not support 5 GHz)
 
-### Option 3: TSP143III Compatibility
-**Important**: The TSP143III may not be fully supported by Star WebPRNT Browser. Check Star Micronics documentation for TSP143III compatibility.
+### Option 3: Network Connection Setup
+**For TSP143IIIW WiFi model:**
+1. **Get printer IP address:**
+   - Print a self-test page from the printer
+   - The IP address will be printed on the test page
+2. **Ensure same network:**
+   - iPad and printer must be on the same WiFi network
+   - Use 2.4 GHz network (not 5 GHz)
+3. **Configure in PassPRNT:**
+   - Add printer using IP address
+   - Port name format: `TCP:192.168.x.x` (your printer's IP)
 
-### Option 4: Use Direct USB (TSP143IIIU model only)
-If you have the **TSP143IIIU** (USB model):
-1. Connect iPad to printer via USB cable
-2. Use direct USB printing (requires different implementation)
+### Option 4: Network Troubleshooting
+**For TSP143IIIW WiFi issues:**
+1. **Check WiFi connection:**
+   - Ensure printer is connected to WiFi (check printer's WiFi indicator)
+   - Verify iPad is on the same network
+   - Try restarting both printer and router
+2. **Check IP address:**
+   - Print self-test page to get current IP
+   - Verify IP is in same subnet as iPad
+3. **Firewall issues:**
+   - Some networks block printer communication
+   - Try on a different network to test
+4. **Printer firmware:**
+   - Check for firmware updates via printer's web interface
+   - Access web interface at: `http://<printer-ip-address>`
 
 ## Current Implementation
 
