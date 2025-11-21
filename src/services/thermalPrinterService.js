@@ -313,18 +313,45 @@ async function checkPassPRNTInstalled() {
 export async function printWithPassPRNT(html, options = {}) {
   return new Promise((resolve, reject) => {
     try {
-      // PassPRNT URL scheme format (from Star Micronics documentation):
-      // starpassprnt://v1/print/nopreview?back=<encoded_back_url>&html=<encoded_html_content>
+      // PassPRNT URL scheme format (matching official sample):
+      // starpassprnt://v1/print/nopreview?&back=<encoded_back_url>&html=<encoded_html_content>
+      // Note: Sample code uses &back= even though it's the first parameter after ?
       
-      // Encode the current page URL for the 'back' parameter (where to return after printing)
+      // Start with base URL (note the ? at the end)
+      let passprntUrl = 'starpassprnt://v1/print/nopreview?'
+      
+      // Add back parameter (where to return after printing)
       const backUrl = encodeURIComponent(window.location.href)
+      passprntUrl += `&back=${backUrl}`
       
-      // Encode HTML content for the 'html' parameter
-      // PassPRNT expects full HTML, so we'll use the HTML directly
+      // Add html parameter (the receipt content)
       const encodedHtml = encodeURIComponent(html)
+      passprntUrl += `&html=${encodedHtml}`
       
-      // Build the PassPRNT URL
-      const passprntUrl = `starpassprnt://v1/print/nopreview?back=${backUrl}&html=${encodedHtml}`
+      // Add optional parameters if provided
+      if (options.port) {
+        passprntUrl += `&port=${encodeURIComponent(options.port)}`
+      }
+      
+      if (options.settings) {
+        passprntUrl += `&settings=${encodeURIComponent(options.settings)}`
+      }
+      
+      if (options.timeout) {
+        passprntUrl += `&timeout=${options.timeout}`
+      }
+      
+      if (options.size) {
+        passprntUrl += `&size=${options.size}`
+      }
+      
+      if (options.cut) {
+        passprntUrl += `&cut=${options.cut}` // e.g., 'full', 'partial', 'nocut'
+      }
+      
+      // Note: The sample shows many other optional parameters:
+      // drawer, drawerpulse, buzzer, sound, blackmark, gap, popup, etc.
+      // Add more if needed based on your requirements
       
       logger.info('Attempting to open PassPRNT')
       logger.info('URL length:', passprntUrl.length, 'characters')
