@@ -5,6 +5,55 @@
  */
 
 /**
+ * Create a simple test receipt for debugging
+ * @returns {string} Simple HTML receipt
+ */
+export function createTestReceipt() {
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Test Receipt</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            margin: 0;
+            background: white;
+            color: black;
+          }
+          .test-receipt {
+            text-align: center;
+            border: 2px solid black;
+            padding: 20px;
+            background: white;
+          }
+          h1 { color: black; font-size: 24px; }
+          p { color: black; font-size: 16px; margin: 10px 0; }
+          @media print {
+            body, .test-receipt, h1, p { 
+              color: black !important; 
+              background: white !important; 
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="test-receipt">
+          <h1>TEST RECEIPT</h1>
+          <p>This is a test receipt</p>
+          <p>Date: ${new Date().toLocaleDateString()}</p>
+          <p>Time: ${new Date().toLocaleTimeString()}</p>
+          <p>If you can see this, the print system is working!</p>
+        </div>
+      </body>
+    </html>
+  `
+}
+
+/**
  * Render receipt HTML using template structure
  * @param {Object} params - Receipt data
  * @returns {string} Complete HTML document string
@@ -112,7 +161,6 @@ export function renderReceiptHTML({
           <strong>$${total.toFixed(2)}</strong>
         </div>
       </div>
-      ${footerText ? `<div class="receipt__footer">${escapeHtml(footerText)}</div>` : ''}
       ${gratuityHTML}
     </div>
   `
@@ -183,7 +231,6 @@ function buildReceiptDocument(bodyHTML, title, showTicketCount) {
       .receipt__total-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
       .receipt__total-row--final { font-size: 16px; }
       .receipt__total-row--final strong { font-weight: bold; }
-      .receipt__footer { margin-top: 24px; text-align: center; font-size: 12px; color: #777; }
       .receipt__gratuity { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #ccc; }
       .receipt__gratuity-title { text-align: center; font-size: 12px; color: #666; margin-bottom: 8px; }
       .receipt__gratuity-options { display: flex; justify-content: space-around; font-size: 11px; }
@@ -193,6 +240,12 @@ function buildReceiptDocument(bodyHTML, title, showTicketCount) {
       
       /* Print-specific styles */
       @media print {
+        /* Hide browser print headers and footers */
+        @page {
+          margin: 0;
+          size: auto;
+        }
+        
         html, body {
           margin: 0 !important;
           padding: 0 !important;
@@ -255,7 +308,6 @@ function buildReceiptDocument(bodyHTML, title, showTicketCount) {
         .receipt__table-header,
         .receipt__table-cell,
         .receipt__totals,
-        .receipt__footer,
         .receipt__gratuity {
           display: block !important;
           visibility: visible !important;
@@ -272,6 +324,19 @@ function buildReceiptDocument(bodyHTML, title, showTicketCount) {
         
         .receipt__total-row {
           display: flex !important;
+        }
+        
+        /* Additional attempts to hide browser print headers/footers */
+        html {
+          -webkit-print-color-adjust: exact;
+        }
+        
+        /* Hide any potential browser-generated content */
+        body::before,
+        body::after,
+        html::before,
+        html::after {
+          display: none !important;
         }
       }
       

@@ -7,11 +7,67 @@
 import logger from './logger.js'
 
 /**
+ * Test print function for debugging
+ * @returns {Promise<void>}
+ */
+export async function testPrint() {
+  const testHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Print Test</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            margin: 0;
+            background: white !important;
+            color: black !important;
+          }
+          .test { 
+            border: 2px solid black; 
+            padding: 20px; 
+            text-align: center;
+            background: white !important;
+            color: black !important;
+          }
+          @media print {
+            * { color: black !important; background: white !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="test">
+          <h1>PRINT TEST</h1>
+          <p>This is a test print</p>
+          <p>Date: ${new Date().toLocaleDateString()}</p>
+          <p>If you see this, printing works!</p>
+        </div>
+      </body>
+    </html>
+  `
+  
+  await printHTML(testHtml)
+}
+
+/**
  * Print HTML content using the best available method
  * @param {string} html - HTML content to print
  * @returns {Promise<void>}
  */
 export async function printHTML(html) {
+  // Debug: Log HTML content length and preview
+  logger.info('Print HTML length:', html.length, 'characters')
+  logger.info('HTML preview:', html.substring(0, 200) + '...')
+  
+  // Check if HTML is empty or invalid
+  if (!html || html.trim().length === 0) {
+    logger.error('Empty HTML content provided for printing')
+    throw new Error('No content to print')
+  }
+  
   try {
     await printWithWindow(html)
   } catch (error) {
@@ -33,29 +89,79 @@ export async function printHTML(html) {
 function printWithWindow(html) {
   return new Promise((resolve, reject) => {
     try {
-      const popup = window.open('', '_blank', 'width=600,height=800')
+      // Check if we're on mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      
+      // Use different window options for mobile
+      const windowOptions = isMobile 
+        ? 'width=device-width,height=device-height,scrollbars=yes'
+        : 'width=600,height=800,scrollbars=yes'
+      
+      const popup = window.open('', '_blank', windowOptions)
       
       if (!popup || !popup.document) {
         reject(new Error('Popup blocked or unavailable'))
         return
       }
 
-      // Extract and clean HTML
-      const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-      const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
+      // For mobile, use the HTML as-is without extraction
+      let cleanHtml = html
       
-      const cleanHtml = bodyMatch && headMatch
-        ? `<!DOCTYPE html><html>${headMatch[0]}${bodyMatch[0]}</html>`
-        : html
+      // Only do HTML extraction for desktop
+      if (!isMobile) {
+        const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+        const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
+        
+        cleanHtml = bodyMatch && headMatch
+          ? `<!DOCTYPE html><html>${headMatch[0]}${bodyMatch[0]}</html>`
+          : html
+      }
 
+      logger.info('Writing HTML to popup, length:', cleanHtml.length)
+      
       popup.document.open()
       popup.document.write(cleanHtml)
       popup.document.close()
+      
+      // Try to hide browser print headers/footers by setting print settings
+      try {
+        // This may not work in all browsers due to security restrictions
+        if (popup.document.head) {
+          const style = popup.document.createElement('style')
+          style.textContent = `
+            @page { 
+              margin: 0; 
+              size: auto;
+            }
+            @media print {
+              html, body { 
+                margin: 0 !important; 
+                padding: 12pt !important;
+              }
+            }
+          `
+          popup.document.head.appendChild(style)
+        }
+      } catch (e) {
+        // Ignore errors - browser security may prevent this
+        logger.warn('Could not modify print page settings:', e)
+      }
 
       // Wait for content to load
-      popup.onload = () => {
+      const handleLoad = () => {
         try {
           popup.focus()
+          
+          // Check if content actually loaded
+          const bodyContent = popup.document.body?.innerHTML || ''
+          logger.info('Popup body content length:', bodyContent.length)
+          
+          if (bodyContent.length === 0) {
+            logger.error('Popup body is empty after loading')
+            popup.close()
+            reject(new Error('Print content failed to load'))
+            return
+          }
           
           // Setup cleanup handler
           const cleanup = () => {
@@ -71,20 +177,25 @@ function printWithWindow(html) {
           
           popup.addEventListener('afterprint', cleanup, { once: true })
           
-          // Trigger print after a short delay
+          // Trigger print after a longer delay for mobile
+          const delay = isMobile ? 500 : 100
           setTimeout(() => {
             try {
               popup.print()
             } catch (printError) {
+              logger.error('Print trigger failed:', printError)
               popup.close()
               reject(printError)
             }
-          }, 100)
+          }, delay)
         } catch (error) {
+          logger.error('Load handler error:', error)
           popup.close()
           reject(error)
         }
       }
+      
+      popup.onload = handleLoad
 
       // Fallback timeout
       setTimeout(() => {

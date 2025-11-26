@@ -139,7 +139,7 @@ import { RouterView } from 'vue-router'
         </v-list-item>
         <template v-slot:append>
           <div class="pa-4 text-center">
-            <div class="text-caption text-medium-emphasis">v25.11</div>
+            <div class="text-caption text-medium-emphasis">v25.11.01</div>
           </div>
         </template>
       </v-navigation-drawer>
