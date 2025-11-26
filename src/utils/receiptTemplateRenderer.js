@@ -242,7 +242,7 @@ function buildReceiptDocument(bodyHTML, title, showTicketCount) {
       @media print {
         /* Hide browser print headers and footers */
         @page {
-          margin: 0;
+          margin: 0.5in;
           size: auto;
         }
         
@@ -254,8 +254,11 @@ function buildReceiptDocument(bodyHTML, title, showTicketCount) {
           background: white !important;
           color: black !important;
           font-size: 12pt !important;
+          line-height: 1.4 !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
+          visibility: visible !important;
+          opacity: 1 !important;
         }
         
         body {
@@ -296,34 +299,94 @@ function buildReceiptDocument(bodyHTML, title, showTicketCount) {
           font-size: 12pt !important;
         }
         
-        /* Ensure all text is visible */
+        /* Ensure all text is visible and printable */
         * {
           color: black !important;
           background: white !important;
           opacity: 1 !important;
           visibility: visible !important;
+          box-shadow: none !important;
+          text-shadow: none !important;
+        }
+        
+        /* Force receipt container to be visible */
+        .receipt {
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          position: static !important;
+          width: 100% !important;
+          height: auto !important;
+          overflow: visible !important;
+          padding: 10pt !important;
+          margin: 0 !important;
         }
         
         /* Override any potential hiding */
+        .receipt__header, .receipt__title, .receipt__sub-header, .receipt__meta, .receipt__print-time {
+          display: block !important;
+          visibility: visible !important;
+          color: black !important;
+          margin-bottom: 4pt !important;
+          font-size: 10pt !important;
+        }
+        
         .receipt__table-header,
         .receipt__table-cell,
         .receipt__totals,
         .receipt__gratuity {
           display: block !important;
           visibility: visible !important;
+          color: black !important;
         }
         
         .receipt__table {
           display: table !important;
+          width: 100% !important;
+          border-collapse: collapse !important;
+          visibility: visible !important;
         }
         
         .receipt__table-header,
         .receipt__table-cell {
           display: table-cell !important;
+          border: 1pt solid #ccc !important;
+          padding: 4pt 3pt !important;
+          visibility: visible !important;
+          color: black !important;
+        }
+        
+        .receipt__table-row {
+          display: table-row !important;
+          visibility: visible !important;
         }
         
         .receipt__total-row {
           display: flex !important;
+          justify-content: space-between !important;
+          margin-bottom: 2pt !important;
+          visibility: visible !important;
+          color: black !important;
+        }
+        
+        .receipt__total-row--final {
+          font-weight: bold !important;
+          font-size: 12pt !important;
+        }
+        
+        .receipt__gratuity {
+          display: block !important;
+          visibility: visible !important;
+          margin-top: 10pt !important;
+          padding-top: 8pt !important;
+          border-top: 1pt dashed #ccc !important;
+        }
+        
+        .receipt__gratuity-title,
+        .receipt__gratuity-options {
+          display: block !important;
+          visibility: visible !important;
+          color: black !important;
         }
         
         /* Additional attempts to hide browser print headers/footers */

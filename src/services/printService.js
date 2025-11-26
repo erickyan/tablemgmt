@@ -79,17 +79,21 @@ export async function printHTML(html) {
   try {
     if (isMobile) {
       logger.info('Trying mobile-optimized print method first')
-      await printWithBlob(html)
+      await printWithSimpleMobile(html)
     } else {
       await printWithWindow(html)
     }
   } catch (error) {
     logger.warn('Primary print method failed, using fallback:', error.message)
     try {
-      await printWithIframe(html)
-    } catch (iframeError) {
-      logger.error('All print methods failed:', iframeError)
-      throw new Error('Unable to print: ' + iframeError.message)
+      if (isMobile) {
+        await printWithBlob(html)
+      } else {
+        await printWithIframe(html)
+      }
+    } catch (fallbackError) {
+      logger.error('All print methods failed:', fallbackError)
+      throw new Error('Unable to print: ' + fallbackError.message)
     }
   }
   
@@ -357,6 +361,91 @@ function printWithBlob(html) {
       }
     } catch (error) {
       logger.error('Blob creation error:', error)
+      reject(error)
+    }
+  })
+}
+
+/**
+ * Simple mobile print method that creates a new window with minimal styling
+ * @param {string} html - HTML content to print
+ * @returns {Promise<void>}
+ */
+function printWithSimpleMobile(html) {
+  return new Promise((resolve, reject) => {
+    try {
+      logger.info('Using simple mobile print method')
+      
+      // Create a simplified HTML document with inline styles
+      const simplifiedHtml = html.replace(
+        /<style[^>]*>[\s\S]*?<\/style>/gi,
+        `<style>
+          body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            margin: 0; 
+            color: black !important; 
+            background: white !important;
+            line-height: 1.4;
+          }
+          .receipt { 
+            display: block !important; 
+            visibility: visible !important; 
+            color: black !important;
+          }
+          .receipt__table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 10px 0;
+          }
+          .receipt__table-cell, .receipt__table-header { 
+            border: 1px solid #ccc; 
+            padding: 8px; 
+            text-align: left;
+            color: black !important;
+          }
+          .receipt__total-row { 
+            display: flex; 
+            justify-content: space-between; 
+            margin: 5px 0;
+            color: black !important;
+          }
+          @media print {
+            * { color: black !important; background: white !important; }
+            body { margin: 0; padding: 20px; }
+          }
+        </style>`
+      )
+      
+      const popup = window.open('', '_blank', 'width=400,height=600,scrollbars=yes')
+      if (!popup) {
+        reject(new Error('Popup blocked'))
+        return
+      }
+
+      popup.document.open()
+      popup.document.write(simplifiedHtml)
+      popup.document.close()
+
+      // Wait for content to load, then print
+      setTimeout(() => {
+        try {
+          popup.focus()
+          popup.print()
+          
+          // Close popup after a delay
+          setTimeout(() => {
+            popup.close()
+            resolve()
+          }, 1000)
+        } catch (printError) {
+          popup.close()
+          reject(printError)
+        }
+      }, 500)
+      
+    } catch (error) {
+      logger.error('Simple mobile print error:', error)
       reject(error)
     }
   })
