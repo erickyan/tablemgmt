@@ -2,36 +2,16 @@
  * Print Service
  * Simplified print functionality with better error handling
  * Provides a clean interface for printing HTML content
- * Supports thermal printers on iOS via PassPRNT
  */
 
 import logger from './logger.js'
-import { printToThermalPrinter, isIOS } from './thermalPrinterService.js'
 
 /**
  * Print HTML content using the best available method
- * On iOS, attempts thermal printer first, then falls back to standard printing
  * @param {string} html - HTML content to print
- * @param {Object} options - Print options
  * @returns {Promise<void>}
  */
-export async function printHTML(html, options = {}) {
-  // Try thermal printer on iOS first
-  if (isIOS() && options.useThermal !== false) {
-    try {
-      logger.info('iOS detected, attempting thermal printer via PassPRNT')
-      await printToThermalPrinter(html, options)
-      logger.info('Thermal printer print initiated successfully')
-      return // Successfully sent to thermal printer
-    } catch (error) {
-      // If thermal printing fails, fall through to standard printing
-      logger.warn('Thermal printing failed, falling back to standard print:', error.message)
-      // Don't return here - continue to standard printing
-    }
-  }
-
-  // Standard browser printing (for non-iOS or when thermal printing fails)
-  logger.info('Using standard browser printing')
+export async function printHTML(html) {
   try {
     await printWithWindow(html)
   } catch (error) {
