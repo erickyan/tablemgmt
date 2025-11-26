@@ -58,9 +58,13 @@ export async function testPrint() {
  * @returns {Promise<void>}
  */
 export async function printHTML(html) {
-  // Debug: Log HTML content length and preview
+  logger.info('=== PRINT DEBUG START ===')
   logger.info('Print HTML length:', html.length, 'characters')
-  logger.info('HTML preview:', html.substring(0, 200) + '...')
+  logger.info('HTML preview:', html.substring(0, 300) + '...')
+  logger.info('HTML contains DOCTYPE:', html.includes('<!DOCTYPE html>'))
+  logger.info('HTML contains body tag:', html.includes('<body>'))
+  logger.info('HTML contains receipt class:', html.includes('receipt'))
+  logger.info('HTML contains China Buffet:', html.includes('China Buffet'))
   
   // Check if HTML is empty or invalid
   if (!html || html.trim().length === 0) {
@@ -68,17 +72,28 @@ export async function printHTML(html) {
     throw new Error('No content to print')
   }
   
+  // Check if we're on mobile
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  logger.info('Is mobile device:', isMobile)
+  
   try {
-    await printWithWindow(html)
+    if (isMobile) {
+      logger.info('Trying mobile-optimized print method first')
+      await printWithBlob(html)
+    } else {
+      await printWithWindow(html)
+    }
   } catch (error) {
-    logger.warn('Window print failed, using iframe fallback:', error)
+    logger.warn('Primary print method failed, using fallback:', error.message)
     try {
       await printWithIframe(html)
     } catch (iframeError) {
-      logger.error('Print failed with both methods:', iframeError)
+      logger.error('All print methods failed:', iframeError)
       throw new Error('Unable to print: ' + iframeError.message)
     }
   }
+  
+  logger.info('=== PRINT DEBUG END ===')
 }
 
 /**
@@ -297,4 +312,67 @@ function printWithIframe(html) {
   })
 }
 
+/**
+ * Print using a Blob URL (simpler approach for mobile)
+ * @param {string} html - HTML content to print
+ * @returns {Promise<void>}
+ */
+function printWithBlob(html) {
+  return new Promise((resolve, reject) => {
+    try {
+      logger.info('Creating blob for printing')
+      const blob = new Blob([html], { type: 'text/html' })
+      const blobUrl = URL.createObjectURL(blob)
+      logger.info('Blob URL created:', blobUrl)
+
+      const iframe = document.createElement('iframe')
+      iframe.style.display = 'none'
+      iframe.src = blobUrl
+      document.body.appendChild(iframe)
+
+      iframe.onload = () => {
+        try {
+          logger.info('Blob iframe loaded, attempting print')
+          iframe.contentWindow.focus()
+          iframe.contentWindow.print()
+          setTimeout(() => {
+            URL.revokeObjectURL(blobUrl)
+            document.body.removeChild(iframe)
+            logger.info('Blob print cleanup completed')
+            resolve()
+          }, 1000)
+        } catch (printError) {
+          logger.error('Blob print error:', printError)
+          URL.revokeObjectURL(blobUrl)
+          document.body.removeChild(iframe)
+          reject(printError)
+        }
+      }
+      
+      iframe.onerror = (error) => {
+        logger.error('Blob iframe error:', error)
+        URL.revokeObjectURL(blobUrl)
+        document.body.removeChild(iframe)
+        reject(new Error('Iframe failed to load Blob URL'))
+      }
+    } catch (error) {
+      logger.error('Blob creation error:', error)
+      reject(error)
+    }
+  })
+}
+
+// Expose test functions globally for debugging
+if (typeof window !== 'undefined') {
+  window.testPrint = testPrint
+  window.debugPrint = (html) => {
+    console.log('=== DEBUG PRINT ===')
+    console.log('HTML length:', html?.length || 'undefined')
+    console.log('HTML preview:', html?.substring(0, 500) || 'no content')
+    console.log('Has DOCTYPE:', html?.includes('<!DOCTYPE html>') || false)
+    console.log('Has body:', html?.includes('<body>') || false)
+    console.log('Has receipt:', html?.includes('receipt') || false)
+    return printHTML(html)
+  }
+}
 

@@ -22,6 +22,13 @@ import Decimal from 'decimal.js'
  * @returns {string} HTML string for receipt
  */
 export function generateTableReceipt({ table, tableIndex, store, isDinner, ticketCount }) {
+  console.log('=== generateTableReceipt DEBUG ===')
+  console.log('Table:', table)
+  console.log('TableIndex:', tableIndex)
+  console.log('Store:', store)
+  console.log('IsDinner:', isDinner)
+  console.log('TicketCount:', ticketCount)
+  
   const tableNumber = table?.number || (tableIndex + 1)
   const receiptSettings = store.receiptSettings || {}
   const headerText = receiptSettings.headerText || 'China Buffet'
@@ -105,7 +112,7 @@ export function generateTableReceipt({ table, tableIndex, store, isDinner, ticke
     : []
 
   // Use template renderer
-  return renderReceiptHTML({
+  const receiptHTML = renderReceiptHTML({
     headerText,
     subHeaderText,
     title: `Table ${tableNumber}`,
@@ -121,6 +128,12 @@ export function generateTableReceipt({ table, tableIndex, store, isDinner, ticke
     showGratuity,
     gratuityOptions
   })
+  
+  console.log('Generated receipt HTML length:', receiptHTML?.length || 'undefined')
+  console.log('Receipt HTML preview:', receiptHTML?.substring(0, 300) || 'no content')
+  console.log('=== generateTableReceipt DEBUG END ===')
+  
+  return receiptHTML
 }
 
 /**
@@ -134,6 +147,13 @@ export function generateTableReceipt({ table, tableIndex, store, isDinner, ticke
  * @returns {string} HTML string for receipt
  */
 export function generateTogoReceipt({ items, subtotal, total, store, ticketCount }) {
+  console.log('=== generateTogoReceipt DEBUG ===')
+  console.log('Items:', items)
+  console.log('Subtotal:', subtotal)
+  console.log('Total:', total)
+  console.log('Store:', store)
+  console.log('TicketCount:', ticketCount)
+  
   const receiptSettings = store.receiptSettings || {}
   const headerText = receiptSettings.headerText || 'China Buffet'
   const subHeaderText = receiptSettings.subHeaderText || ''
