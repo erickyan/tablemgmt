@@ -196,27 +196,29 @@ import { RouterView } from 'vue-router'
               <RouterView v-else-if="firebaseReady" />
             </div>
             <aside v-if="showOrderPanel" class="pos-content__panel" :class="{ 'panel-mobile-hidden': isCashierRoute && ($vuetify.display.xs || $vuetify.display.sm) }">
-          <component
-            v-if="activeOrderPanelComponent"
-            :is="activeOrderPanelComponent"
-            v-bind="activeOrderPanelProps"
-            @manage-table="handlePanelManageTable"
-            @print-table="handlePanelPrintTable"
-            @pay-table="handlePanelPayTable"
-            @edit="handlePanelEditItems"
-            @print="handlePanelPrintTogo"
-            @paid="handlePanelTogoPaid"
-          />
-          <cashier-receipt-panel v-else-if="isCashierRoute" />
-          <div v-else class="pos-content__panel-placeholder">
-            <v-icon size="42" color="accent">mdi-receipt-outline</v-icon>
-            <p class="text-subtitle-1 font-weight-medium mt-3">
-              {{ getTranslatedLabel('Orders you open will appear here.') }}
-            </p>
-            <p class="text-body-2 text-medium-emphasis">
-              {{ getTranslatedLabel('Select a table or build a to-go order to review items, actions, and guest details.') }}
-            </p>
-          </div>
+              <div class="pos-content__panel-wrapper">
+                <component
+                  v-if="activeOrderPanelComponent"
+                  :is="activeOrderPanelComponent"
+                  v-bind="activeOrderPanelProps"
+                  @manage-table="handlePanelManageTable"
+                  @print-table="handlePanelPrintTable"
+                  @pay-table="handlePanelPayTable"
+                  @edit="handlePanelEditItems"
+                  @print="handlePanelPrintTogo"
+                  @paid="handlePanelTogoPaid"
+                />
+                <cashier-receipt-panel v-else-if="isCashierRoute" />
+                <div v-else class="pos-content__panel-placeholder">
+                  <v-icon size="42" color="accent">mdi-receipt-outline</v-icon>
+                  <p class="text-subtitle-1 font-weight-medium mt-3">
+                    {{ getTranslatedLabel('Orders you open will appear here.') }}
+                  </p>
+                  <p class="text-body-2 text-medium-emphasis">
+                    {{ getTranslatedLabel('Select a table or build a to-go order to review items, actions, and guest details.') }}
+                  </p>
+                </div>
+              </div>
             </aside>
           </section>
         </div>
@@ -1668,10 +1670,13 @@ export default {
   gap: 12px;
   position: sticky;
   top: 24px;
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 48px);
   overflow-y: auto;
   overflow-x: hidden;
   width: 400px;
+  min-height: 0; /* Ensures flex children can shrink */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 @media (min-width: 768px) and (max-width: 900px) and (orientation: landscape) {
@@ -1704,6 +1709,15 @@ export default {
     padding: 20px;
     gap: 12px;
   }
+}
+
+/* Panel wrapper to contain overflow properly */
+.pos-content__panel-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .pos-content__panel-placeholder {

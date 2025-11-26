@@ -131,10 +131,39 @@ export function renderReceiptHTML({
 function buildReceiptDocument(bodyHTML, title, showTicketCount) {
   const styles = `
     <style>
-      body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 24px; color: #333; position: relative; }
+      /* Base styles */
+      * { box-sizing: border-box; }
+      html, body { 
+        margin: 0; 
+        padding: 0; 
+        width: 100%; 
+        height: auto; 
+        font-family: 'Helvetica Neue', Arial, sans-serif; 
+        color: #333; 
+        background: white;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      
+      body { 
+        padding: 24px; 
+        position: relative; 
+        min-height: 100vh;
+      }
+      
       ${showTicketCount ? '.receipt__ticket-count { position: absolute; top: 24px; right: 24px; font-size: 18px; font-weight: bold; color: #333; }' : ''}
-      .receipt { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 24px; color: #333; position: relative; }
-      .receipt__header { text-align: center; margin-bottom: 4px; letter-spacing: 1px; }
+      
+      .receipt { 
+        font-family: 'Helvetica Neue', Arial, sans-serif; 
+        padding: 24px; 
+        color: #333; 
+        position: relative; 
+        background: white;
+        width: 100%;
+        max-width: 100%;
+      }
+      
+      .receipt__header { text-align: center; margin-bottom: 4px; letter-spacing: 1px; font-size: 24px; font-weight: bold; }
       .receipt__sub-header { text-align: center; margin-top: 4px; margin-bottom: 8px; font-size: 14px; color: #666; font-style: italic; white-space: pre-line; }
       .receipt__title { text-align: center; margin-top: 0; font-weight: normal; font-size: 16px; }
       .receipt__meta { text-align: center; margin-top: 8px; font-size: 12px; color: #666; }
@@ -161,6 +190,109 @@ function buildReceiptDocument(bodyHTML, title, showTicketCount) {
       .receipt__gratuity-option { text-align: center; }
       .receipt__gratuity-percent { font-weight: bold; }
       .receipt__gratuity-amount { color: #666; }
+      
+      /* Print-specific styles */
+      @media print {
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 100% !important;
+          height: auto !important;
+          background: white !important;
+          color: black !important;
+          font-size: 12pt !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        body {
+          padding: 12pt !important;
+        }
+        
+        .receipt {
+          width: 100% !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+          padding: 12pt !important;
+          background: white !important;
+          color: black !important;
+          page-break-inside: avoid;
+        }
+        
+        .receipt__header {
+          font-size: 18pt !important;
+          color: black !important;
+        }
+        
+        .receipt__table {
+          width: 100% !important;
+          font-size: 10pt !important;
+        }
+        
+        .receipt__table-header,
+        .receipt__table-cell {
+          color: black !important;
+          border-color: #333 !important;
+        }
+        
+        .receipt__totals {
+          font-size: 11pt !important;
+        }
+        
+        .receipt__total-row--final {
+          font-size: 12pt !important;
+        }
+        
+        /* Ensure all text is visible */
+        * {
+          color: black !important;
+          background: white !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+        }
+        
+        /* Override any potential hiding */
+        .receipt__table-header,
+        .receipt__table-cell,
+        .receipt__totals,
+        .receipt__footer,
+        .receipt__gratuity {
+          display: block !important;
+          visibility: visible !important;
+        }
+        
+        .receipt__table {
+          display: table !important;
+        }
+        
+        .receipt__table-header,
+        .receipt__table-cell {
+          display: table-cell !important;
+        }
+        
+        .receipt__total-row {
+          display: flex !important;
+        }
+      }
+      
+      /* Mobile-specific adjustments */
+      @media screen and (max-width: 600px) {
+        body {
+          padding: 12px;
+        }
+        
+        .receipt {
+          padding: 12px;
+        }
+        
+        .receipt__header {
+          font-size: 20px;
+        }
+        
+        .receipt__table {
+          font-size: 12px;
+        }
+      }
     </style>
   `
   
@@ -170,6 +302,8 @@ function buildReceiptDocument(bodyHTML, title, showTicketCount) {
       <head>
         <title>${escapeHtml(title)}</title>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="format-detection" content="telephone=no">
         ${styles}
       </head>
       <body>
